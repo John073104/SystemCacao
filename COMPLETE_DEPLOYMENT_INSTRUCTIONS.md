@@ -47,7 +47,7 @@ Your code is now on GitHub in the `deploy-clean` branch without sensitive creden
 ### Step 2: Create New Web Service
 1. Click **"New +"** → **"Web Service"**
 2. Select your repository: **SystemCacao**
-3. Branch: **deploy-clean** ✅ (Use this branch!)
+3. Branch: **production-ready** ✅ (Use this branch!)
 4. Name: `cacaoguard`
 5. Environment: **Python 3**
 
@@ -55,7 +55,7 @@ Your code is now on GitHub in the `deploy-clean` branch without sensitive creden
 
 **Build Command:**
 ```bash
-pip install --upgrade pip && pip install -r requirements.txt && python manage.py collectstatic --noinput
+pip install --upgrade pip && pip install -r requirements_render.txt && python manage.py collectstatic --noinput
 ```
 
 **Start Command:**
