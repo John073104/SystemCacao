@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CacaoGuard Analysis Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            border-radius: 8px;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .stat-card .number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-card .label {
+            color: #666;
+            font-size: 11px;
+        }
+        .disease .number { color: #dc2626; }
+        .pest .number { color: #ea580c; }
+        .total .number { color: #2563eb; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 10px;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .confidence-high { background-color: #dcfce7; color: #166534; }
+        .confidence-medium { background-color: #fef3c7; color: #92400e; }
+        .confidence-low { background-color: #fee2e2; color: #991b1b; }
+        
+        .filters {
+            background: #f0f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CacaoGuard Analysis Report</h1>
+        <p>Generated on {{ report_generated|date:"F d, Y \a\t H:i" }}</p>
+    </div>
+
+    {% if filters.type or filters.confidence or filters.date_from or filters.date_to %}
+        <div class="filters">
+            <strong>Applied Filters:</strong>
+            {% if filters.type %}Type: {{ filters.type|title }} | {% endif %}
+            {% if filters.confidence %}Confidence: {{ filters.confidence|title }} | {% endif %}
+            {% if filters.date_from %}From: {{ filters.date_from }} | {% endif %}
+            {% if filters.date_to %}To: {{ filters.date_to }}{% endif %}
+        </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="number">{{ total_scans }}</div>
+            <div class="label">Total Scans</div>
+        </div>
+        <div class="stat-card disease">
+            <div class="number">{{ disease_scans }}</div>
+            <div class="label">Disease Scans</div>
+        </div>
+        <div class="stat-card pest">
+            <div class="number">{{ pest_scans }}</div>
+            <div class="label">Pest Scans</div>
+        </div>
+    </div>
+
+    {% if scans %}
+        <h2>Detailed Scan Results ({{ scans.count }} total)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Image Name</th>
+                    <th>Type</th>
+                    <th>Result</th>
+                    <th>Confidence</th>
+                    <th>User</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in scans %}
+                    <tr>
+                        <td>{{ scan.image_name|truncatechars:25 }}</td>
+                        <td style="text-transform: capitalize;">{{ scan.type }}</td>
+                        <td>{{ scan.primary_class }}</td>
+                        <td class="{% if scan.primary_confidence > 80 %}confidence-high{% elif scan.primary_confidence > 60 %}confidence-medium{% else %}confidence-low{% endif %}">
+                            {{ scan.primary_confidence|floatformat:1 }}%
+                        </td>
+                        <td>{{ scan.username }}</td>
+                        <td>{{ scan.timestamp|date:"m/d/Y H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: #666;">
+            <h3>No Scan Results</h3>
+            <p>No scans match the current filters.</p>
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>This report was generated by CacaoGuard Admin Dashboard</p>
+        <p>For questions or support, contact your system administrator</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,382 @@
+{% extends "user/userdashboard.html" %}
+{% load static %}
+
+{% block title %}{{ product.name }} - Cacao Marketplace{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-gallery {
+        transition: all 0.3s ease;
+    }
+    .quantity-input {
+        -moz-appearance: textfield;
+    }
+    .quantity-input::-webkit-outer-spin-button,
+    .quantity-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .product-image {
+        transition: transform 0.3s ease;
+    }
+    .product-image:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+    <!-- Breadcrumb -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-4">
+                    <li>
+                        <a href="{% url 'marketplace' %}" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                            </svg>
+                            <span class="sr-only">Marketplace</span>
+                        </a>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            <a href="{% url 'marketplace' %}" class="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                Marketplace
+                            </a>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span class="ml-4 text-sm font-medium text-gray-900">{{ product.name }}</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <!-- Product Images -->
+            <div class="space-y-4">
+                <!-- Main Image -->
+                <div class="aspect-w-1 aspect-h-1 bg-white rounded-xl shadow-sm overflow-hidden">
+                    {% if product.images %}
+                    <img id="mainImage" src="{{ product.images.0 }}" alt="{{ product.name }}" 
+                         class="w-full h-96 object-cover product-image">
+                    {% else %}
+                    <div class="w-full h-96 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                        <svg class="w-24 h-24 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Thumbnail Images -->
+                {% if product.images|length > 1 %}
+                <div class="grid grid-cols-4 gap-4">
+                    {% for image in product.images %}
+                    <button onclick="changeMainImage('{{ image }}')" 
+                            class="aspect-w-1 aspect-h-1 bg-white rounded-lg shadow-sm overflow-hidden hover:ring-2 hover:ring-amber-500 transition-all">
+                        <img src="{{ image }}" alt="{{ product.name }}" 
+                             class="w-full h-20 object-cover">
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Product Information -->
+            <div class="space-y-6">
+                <!-- Product Title and Price -->
+                <div>
+                    <div class="flex items-start justify-between mb-4">
+                        <h1 class="text-3xl font-bold text-gray-900">{{ product.name }}</h1>
+                        {% if product.featured %}
+                        <span class="bg-amber-100 text-amber-800 text-sm px-3 py-1 rounded-full font-medium">
+                            Featured
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex items-baseline space-x-2 mb-4">
+                        <span class="text-4xl font-bold text-amber-600">₱{{ product.price }}</span>
+                        <span class="text-lg text-gray-500">/ {{ product.unit }}</span>
+                    </div>
+                    
+                    <!-- Product Type and Category -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            {{ product.product_type|title }}
+                        </span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            {{ product.category }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Product Details</h3>
+                    <div class="space-y-3">
+                        {% if product.origin %}
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="text-gray-600">Origin: {{ product.origin }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if product.harvest_date %}
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <span class="text-gray-600">Harvest Date: {{ product.harvest_date }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                            <span class="text-gray-600">Stock: {{ product.stock_quantity }} {{ product.unit }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Description</h3>
+                    <p class="text-gray-600 leading-relaxed">{{ product.description }}</p>
+                </div>
+
+                <!-- Add to Cart Section -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    {% if product.stock_quantity > 0 %}
+                    <div class="space-y-4">
+                        <!-- Quantity Selector -->
+                        <div>
+                            <label for="quantity" class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                            <div class="flex items-center space-x-3">
+                                <button onclick="decreaseQuantity()" 
+                                        class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                                    </svg>
+                                </button>
+                                
+                                <input type="number" id="quantity" value="1" min="1" max="{{ product.stock_quantity }}"
+                                       class="quantity-input w-20 text-center border border-gray-300 rounded-lg py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                                
+                                <button onclick="increaseQuantity()" 
+                                        class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center hover:bg-gray-200 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </button>
+                                
+                                <span class="text-sm text-gray-500">{{ product.unit }} available</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Total Price -->
+                        <div class="flex items-center justify-between py-3 border-t border-gray-200">
+                            <span class="text-lg font-medium text-gray-900">Total:</span>
+                            <span id="totalPrice" class="text-2xl font-bold text-amber-600">₱{{ product.price }}</span>
+                        </div>
+                        
+                        <!-- Add to Cart Button -->
+                        <button onclick="addToCart()" 
+                                class="w-full bg-amber-600 text-white py-3 px-6 rounded-lg hover:bg-amber-700 transition-colors font-medium text-lg">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9m-9 0h9"></path>
+                            </svg>
+                            Add to Cart
+                        </button>
+                        
+                        <!-- Quick Actions -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <a href="{% url 'cart_view' %}" 
+                               class="text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                View Cart
+                            </a>
+                            <a href="{% url 'marketplace' %}" 
+                               class="text-center py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                Continue Shopping
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Out of Stock</h3>
+                        <p class="text-gray-500 mb-4">This product is currently unavailable.</p>
+                        <a href="{% url 'marketplace' %}" 
+                           class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                            Browse Other Products
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Products -->
+        {% if related_products %}
+        <div class="mt-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Related Products</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for related_product in related_products %}
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                    <div class="aspect-w-1 aspect-h-1 bg-gray-200">
+                        {% if related_product.images %}
+                        <img src="{{ related_product.images.0 }}" alt="{{ related_product.name }}" 
+                             class="w-full h-48 object-cover">
+                        {% else %}
+                        <div class="w-full h-48 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                            <svg class="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{{ related_product.name }}</h3>
+                        <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ related_product.description }}</p>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xl font-bold text-amber-600">₱{{ related_product.price }}</span>
+                                <span class="text-sm text-gray-500">/ {{ related_product.unit }}</span>
+                            </div>
+                            
+                            <a href="{% url 'product_detail' related_product.id %}" 
+                               class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm">
+                                View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+        <div class="text-center">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Added to Cart!</h3>
+            <p class="text-gray-500 mb-4">Product has been added to your cart successfully.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeSuccessModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    Continue Shopping
+                </button>
+                <a href="{% url 'cart_view' %}" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-center">
+                    View Cart
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const productPrice = {{ product.price }};
+const maxStock = {{ product.stock_quantity }};
+
+function changeMainImage(imageUrl) {
+    document.getElementById('mainImage').src = imageUrl;
+}
+
+function updateTotalPrice() {
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const total = (productPrice * quantity).toFixed(2);
+    document.getElementById('totalPrice').textContent = '₱' + total;
+}
+
+function increaseQuantity() {
+    const quantityInput = document.getElementById('quantity');
+    const currentValue = parseInt(quantityInput.value);
+    if (currentValue < maxStock) {
+        quantityInput.value = currentValue + 1;
+        updateTotalPrice();
+    }
+}
+
+function decreaseQuantity() {
+    const quantityInput = document.getElementById('quantity');
+    const currentValue = parseInt(quantityInput.value);
+    if (currentValue > 1) {
+        quantityInput.value = currentValue - 1;
+        updateTotalPrice();
+    }
+}
+
+function addToCart() {
+    const quantity = parseInt(document.getElementById('quantity').value);
+    
+    fetch('{% url "add_to_cart" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            product_id: '{{ product.id }}',
+            quantity: quantity
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success modal
+            document.getElementById('successModal').classList.remove('hidden');
+            document.getElementById('successModal').classList.add('flex');
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
+function closeSuccessModal() {
+    document.getElementById('successModal').classList.add('hidden');
+    document.getElementById('successModal').classList.remove('flex');
+}
+
+// Update total price when quantity changes
+document.getElementById('quantity').addEventListener('input', updateTotalPrice);
+
+// Close modal when clicking outside
+document.getElementById('successModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeSuccessModal();
+    }
+});
+</script>
+{% endblock %}

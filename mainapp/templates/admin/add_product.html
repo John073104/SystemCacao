@@ -1,0 +1,252 @@
+{% extends "admin/admin_dashboard.html" %}
+{% load static %}
+
+{% block title %}Add Product{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Add New Product</h1>
+                    <p class="text-gray-600 mt-1">Create a new cacao product for your marketplace</p>
+                </div>
+                
+                <a href="{% url 'admin_products' %}" 
+                   class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Products
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <form method="POST" enctype="multipart/form-data" class="space-y-8">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Basic Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                        <input type="text" id="name" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                               placeholder="e.g., Premium Organic Cacao Beans">
+                    </div>
+                    
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                        <input type="text" id="category" name="category" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                               placeholder="e.g., Organic, Premium, Raw">
+                    </div>
+                    
+                    <div>
+                        <label for="product_type" class="block text-sm font-medium text-gray-700 mb-2">Product Type *</label>
+                        <select id="product_type" name="product_type" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <option value="">Select product type</option>
+                            {% for type_value, type_label in product_types %}
+                            <option value="{{ type_value }}">{{ type_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                        <textarea id="description" name="description" rows="4" required
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                  placeholder="Describe your product, its quality, origin, and benefits..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing & Inventory -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Pricing & Inventory</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700 mb-2">Price (₱) *</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                               placeholder="0.00">
+                    </div>
+                    
+                    <div>
+                        <label for="stock_quantity" class="block text-sm font-medium text-gray-700 mb-2">Stock Quantity *</label>
+                        <input type="number" id="stock_quantity" name="stock_quantity" min="0" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                               placeholder="0">
+                    </div>
+                    
+                    <div>
+                        <label for="unit" class="block text-sm font-medium text-gray-700 mb-2">Unit *</label>
+                        <select id="unit" name="unit" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="g">Gram (g)</option>
+                            <option value="lb">Pound (lb)</option>
+                            <option value="pieces">Pieces</option>
+                            <option value="bags">Bags</option>
+                            <option value="boxes">Boxes</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Details -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Product Details</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="origin" class="block text-sm font-medium text-gray-700 mb-2">Origin/Farm Location</label>
+                        <input type="text" id="origin" name="origin"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                               placeholder="e.g., Ecuador, Ghana, Madagascar">
+                    </div>
+                    
+                    <div>
+                        <label for="harvest_date" class="block text-sm font-medium text-gray-700 mb-2">Harvest Date</label>
+                        <input type="date" id="harvest_date" name="harvest_date"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Product Images</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload Product Images</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="images" class="relative cursor-pointer bg-white rounded-md font-medium text-amber-600 hover:text-amber-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-amber-500">
+                                    <span>Upload files</span>
+                                    <input id="images" name="images" type="file" accept="image/*" multiple class="sr-only" onchange="previewImages(this)">
+                                </label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image Preview -->
+                <div id="imagePreview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 hidden">
+                    <!-- Preview images will be inserted here -->
+                </div>
+                
+                <p class="text-sm text-gray-500 mt-2">
+                    <strong>Storage Location:</strong> Images will be saved to <code>media/products/</code> folder. 
+                    The first image will be used as the main product image.
+                </p>
+            </div>
+
+            <!-- Settings -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">Settings</h3>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is_active" name="is_active" checked
+                               class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded">
+                        <label for="is_active" class="ml-2 block text-sm text-gray-900">
+                            Active (Product will be visible in marketplace)
+                        </label>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" id="featured" name="featured"
+                               class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded">
+                        <label for="featured" class="ml-2 block text-sm text-gray-900">
+                            Featured Product (Will be highlighted in marketplace)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'admin_products' %}" 
+                   class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                    Create Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function previewImages(input) {
+    const previewContainer = document.getElementById('imagePreview');
+    previewContainer.innerHTML = '';
+    
+    if (input.files && input.files.length > 0) {
+        previewContainer.classList.remove('hidden');
+        
+        Array.from(input.files).forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageDiv = document.createElement('div');
+                    imageDiv.className = 'relative group';
+                    imageDiv.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview ${index + 1}" 
+                             class="w-full h-32 object-cover rounded-lg border border-gray-200">
+                        <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <span class="text-white text-sm">Image ${index + 1}</span>
+                        </div>
+                        ${index === 0 ? '<div class="absolute top-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded">Main</div>' : ''}
+                    `;
+                    previewContainer.appendChild(imageDiv);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    } else {
+        previewContainer.classList.add('hidden');
+    }
+}
+
+// Drag and drop functionality
+const dropZone = document.querySelector('.border-dashed');
+const fileInput = document.getElementById('images');
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('border-amber-500', 'bg-amber-50');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-amber-500', 'bg-amber-50');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-amber-500', 'bg-amber-50');
+    
+    const files = e.dataTransfer.files;
+    fileInput.files = files;
+    previewImages(fileInput);
+});
+</script>
+{% endblock %}

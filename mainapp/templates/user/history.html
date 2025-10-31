@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan History - CacaoGuard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen overflow-hidden">
+        <!-- User Sidebar -->
+        {% include 'user/sidebar.html' %}
+
+        <!-- Main Content -->
+        <div class="flex-1 p-8 overflow-y-auto">
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Your Scan History</h3>
+                        <p class="mt-1 max-w-2xl text-sm text-gray-500">All your previous scans and results</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleHistory()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm">
+                            <i class="fas fa-eye-slash mr-2"></i>Hide History
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="border-t border-gray-200 px-4 py-4">
+                    <form method="GET" class="flex flex-wrap gap-4">
+                        <select name="type" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            <option value="all">All Types</option>
+                            <option value="disease" {% if request.GET.type == 'disease' %}selected{% endif %}>Disease</option>
+                            <option value="pest" {% if request.GET.type == 'pest' %}selected{% endif %}>Pest</option>
+                        </select>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+                            <i class="fas fa-filter mr-2"></i>Filter
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Results -->
+                <div class="overflow-x-auto">
+                    {% if scans %}
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Image
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Result
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Confidence
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for scan in scans %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            {% if scan.type == 'disease' %}
+                                                <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                                                    <i class="fas fa-virus text-red-600"></i>
+                                                </div>
+                                            {% else %}
+                                                <div class="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                                    <i class="fas fa-bug text-orange-600"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">{{ scan.image_name }}</div>
+                                            <div class="text-sm text-gray-500 capitalize">{{ scan.type }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ scan.primary_class }}</div>
+                                    {% if scan.secondary_class %}
+                                    <div class="text-sm text-gray-500">{{ scan.secondary_class }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if scan.primary_confidence > 0.8 %}bg-green-100 text-green-800
+                                        {% elif scan.primary_confidence > 0.6 %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ scan.primary_confidence|floatformat:1 }}%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ scan.timestamp|date:"M d, Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="viewDetails('{{ scan.id }}')" class="text-blue-600 hover:text-blue-900">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-history text-gray-400 text-6xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Scan History</h3>
+                        <p class="text-gray-500 mb-6">You haven't performed any scans yet.</p>
+                        <div class="space-x-4">
+                            <a href="{% url 'scan_upload' 'disease' %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
+                                <i class="fas fa-virus mr-2"></i>Scan for Disease
+                            </a>
+                            <a href="{% url 'scan_upload' 'pest' %}" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm">
+                                <i class="fas fa-bug mr-2"></i>Scan for Pest
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Pagination -->
+                {% if scans.has_other_pages %}
+                <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        {% if scans.has_previous %}
+                            <a href="?page={{ scans.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Previous
+                            </a>
+                        {% endif %}
+                        {% if scans.has_next %}
+                            <a href="?page={{ scans.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                Next
+                            </a>
+                        {% endif %}
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing <span class="font-medium">{{ scans.start_index }}</span> to <span class="font-medium">{{ scans.end_index }}</span> of <span class="font-medium">{{ scans.paginator.count }}</span> results
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                {% if scans.has_previous %}
+                                    <a href="?page={{ scans.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                {% for num in scans.paginator.page_range %}
+                                    {% if scans.number == num %}
+                                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                            {{ num }}
+                                        </span>
+                                    {% else %}
+                                        <a href="?page={{ num }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                            {{ num }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if scans.has_next %}
+                                    <a href="?page={{ scans.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium">Scan Details</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="modalContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function viewDetails(scanId) {
+            fetch(`/scan-details/${scanId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const content = `
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Image Name</label>
+                                    <p class="text-sm text-gray-900">${data.image_name}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                                    <p class="text-sm text-gray-900 capitalize">${data.type}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Primary Classification</label>
+                                    <p class="text-sm text-gray-900">${data.primary_class}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Primary Confidence</label>
+                                    <p class="text-sm text-gray-900">${data.primary_confidence.toFixed(1)}%</p>
+                                </div>
+                                ${data.secondary_class ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Secondary Classification</label>
+                                    <p class="text-sm text-gray-900">${data.secondary_class}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Secondary Confidence</label>
+                                    <p class="text-sm text-gray-900">${data.secondary_confidence.toFixed(1)}%</p>
+                                </div>
+                                ` : ''}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Scan Date</label>
+                                    <p class="text-sm text-gray-900">${data.timestamp}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('modalContent').innerHTML = content;
+                    document.getElementById('detailsModal').classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load scan details');
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').classList.add('hidden');
+        }
+
+        function toggleHistory() {
+            fetch('{% url "toggle_user_history" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '{% url "user_dashboard" %}';
+                } else {
+                    alert('Failed to toggle history visibility');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to toggle history visibility');
+            });
+        }
+    </script>
+</body>
+</html>

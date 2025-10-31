@@ -1,0 +1,380 @@
+{% extends 'user/userdashboard.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CacaoGuard - Scan & Diagnose</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .image-preview-container {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .image-preview-container:hover {
+            transform: scale(1.02);
+        }
+        .modal-image {
+            max-height: 80vh;
+            max-width: 90vw;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<!-- Enhanced Header with Gradient -->
+<div class="mb-8 p-8 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-600 border-l-4 border-emerald-800 rounded-2xl shadow-2xl">
+  <h2 class="text-3xl font-extrabold text-white flex items-center mb-3">
+    <div class="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl mr-5 animate-pulse">
+      <i class="fas fa-microscope text-white text-4xl"></i>
+    </div>
+    <div>
+      <div>Scan & Diagnose</div>
+      <p class="text-sm font-normal text-emerald-50 mt-1">AI-Powered Cacao Disease & Pest Detection</p>
+    </div>
+  </h2>
+  <p class="text-white/90 leading-relaxed ml-24">
+    Upload images of cacao fruits from Oriental Mindoro for instant disease and pest analysis
+  </p>
+</div>
+
+<!-- Two Separate Upload Interfaces -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    
+    <!-- Disease Detection Interface -->
+    <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-amber-100">
+        <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-6 py-5">
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-virus mr-3 text-3xl"></i>
+                Disease Detection
+            </h3>
+            <p class="text-amber-50 mt-2 text-sm">Upload cacao fruit image to detect diseases</p>
+        </div>
+        <div class="p-6">
+            <div id="diseaseUploadSection" class="text-center">
+                <div class="border-2 border-dashed border-amber-300 rounded-xl p-8 hover:border-amber-500 transition-all bg-gradient-to-br from-amber-50 to-orange-50 hover:shadow-lg">
+                    <div class="space-y-4">
+                        <div class="mx-auto h-20 w-20 text-amber-500">
+                            <i class="fas fa-cloud-upload-alt text-5xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold text-amber-900">Upload Disease Image</h4>
+                            <p class="text-amber-700 text-sm mt-1">Drag and drop or click to select</p>
+                        </div>
+                        <div>
+                            <input type="file" id="diseaseImageInput" accept="image/*" class="hidden">
+                            <button onclick="document.getElementById('diseaseImageInput').click()"
+                                     class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all">
+                                <i class="fas fa-camera mr-2"></i>Choose Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disease Preview Section -->
+            <div id="diseasePreviewSection" class="hidden mt-4">
+                <div class="border-2 border-amber-200 rounded-xl overflow-hidden shadow-lg image-preview-container" onclick="viewFullImage('disease')">
+                    <img id="diseaseImagePreview" class="w-full h-64 object-contain bg-gray-50" alt="Disease preview">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
+                        <i class="fas fa-search-plus text-white text-3xl opacity-0 hover:opacity-100 transition-opacity"></i>
+                    </div>
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>Click image to view full size
+                </p>
+                <div class="mt-4 flex space-x-3">
+                    <button id="diseaseAnalyzeBtn" onclick="analyzeImage('disease')"
+                             class="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
+                        <i class="fas fa-search mr-2"></i>Analyze Disease
+                    </button>
+                    <button onclick="resetUpload('disease')"
+                             class="px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all">
+                        <i class="fas fa-redo mr-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Disease Results -->
+            <div id="diseaseResultsSection" class="hidden mt-4">
+                <div id="diseaseResultsContent" class="space-y-3">
+                    <!-- Disease results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pest Detection Interface -->
+    <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-green-100">
+        <div class="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 px-6 py-5">
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-bug mr-3 text-3xl"></i>
+                Pest Detection
+            </h3>
+            <p class="text-green-50 mt-2 text-sm">Upload cacao fruit image to detect pests</p>
+        </div>
+        <div class="p-6">
+            <div id="pestUploadSection" class="text-center">
+                <div class="border-2 border-dashed border-green-300 rounded-xl p-8 hover:border-green-500 transition-all bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-lg">
+                    <div class="space-y-4">
+                        <div class="mx-auto h-20 w-20 text-green-500">
+                            <i class="fas fa-cloud-upload-alt text-5xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold text-green-900">Upload Pest Image</h4>
+                            <p class="text-green-700 text-sm mt-1">Drag and drop or click to select</p>
+                        </div>
+                        <div>
+                            <input type="file" id="pestImageInput" accept="image/*" class="hidden">
+                            <button onclick="document.getElementById('pestImageInput').click()"
+                                     class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all">
+                                <i class="fas fa-camera mr-2"></i>Choose Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pest Preview Section -->
+            <div id="pestPreviewSection" class="hidden mt-4">
+                <div class="border-2 border-green-200 rounded-xl overflow-hidden shadow-lg image-preview-container" onclick="viewFullImage('pest')">
+                    <img id="pestImagePreview" class="w-full h-64 object-contain bg-gray-50" alt="Pest preview">
+                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
+                        <i class="fas fa-search-plus text-white text-3xl opacity-0 hover:opacity-100 transition-opacity"></i>
+                    </div>
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>Click image to view full size
+                </p>
+                <div class="mt-4 flex space-x-3">
+                    <button id="pestAnalyzeBtn" onclick="analyzeImage('pest')"
+                             class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
+                        <i class="fas fa-search mr-2"></i>Analyze Pest
+                    </button>
+                    <button onclick="resetUpload('pest')"
+                             class="px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all">
+                        <i class="fas fa-redo mr-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pest Results -->
+            <div id="pestResultsSection" class="hidden mt-4">
+                <div id="pestResultsContent" class="space-y-3">
+                    <!-- Pest results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Section (Shared) -->
+<div id="loadingSection" class="hidden text-center py-8 bg-white rounded-2xl shadow-xl mb-6">
+    <div class="inline-flex items-center px-6 py-3 font-semibold leading-6 text-sm shadow-lg rounded-xl text-white bg-gradient-to-r from-emerald-500 to-teal-500">
+        <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Analyzing image with AI...
+    </div>
+    <p class="text-gray-500 mt-3 text-sm">This may take a few seconds</p>
+</div>
+
+<!-- Image Full View Modal -->
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-90 hidden z-50 flex items-center justify-center p-4" onclick="closeImageModal()">
+    <div class="relative max-w-7xl max-h-screen">
+        <button onclick="closeImageModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-4xl font-bold">
+            <i class="fas fa-times-circle"></i>
+        </button>
+        <img id="modalImage" class="modal-image rounded-lg shadow-2xl" alt="Full size preview">
+        <p class="text-white text-center mt-4 text-sm">
+            <i class="fas fa-info-circle mr-1"></i>Click anywhere to close
+        </p>
+    </div>
+</div>
+
+<!-- History Section (Toggleable) -->
+<div class="bg-white shadow-2xl rounded-2xl overflow-hidden mb-6 border border-blue-100">
+    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 flex justify-between items-center">
+        <div>
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-history mr-3 text-3xl"></i>
+                Scan History
+            </h3>
+            <p class="text-blue-50 mt-2 text-sm">View your previous scan results</p>
+        </div>
+        <button id="toggleHistoryBtn" onclick="toggleHistory()"
+                 class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-5 py-3 rounded-xl font-semibold shadow-lg transition-all">
+            <i class="fas fa-eye mr-2" id="historyToggleIcon"></i>
+            <span id="historyToggleText">Show History</span>
+        </button>
+    </div>
+
+    <!-- History Content (Initially Hidden) -->
+    <div id="historyContent" class="hidden">
+        <!-- History Filters -->
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+            <div class="flex flex-wrap gap-3 items-center">
+                <select id="historyTypeFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <option value="all">All Types</option>
+                    <option value="disease">Disease Only</option>
+                    <option value="pest">Pest Only</option>
+                </select>
+                <select id="historyResultFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <option value="all">All Results</option>
+                    <option value="healthy">Healthy Only</option>
+                    <option value="issues">Issues Only</option>
+                </select>
+                <input type="date" id="historyDateFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                <button onclick="applyHistoryFilters()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm hover:from-blue-700 hover:to-indigo-700 font-semibold shadow-md">
+                    <i class="fas fa-filter mr-2"></i>Filter
+                </button>
+                <button onclick="clearHistoryFilters()" class="px-5 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-400 font-semibold">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- History List -->
+        <div class="p-6">
+            <div id="historyList" class="space-y-4">
+                <!-- History items will be loaded here -->
+            </div>
+            <div id="historyLoading" class="text-center py-8 hidden">
+                <i class="fas fa-spinner fa-spin text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-500">Loading scan history...</p>
+            </div>
+            <div id="historyEmpty" class="text-center py-12 hidden">
+                <i class="fas fa-history text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg font-medium">No scan history found</p>
+                <p class="text-gray-400 text-sm mt-2">Start by uploading an image above</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Details Modal -->
+<div id="scanDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-screen overflow-y-auto shadow-2xl">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold text-gray-900">Scan Details</h3>
+                    <button onclick="closeScanDetails()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+                <div id="scanDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tips Section -->
+<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 shadow-lg">
+    <h3 class="text-xl font-bold text-blue-900 mb-4 flex items-center">
+        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+            <i class="fas fa-lightbulb text-white text-lg"></i>
+        </div>
+        Tips for Better Results
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ul class="space-y-3 text-blue-900">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Ensure good lighting when taking photos</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Focus on the cacao fruit/pod clearly</span>
+            </li>
+        </ul>
+        <ul class="space-y-3 text-blue-900">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Avoid blurry or distant images</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Include the affected area in the frame</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    let selectedFiles = {
+        disease: null,
+        pest: null
+    };
+    let allScanHistory = [];
+    let analyzedImages = {}; // Store analyzed results by image hash
+
+    // Setup file inputs for both types
+    document.getElementById('diseaseImageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFiles.disease = file;
+            previewImage(file, 'disease');
+        }
+    });
+
+    document.getElementById('pestImageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFiles.pest = file;
+            previewImage(file, 'pest');
+        }
+    });
+
+    function previewImage(file, type) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(type + 'ImagePreview').src = e.target.result;
+            document.getElementById(type + 'UploadSection').classList.add('hidden');
+            document.getElementById(type + 'PreviewSection').classList.remove('hidden');
+            document.getElementById(type + 'ResultsSection').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function viewFullImage(type) {
+        const imgSrc = document.getElementById(type + 'ImagePreview').src;
+        document.getElementById('modalImage').src = imgSrc;
+        document.getElementById('imageModal').classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+    }
+
+    function resetUpload(type) {
+        selectedFiles[type] = null;
+        document.getElementById(type + 'UploadSection').classList.remove('hidden');
+        document.getElementById(type + 'PreviewSection').classList.add('hidden');
+        document.getElementById(type + 'ResultsSection').classList.add('hidden');
+        document.getElementById(type + 'ImageInput').value = '';
+    }
+
+    async function analyzeImage(type) {
+        if (!selectedFiles[type]) return;
+
+        // Show loading
+        document.getElementById('loadingSection').classList.remove('hidden');
+        document.getElementById(type + 'AnalyzeBtn').disabled = true;
+
+        const formData = new FormData();
+        formData.append('image', selectedFiles[type]);
+        formData.append('scan_type', type);
+
+        try {
+            const response = await fetch('{% url "scan_image" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('cs

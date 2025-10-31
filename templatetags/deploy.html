@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Deployment Guide</title>
+    <style>
+        :root {
+            --primary: #092e20;
+            --secondary: #0c4b33;
+            --accent: #198754;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --code-bg: #f5f5f5;
+            --border: #dee2e6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo span {
+            color: var(--accent);
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+        
+        .hero {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .content {
+            padding: 3rem 0;
+        }
+        
+        .section {
+            margin-bottom: 3rem;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent);
+        }
+        
+        .section h3 {
+            color: var(--secondary);
+            margin: 1.5rem 0 1rem;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-top: 4px solid var(--accent);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        pre {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--accent);
+        }
+        
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+        
+        .checklist {
+            list-style-type: none;
+        }
+        
+        .checklist li {
+            margin-bottom: 0.8rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .checklist li:before {
+            content: "✓";
+            color: var(--accent);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        .deployment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .option {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .option:hover {
+            transform: translateY(-5px);
+        }
+        
+        .option h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        .option-icon {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+        
+        footer {
+            background-color: var(--primary);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">Django<span>Deploy</span></div>
+                <ul class="nav-links">
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#wsgi">WSGI</a></li>
+                    <li><a href="#asgi">ASGI</a></li>
+                    <li><a href="#checklist">Checklist</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <section class="hero">
+        <div class="container">
+            <h1>Django Deployment Guide</h1>
+            <p>Learn how to deploy your Django application to production with various server options and best practices.</p>
+        </div>
+    </section>
+    
+    <section class="content container">
+        <div class="section" id="overview">
+            <h2>Django Deployment Overview</h2>
+            <p>Django is a high-level Python web framework that enables rapid development of secure and maintainable websites. However, deploying Django applications to production requires careful consideration of several factors.</p>
+            
+            <p>Unlike the development server (<code>manage.py runserver</code>), which is not suitable for production, a production deployment requires:</p>
+            
+            <ul class="checklist">
+                <li>A dedicated web server (like Nginx or Apache)</li>
+                <li>An application server (like Gunicorn or uWSGI for WSGI, or Daphne for ASGI)</li>
+                <li>Proper configuration for static and media files</li>
+                <li>Environment-specific settings</li>
+                <li>Security considerations (HTTPS, secret key management, etc.)</li>
+            </ul>
+            
+            <div class="deployment-options">
+                <div class="option">
+                    <div class="option-icon">🐍</div>
+                    <h3>WSGI Deployment</h3>
+                    <p>Traditional synchronous deployment using WSGI servers like Gunicorn or uWSGI.</p>
+                </div>
+                <div class="option">
+                    <div class="option-icon">⚡</div>
+                    <h3>ASGI Deployment</h3>
+                    <p>Asynchronous deployment using ASGI servers for real-time capabilities.</p>
+                </div>
+                <div class="option">
+                    <div class="option-icon">☁️</div>
+                    <h3>Platform as a Service</h3>
+                    <p>Deploy to platforms like Heroku, PythonAnywhere, or DigitalOcean App Platform.</p>
+                </div>
+                <div class="option">
+                    <div class="option-icon">🐳</div>
+                    <h3>Containerization</h3>
+                    <p>Use Docker containers for consistent deployment across environments.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section" id="wsgi">
+            <h2>WSGI Deployment</h2>
+            <p>WSGI (Web Server Gateway Interface) is the traditional Python standard for synchronous web applications. Most Django deployments use WSGI.</p>
+            
+            <h3>Using Gunicorn</h3>
+            <p>Gunicorn (Green Unicorn) is a popular WSGI HTTP Server for UNIX.</p>
+            
+            <pre><code># Install Gunicorn
+pip install gunicorn
+
+# Run your Django project with Gunicorn
+gunicorn myproject.wsgi:application
+
+# With specific settings and workers
+gunicorn myproject.wsgi:application --bind 0.0.0.0:8000 --workers 3 --env DJANGO_SETTINGS_MODULE=myproject.settings.production</code></pre>
+            
+            <h3>Using uWSGI</h3>
+            <p>uWSGI is a full stack for building hosting services, known for its performance.</p>
+            
+            <pre><code># Install uWSGI
+pip install uwsgi
+
+# Run with uWSGI
+uwsgi --http :8000 --module myproject.wsgi --master --processes 4 --threads 2</code></pre>
+            
+            <h3>Example Nginx Configuration</h3>
+            <p>Nginx is often used as a reverse proxy in front of WSGI servers.</p>
+            
+            <pre><code># /etc/nginx/sites-available/myproject
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /static/ {
+        alias /path/to/your/static/files/;
+        expires 30d;
+    }
+
+    location /media/ {
+        alias /path/to/your/media/files/;
+        expires 30d;
+    }
+}</code></pre>
+        </div>
+        
+        <div class="section" id="asgi">
+            <h2>ASGI Deployment</h2>
+            <p>ASGI (Asynchronous Server Gateway Interface) is the emerging standard for asynchronous Python web applications and supports WebSockets.</p>
+            
+            <h3>Using Daphne</h3>
+            <p>Daphne is a HTTP, HTTP2 and WebSocket protocol server for ASGI.</p>
+            
+            <pre><code># Install Daphne
+pip install daphne
+
+# Run with Daphne
+daphne -b 0.0.0.0 -p 8000 myproject.asgi:application</code></pre>
+            
+            <h3>Using Uvicorn with Gunicorn</h3>
+            <p>Uvicorn is a lightning-fast ASGI server implementation, using uvloop and httptools.</p>
+            
+            <pre><code># Install Uvicorn and Gunicorn
+pip install uvicorn gunicorn
+
+# Run with Gunicorn and Uvicorn workers
+gunicorn myproject.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000</code></pre>
+            
+            <h3>Example ASGI Application</h3>
+            <p>Ensure your project has an asgi.py file configured correctly.</p>
+            
+            <pre><code># myproject/asgi.py
+import os
+from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+import myapp.routing
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+
+application = ProtocolTypeRouter({
+    "http": get_asgi_application(),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            myapp.routing.websocket_urlpatterns
+        )
+    ),
+})</code></pre>
+        </div>
+        
+        <div class="section" id="checklist">
+            <h2>Deployment Checklist</h2>
+            <p>Before deploying your Django application to production, run through this checklist to ensure your configuration is secure and optimized.</p>
+            
+            <div class="card-container">
+                <div class="card">
+                    <h3>Security Settings</h3>
+                    <ul class="checklist">
+                        <li>Set DEBUG = False</li>
+                        <li>Set a unique SECRET_KEY</li>
+                        <li>Configure ALLOWED_HOSTS properly</li>
+                        <li>Use HTTPS and redirect HTTP to HTTPS</li>
+                        <li>Set secure cookie settings</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h3>Performance</h3>
+                    <ul class="checklist">
+                        <li>Set up caching</li>
+                        <li>Configure database connection pooling</li>
+                        <li>Compress static files</li>
+                        <li>Optimize database queries</li>
+                        <li>Use a CDN for static files</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h3>Monitoring</h3>
+                    <ul class="checklist">
+                        <li>Set up error reporting</li>
+                        <li>Configure logging</li>
+                        <li>Monitor performance metrics</li>
+                        <li>Set up health checks</li>
+                        <li>Implement backup strategy</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>Run Deployment Checks</h3>
+            <p>Django includes a system check framework specifically for deployment:</p>
+            
+            <pre><code>python manage.py check --deploy</code></pre>
+            
+            <p>This command will check your settings for common deployment issues and provide recommendations.</p>
+        </div>
+    </section>
+    
+    <footer>
+        <div class="container">
+            <p>Django Deployment Guide | Based on Django 5.2 Documentation</p>
+            <p>Remember to always test your deployment in a staging environment before going live.</p>
+        </div>
+    </footer>
+</body>
+</html>

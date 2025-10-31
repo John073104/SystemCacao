@@ -1,0 +1,172 @@
+    "apiKey": "AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4",
+    "authDomain": "systemcacao.firebaseapp.com",
+    "databaseURL": "https://systemcacao-default-rtdb.firebaseio.com",
+    "projectId": "systemcacao",
+    "storageBucket": "systemcacao.appspot.com",
+    "messagingSenderId": "35186667542",
+    "appId": "1:35186667542:web:14fcda24f86fee52f60537"
+
+    Ctrl Shift I Alt A
+
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    def login_view(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        password = request.POST['password']
+
+        try:
+            # Sign in with Firebase REST API
+            api_key = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
+            payload = {
+                'email': email,
+                'password': password,
+                'returnSecureToken': True
+            }
+            r = requests.post(
+                f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}',
+                data=payload
+            )
+            r.raise_for_status()
+            res = r.json()
+            id_token = res['idToken']
+            decoded_token = auth.verify_id_token(id_token)
+            uid = decoded_token['uid']
+         
+            is_admin = decoded_token.get('admin') == True  
+
+            request.session['uid'] = uid
+            request.session['role'] = 'admin' if is_admin else 'user'
+
+            role = 'admin' if is_admin else 'user'
+            token = jwt.encode({'uid': uid, 'role': role}, SECRET_KEY, algorithm='HS256')
+
+            redirect_url = 'admin_dashboard' if is_admin else 'base'
+            response = redirect(redirect_url)
+            response.set_cookie('session', token)  
+
+            return response
+
+        except requests.exceptions.HTTPError:
+            messages.error(request, 'Invalid credentials')
+        except Exception as e:
+            messages.error(request, f'Login failed: {e}')
+
+    return render(request, 'accounts/login.html')
+
+
+def signup_view(request):
+    if request.method == "POST":
+        email = request.POST['email']
+        password = request.POST['password']
+        name = request.POST['name']
+
+        try:
+            user = auth.create_user_with_email_and_password(email, password)
+            uid = user['localId']
+
+            # Set default role to 'user'. You can customize this.
+            role = 'user'
+            db.child("users").child(uid).set({
+                "email": email,
+                "name": name,
+                "role": role
+            })
+
+            messages.success(request, "You are registered, you can sign in.")
+            return redirect('login')
+        except Exception as e:
+            print("Signup error:", e)
+            messages.error(request, "Signup failed. Please try again.")
+            return redirect('signup')
+
+    return render(request, "accounts/signup.html")
+
+
+/////
+Admin create_user_with_email_and_password
+
+✅ Step-by-Step Guide to Add an Admin in Firestore
+🔧 1. Manually Add Admin in Firestore Console
+Go to Firebase Console
+
+Open your project
+
+Go to Firestore Database
+
+Click "Start collection" (if you haven’t already created users)
+
+Collection ID: users
+
+Add a document manually:
+
+Document ID: use Firebase Auth UID of the admin (you'll need to get this from Firebase Authentication)
+
+Fields:
+
+name: "Admin Name"
+
+email: "admin@example.com"
+
+role: "admin"
+
+🔑 You must match the UID from Firebase Authentication so when they log in, you can fetch their role from Firestore.
+
+🧠 2. How to Get the UID of a User
+If the admin already exists in Authentication:
+
+Go to Firebase Console → Authentication
+
+Find the user (admin) by email
+
+Copy their UID
+
+If the admin does not exist:
+
+Manually create a user via Authentication > Add User
+
+Or register from your frontend
+
+Then use their UID to create a document in the users collection
+
+🧩 3. Example Firestore Document Structure
+Collection: users
+Document ID: P0xZ3rEXAMPLEuId
+
+json
+Copy
+Edit
+{
+  "name": "Velzard Admin",
+  "email": "admin@example.com",
+  "role": "admin"
+}
+
+
+
+system tme
+    <!-- Header -->
+            <div class="glass-card p-6 rounded-2xl shadow-lg mb-8 animate-fade-in">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 icon-gradient-3 rounded-2xl flex items-center justify-center animate-float">
+                            <i class="fas fa-leaf text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold gradient-text">CacaoGuard Admin</h1>
+                            <p class="text-gray-600">Agricultural Management Dashboard</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                            <i class="fas fa-circle text-green-500 mr-1"></i>
+                            System Online
+                        </span>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500" id="current-time"></p>
+                            <p class="text-xs text-gray-400">Philippines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>

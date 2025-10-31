@@ -1,0 +1,215 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enhanced Sidebar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+
+    .sidebar-gradient {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    }
+
+    .nav-item {
+      transition: background 0.3s ease;
+    }
+
+    .nav-item:hover:not(.active) {
+      background: rgba(59, 130, 246, 0.1); /* light blue hover */
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+      border-left: 3px solid #3b82f6;
+    }
+
+    .icon-wrapper {
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .nav-item:hover .icon-wrapper {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
+    }
+
+    .scrollbar-thin {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+
+    .profile-avatar {
+      background: linear-gradient(135deg, #f59e0b, #d946ef);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .feature-badge {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+  </style>
+</head>
+
+<body class="p-8">
+
+<div class="w-72 sidebar-gradient text-white shadow-2xl rounded-2xl overflow-hidden h-screen relative">
+
+  <!-- Profile Header -->
+<div>
+  <div class="p-6 border-b border-gray-300">
+    <div class="flex items-center space-x-4">
+
+      <!-- Logo with soft bounce -->
+      <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center animate-softbounce">
+        <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
+      </div>
+
+      <!-- Text with blue gradient and soft bounce -->
+      <div class="animate-softbounce">
+        <h3 class="font-bold text-lg bg-gradient-to-r from-sky-400 to-blue-600 bg-clip-text text-transparent">
+          CacaoGuard
+        </h3>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-gray-300">Administrator</span>
+          <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  <!-- Welcome -->
+  {% if request.session.name %}
+  <div class="px-4 mt-4">
+    <div class="flex items-center p-3 rounded-xl bg-white/10 text-white">
+      <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg bg-white/10">
+        {% if request.session.role == "admin" %}
+          <i class="fas fa-user-shield text-yellow-300 text-lg"></i>
+        {% else %}
+          <i class="fas fa-smile-beam text-green-300 text-lg"></i>
+        {% endif %}
+      </div>
+      <div class="flex-1">
+        <h4 class="text-sm font-semibold">Welcome back</h4>
+        <p class="text-xs text-gray-300">{{ request.session.name }}!</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  <!-- Navigation -->
+  <div class="px-4 pb-20 overflow-y-auto flex-1 scrollbar-thin mt-4">
+    
+
+    <nav class="space-y-2">
+
+      <a href="{% url 'admin_dashboard' %}" class="block hover:no-underline">
+        <div class="nav-item {% if request.path == '/admin/dashboard/' %}active{% endif %} flex items-center p-3 rounded-xl cursor-pointer group">
+          <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+            <i class="fas fa-chart-pie text-blue-400 text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold group-hover:text-white">Dashboard</h4>
+            <p class="text-xs text-gray-300 group-hover:text-gray-100">System Overview</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'image_analysis' %}" class="block hover:no-underline">
+        <div class="nav-item {% if request.path == '/admin/image-analysis/' %}active{% endif %} flex items-center p-3 rounded-xl cursor-pointer group">
+          <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+            <i class="fas fa-microscope text-emerald-400 text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold group-hover:text-white">Image Analysis</h4>
+            <p class="text-xs text-gray-300 group-hover:text-gray-100">AI Disease Detection</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'admin_ecommerce' %}" class="block hover:no-underline">
+        <div class="nav-item {% if request.path == '/admin/ecommerce/' %}active{% endif %} flex items-center p-3 rounded-xl cursor-pointer group">
+          <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+            <i class="fas fa-store text-amber-400 text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold group-hover:text-white">E-commerce Hub</h4>
+            <p class="text-xs text-gray-300 group-hover:text-gray-100">Products & Orders</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'farm_location' %}" class="block hover:no-underline">
+        <div class="nav-item {% if request.path == '/admin/farm-location/' %}active{% endif %} flex items-center p-3 rounded-xl cursor-pointer group">
+          <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+            <i class="fas fa-map-marked-alt text-cyan-400 text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold group-hover:text-white">Farm Mapping</h4>
+            <p class="text-xs text-gray-300 group-hover:text-gray-100">Geographic Analytics</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="{% url 'admin_user_management' %}" class="block hover:no-underline">
+        <div class="nav-item {% if request.path == '/admin/user-management/' %}active{% endif %} flex items-center p-3 rounded-xl cursor-pointer group">
+          <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+            <i class="fas fa-users-cog text-purple-400 text-lg"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold group-hover:text-white">User Management</h4>
+            <p class="text-xs text-gray-300 group-hover:text-gray-100">Manage Users</p>
+          </div>
+        </div>
+      </a>
+
+    </nav>
+  </div>
+
+  <!-- Logout -->
+  <div class="absolute bottom-0 w-full p-4 border-t border-white/10 bg-slate-900/50">
+    <a href="{% url 'logout' %}" onclick="return confirm('Are you sure you want to log out?')" class="w-full block hover:no-underline">
+      <div class="nav-item flex items-center p-3 rounded-xl cursor-pointer group hover:bg-red-500/10">
+        <div class="icon-wrapper w-10 h-10 mr-4 flex items-center justify-center rounded-lg">
+          <i class="fas fa-sign-out-alt text-red-400 text-lg"></i>
+        </div>
+        <div class="flex-1 text-left">
+          <h4 class="text-sm font-semibold group-hover:text-white">Log Out</h4>
+          <p class="text-xs text-gray-300 group-hover:text-gray-100">End Session</p>
+        </div>
+        <i class="fas fa-chevron-right text-gray-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+      </div>
+    </a>
+  </div>
+</div>
+</body>
+</html>

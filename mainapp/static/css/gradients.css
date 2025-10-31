@@ -1,0 +1,91 @@
+/* Gradient Header Styles for Different User Types */
+
+/* Admin Header - Orange Gradient */
+.admin-header-gradient {
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 25%, #ff8c00 50%, #ffa500 75%, #ffb347 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+}
+
+.admin-header-gradient:hover {
+    background: linear-gradient(135deg, #ff8c00 0%, #ffa500 25%, #ffb347 50%, #ff6b35 75%, #f7931e 100%);
+}
+
+/* User Header - Green Gradient */
+.user-header-gradient {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 25%, #16a085 50%, #1abc9c 75%, #48c9b0 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+}
+
+.user-header-gradient:hover {
+    background: linear-gradient(135deg, #1abc9c 0%, #48c9b0 25%, #2ecc71 50%, #27ae60 75%, #16a085 100%);
+}
+
+/* Guest Header - Brown Gradient */
+.guest-header-gradient {
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 25%, #cd853f 50%, #d2691e 75%, #daa520 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+}
+
+.guest-header-gradient:hover {
+    background: linear-gradient(135deg, #daa520 0%, #8b4513 25%, #a0522d 50%, #cd853f 75%, #d2691e 100%);
+}
+
+/* Animation for gradient movement */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Additional styling for better contrast */
+.admin-header-gradient,
+.user-header-gradient,
+.guest-header-gradient {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.admin-header-gradient:hover,
+.user-header-gradient:hover,
+.guest-header-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Button styles within headers */
+.admin-header-gradient button,
+.user-header-gradient button,
+.guest-header-gradient button {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.admin-header-gradient button:hover,
+.user-header-gradient button:hover,
+.guest-header-gradient button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Icon styles */
+.admin-header-gradient i,
+.user-header-gradient i,
+.guest-header-gradient i {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}

@@ -1,0 +1,283 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+
+    <div class="bg-white shadow-lg rounded-lg p-6 w-96 text-center">
+        <h2 class="text-2xl font-bold text-gray-700">User Dashboard</h2>
+        <p class="text-gray-500 mt-2">Welcome, <span class="font-semibold text-blue-600">{{ user.email }}</span>!</p>
+        
+        <button onclick="confirmLogout()" 
+            class="mt-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded">
+            Logout
+        </button>
+    </div>
+
+    <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = "{% url 'logout' %}";
+            }
+        }
+    </script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cacao Farm Management Dashboard - Manage your farm, scan plants, and trade in the marketplace">
+    <meta name="keywords" content="cacao, farm management, plant scanning, marketplace, agriculture">
+    <meta property="og:title" content="Cacao Farm Management Dashboard">
+    <meta property="og:description" content="Comprehensive dashboard for cacao farmers to manage farms, diagnose plants, and trade products">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cacao Farm Management Dashboard">
+    <meta name="twitter:description" content="Comprehensive dashboard for cacao farmers to manage farms, diagnose plants, and trade products">
+    <title>User Dashboard - Cacao Farm Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div id="root" class="flex">
+        <div class="sidebar w-64 bg-green-800 text-white fixed h-full flex flex-col">
+            <div class="sidebar-logo p-4 border-b border-green-700 flex items-center">
+                <img src="hero.png" alt="CacaoGuard Logo" class="w-8 h-8 mr-2">
+                <h1 class="text-xl font-bold">CacaoGuard</h1>
+            </div>
+            <div class="welcome-user p-4 bg-green-700 mb-2">
+                <h2 class="text-lg">Welcome, User</h2>
+            </div>
+            <nav class="nav-section flex-grow overflow-y-auto flex flex-col items-center">
+                <div class="nav-item w-full text-center p-4 hover:bg-green-600 cursor-pointer flex items-center justify-center" onclick="navigate('dashboard')">
+                    <i class="nav-icon fas fa-chart-line mr-2"></i> Dashboard
+                </div>
+                <div class="nav-item w-full text-center p-4 hover:bg-green-600 cursor-pointer flex items-center justify-center" onclick="navigate('scan')">
+                    <i class="nav-icon fas fa-camera mr-2"></i> Scan & Diagnose
+                </div>
+                <div class="nav-item w-full text-center p-4 hover:bg-green-600 cursor-pointer flex items-center justify-center" onclick="navigate('marketplace')">
+                    <i class="nav-icon fas fa-store mr-2"></i> Marketplace
+                </div>
+                <div class="nav-item w-full text-center p-4 hover:bg-green-600 cursor-pointer flex items-center justify-center" onclick="navigate('farm')">
+                    <i class="nav-icon fas fa-map-location-dot mr-2"></i> My Farm Mapping
+                </div>
+                <div class="nav-item w-full text-center p-4 hover:bg-green-600 cursor-pointer flex items-center justify-center" onclick="navigate('account')">
+                    <i class="nav-icon fas fa-user mr-2"></i> Account & Orders
+                </div>
+            </nav>
+            <div class="system-logs p-4 border-t border-green-700">
+                <p class="text-sm">System Logs</p>
+                <p class="text-xs">Last updated: 2 mins ago</p>
+            </div>
+            <div onclick="confirmLogout()" class="logout-button p-4 cursor-pointer hover:bg-green-600" onclick="console.log('Logout clicked')">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </div>
+        </div>
+
+        <div class="flex-1 ml-64">
+            <div class="top-nav fixed right-0 top-0 left-64 h-16 bg-white border-b border-gray-300 flex items-center justify-between px-4 z-10">
+                <div class="search-bar flex items-center bg-gray-200 rounded-lg p-2">
+                    <i class="fas fa-search text-gray-400 mr-2"></i>
+                    <input type="text" placeholder="Search..." class="bg-transparent outline-none flex-1">
+                </div>
+                <div class="user-menu flex items-center gap-4">
+                    <i class="fas fa-bell text-gray-600 text-xl"></i>
+                    <i class="fas fa-cog text-gray-600 text-xl"></i>
+                    <img src="https://ui-avatars.com/api/?name=User  " alt="Profile" class="w-8 h-8 rounded-full">
+                </div>
+            </div>
+
+            <main class="content-area mt-16 p-6 min-h-screen">
+                <div id="content">
+                    <!-- Default content (Dashboard) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-name="dashboard-stats">
+                        <div class="card bg-white rounded-lg shadow p-4">
+                            <h3 class="text-lg font-semibold mb-2">Image Uploads</h3>
+                            <p class="text-3xl font-bold text-green-600">24</p>
+                            <p class="text-gray-600">Total scanned images</p>
+                        </div>
+                        <div class="card bg-white rounded-lg shadow p-4">
+                            <h3 class="text-lg font-semibold mb-2">Purchases</h3>
+                            <p class="text-3xl font-bold text-blue-600">12</p>
+                            <p class="text-gray-600">Items bought</p>
+                        </div>
+                        <div class="card bg-white rounded-lg shadow p-4">
+                            <h3 class="text-lg font-semibold mb-2">Farm Size</h3>
+                            <p class="text-3xl font-bold text-purple-600">5.2</p>
+                            <p class="text-gray-600">Hectares</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function navigate(page) {
+            const content = document.getElementById('content');
+            switch (page) {
+                case 'dashboard':
+                    content.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-name="dashboard-stats">
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Image Uploads</h3>
+                                <p class="text-3xl font-bold text-green-600">24</p>
+                                <p class="text-gray-600">Total scanned images</p>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Purchases</h3>
+                                <p class="text-3xl font-bold text-blue-600">12</p>
+                                <p class="text-gray-600">Items bought</p>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Farm Size</h3>
+                                <p class="text-3xl font-bold text-purple-600">5.2</p>
+                                <p class="text-gray-600">Hectares</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'scan':
+                    content.innerHTML = `
+                        <div class="space-y-6 mt-6" data-name="scan-diagnose">
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h2 class="text-xl font-bold mb-4">Scan & Diagnose</h2>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-600">Drag and drop your images here or click to upload</p>
+                                </div>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-4">Scan History</h3>
+                                <p class="text-gray-600">No recent scans</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'marketplace':
+                    content.innerHTML = `
+                        <div class="space-y-6 mt-6" data-name="marketplace">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-xl font-bold">Marketplace</h2>
+                                <button class="bg-green-600 text-white px-4 py-2 rounded-lg">
+                                    <i class="fas fa-plus mr-2"></i> Sell Item
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" data-name="product-grid">
+                                <div class="card bg-white rounded-lg shadow p-4">
+                                    <div class="p-4">
+                                        <h3 class="font-semibold">Organic Cacao Beans</h3>
+                                        <p class="text-gray-600">$24.99/kg</p>
+                                        <div class="mt-4 flex justify-between items-center">
+                                            <span class="text-sm text-gray-500">Stock: 100kg</span>
+                                            <button class="text-green-600 hover:text-green-700">
+                                                <i class="fas fa-shopping-cart mr-1"></i> Add to Cart
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Repeat product cards as needed -->
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'farm':
+                    content.innerHTML = `
+                        <div class="space-y-6 mt-6" data-name="farm-mapping">
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h2 class="text-xl font-bold mb-4">My Farm Location</h2>
+                                <div class="bg-gray-100 h-96 rounded-lg flex items-center justify-center">
+                                    <p class="text-gray-600">
+                                        <i class="fas fa-map-marker-alt text-2xl mb-2"></i>
+                                        <br/>Map will be displayed here
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-4">Farm Details</h3>
+                                <div class="space-y-4">
+                                    <p><strong>Location:</strong> Sample Location</p>
+                                    <p><strong>Total Area:</strong> 5.2 hectares</p>
+                                    <p><strong>Cacao Trees:</strong> 2,500</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'account':
+                    content.innerHTML = `
+                        <div class="space-y-6 mt-6" data-name="account-orders">
+                            <div class="md:col-span-1">
+                                <div class="card bg-white rounded-lg shadow p-4">
+                                    <div class="text-center mb-4">
+                                        <img src="https://ui-avatars.com/api/?name=John+Doe" alt="Profile" class="w-24 h-24 rounded-full mx-auto"/>
+                                        <h2 class="text-xl font-bold mt-4">John Doe</h2>
+                                        <p class="text-gray-600">Cacao Farmer</p>
+                                    </div>
+                                    <div class="border-t pt-4 mt-4">
+                                        <button class="w-full bg-green-600 text-white px-4 py-2 rounded-lg">
+                                            Edit Profile
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <div class="card bg-white rounded-lg shadow p-4">
+                                    <h3 class="text-lg font-semibold mb-4">Recent Orders</h3>
+                                    <div class="space-y-4">
+                                        <div class="border-b pb-4">
+                                            <p class="font-semibold">Order #12345</p>
+                                            <p class="text-gray-600">2 items • $49.98</p>
+                                            <p class="text-green-600">Delivered</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                default:
+                    content.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-name="dashboard-stats">
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Image Uploads</h3>
+                                <p class="text-3xl font-bold text-green-600">24</p>
+                                <p class="text-gray-600">Total scanned images</p>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Purchases</h3>
+                                <p class="text-3xl font-bold text-blue-600">12</p>
+                                <p class="text-gray-600">Items bought</p>
+                            </div>
+                            <div class="card bg-white rounded-lg shadow p-4">
+                                <h3 class="text-lg font-semibold mb-2">Farm Size</h3>
+                                <p class="text-3xl font-bold text-purple-600">5.2</p>
+                                <p class="text-gray-600">Hectares</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        // Initialize with the dashboard content
+        navigate('dashboard');
+    </script>
+       <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = "{% url 'logout' %}";
+            }
+        }
+    </script>
+</body>
+</html>

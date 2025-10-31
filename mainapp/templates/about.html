@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+
+    <!-- Enhanced Features Section -->
+    <div class="py-20 bg-white">
+        <section class="min-h-screen">
+    <!-- Hero Section with Animated Background -->
+    <div class="relative bg-gradient-to-br from-green-50 via-white to-blue-50 overflow-hidden">
+        <!-- Animated Background Elements -->
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute -top-10 -left-10 w-40 h-40 bg-green-200 rounded-full opacity-20 animate-pulse"></div>
+            <div class="absolute top-1/4 right-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 animate-bounce" style="animation-delay: 1s;"></div>
+            <div class="absolute bottom-1/4 left-1/4 w-24 h-24 bg-purple-200 rounded-full opacity-20 animate-pulse" style="animation-delay: 2s;"></div>
+        </div>
+        
+        <!-- Main Hero Content -->
+        <div class="relative z-10 text-center py-20">
+            
+
+            <!-- Logo and Title Section with Enhanced Animation -->
+            <div class="flex flex-col items-center justify-center py-8 animate-slide-up">
+                <div class="relative group">
+                    <div class="absolute -inset-4 bg-gradient-to-r from-green-400 to-blue-400 rounded-full opacity-20 group-hover:opacity-30 transition-opacity duration-300 animate-pulse"></div>
+                    <div class="relative flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                        <div class="h-32 w-32 md:h-36 md:w-36 rounded-full bg-gradient-to-br from-green-100 to-blue-100 flex items-center justify-center shadow-2xl border-4 border-white">
+                            <img alt="CacaoGuard logo" class="h-20 w-20 md:h-24 md:w-24 rounded-full hover:rotate-12 transition-transform duration-500" src="{% static 'images/NOBGHERO.png' %}"/>
+                        </div>
+                        <div class="ml-6">
+                            <span class="text-5xl md:text-6xl font-bold bg-gradient-to-r from-green-700 to-blue-700 bg-clip-text text-transparent">
+                               About CacaoGuard
+                            </span>
+                            <div class="flex items-center justify-center mt-2">
+                                <div class="h-0.5 w-8 bg-green-500"></div>
+                                <div class="h-0.5 w-8 bg-blue-500 ml-1"></div>
+                                <div class="h-0.5 w-8 bg-purple-500 ml-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 max-w-3xl px-4 animate-fade-in-delayed">
+                    <p class="text-2xl md:text-3xl font-medium text-gray-700 mb-4">
+                        Revolutionizing Cacao Farming
+                    </p>
+                    <p class="text-lg md:text-xl text-gray-600 leading-relaxed">
+                        Through advanced AI technology, comprehensive farm management, and direct market access - 
+                        empowering farmers in Oriental Mindoro to achieve sustainable success
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">Our Core Features</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Discover how CacaoGuard transforms traditional farming with cutting-edge technology
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Advanced Detection Card -->
+                <div class="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+                    <div class="relative p-8 text-center">
+                        <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                            <i class="fas fa-microscope text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4 text-gray-800">AI Disease Detection</h3>
+                        <p class="text-gray-600 mb-6 leading-relaxed">
+                            State-of-the-art machine learning algorithms provide instant, accurate detection of cacao diseases and pests with 95%+ accuracy.
+                        </p>
+                        <div class="flex items-center justify-center space-x-2 text-sm text-blue-600 font-medium">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Real-time Analysis</span>
+                        </div>
+                       
+                    </div>
+                </div>
+
+                <!-- Smart Mapping Card -->
+                <div class="group relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                    <div class="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+                    <div class="relative p-8 text-center">
+                        <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                            <i class="fas fa-map-marked-alt text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4 text-gray-800">Smart Farm Mapping</h3>
+                        <p class="text-gray-600 mb-6 leading-relaxed">
+                            Comprehensive GIS-powered mapping system tracking farm locations, crop health, and yield patterns across Oriental Mindoro.
+                        </p>
+                       
+                        <div class="flex items-center justify-center space-x-2 text-sm text-green-600 font-medium mt-2">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Analytics Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E-Commerce Platform Card -->
+                <div class="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-600 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+                    <div class="relative p-8 text-center">
+                        <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                            <i class="fas fa-store text-4xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-4 text-gray-800">Digital Marketplace</h3>
+                        <p class="text-gray-600 mb-6 leading-relaxed">
+                            Direct-to-consumer platform connecting farmers with buyers, eliminating middlemen and maximizing profit margins.
+                        </p>
+                        <div class="flex items-center justify-center space-x-2 text-sm text-purple-600 font-medium">
+                            <i class="fas fa-handshake"></i>
+                            <span>Direct Trading</span>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Mission & Vision Section -->
+    <div class="bg-gradient-to-br from-gray-50 via-white to-blue-50 py-20">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <!-- Mission Card -->
+                <div class="bg-white rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-shadow duration-500">
+                    <div class="flex items-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-bullseye text-2xl text-white"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold ml-4 text-gray-800">Our Mission</h2>
+                    </div>
+                    <p class="text-lg text-gray-600 leading-relaxed mb-6">
+                        To empower cacao farmers in Oriental Mindoro with innovative technology solutions that enhance crop productivity, prevent diseases, and create sustainable income opportunities through direct market access.
+                    </p>
+                    <div class="space-y-3">
+                        <div class="flex items-center text-green-600">
+                            <i class="fas fa-leaf mr-3"></i>
+                            <span class="font-medium">Sustainable Farming Practices</span>
+                        </div>
+                        <div class="flex items-center text-blue-600">
+                            <i class="fas fa-users mr-3"></i>
+                            <span class="font-medium">Community Empowerment</span>
+                        </div>
+                        <div class="flex items-center text-purple-600">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <span class="font-medium">Economic Growth</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vision Card -->
+                <div class="bg-white rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-shadow duration-500">
+                    <div class="flex items-center mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-eye text-2xl text-white"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold ml-4 text-gray-800">Our Vision</h2>
+                    </div>
+                    <p class="text-lg text-gray-600 leading-relaxed mb-6">
+                        To become the leading agricultural technology platform in the Philippines, transforming traditional farming into smart, data-driven agriculture that benefits farmers, consumers, and the environment.
+                    </p>
+                    <div class="space-y-3">
+                        <div class="flex items-center text-indigo-600">
+                            <i class="fas fa-globe mr-3"></i>
+                            <span class="font-medium">Regional Leadership</span>
+                        </div>
+                        <div class="flex items-center text-teal-600">
+                            <i class="fas fa-seedling mr-3"></i>
+                            <span class="font-medium">Environmental Sustainability</span>
+                        </div>
+                        <div class="flex items-center text-orange-600">
+                            <i class="fas fa-rocket mr-3"></i>
+                            <span class="font-medium">Innovation Excellence</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  
+        </div>
+    </div>
+</section>
+
+<style>
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fade-in 1s ease-out; }
+.animate-slide-up { animation: slide-up 1s ease-out; }
+.animate-fade-in-delayed { animation: fade-in 1s ease-out 0.5s both; }
+
+.counter { transition: all 0.3s ease; }
+</style>
+
+<script>
+// Counter animation
+function animateCounter(element) {
+    const target = parseInt(element.getAttribute('data-target'));
+    const duration = 2000;
+    const step = target / (duration / 16);
+    let current = 0;
+    
+    const timer = setInterval(() => {
+        current += step;
+        if (current >= target) {
+            element.textContent = target.toLocaleString();
+            clearInterval(timer);
+        } else {
+            element.textContent = Math.floor(current).toLocaleString();
+        }
+    }, 16);
+}
+
+// Intersection Observer for counter animation
+const observerOptions = {
+    threshold: 0.5,
+    rootMargin: '0px'
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const counters = entry.target.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                if (!counter.classList.contains('animated')) {
+                    counter.classList.add('animated');
+                    animateCounter(counter);
+                }
+            });
+        }
+    });
+}, observerOptions);
+
+// Start observing when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const statsSection = document.querySelector('.bg-gradient-to-r.from-green-600');
+    if (statsSection) {
+        observer.observe(statsSection);
+    }
+});
+</script>
+{% endblock %}

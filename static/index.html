@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Marketplace - CacaoDetect{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Cacao Marketplace</h1>
+    <p class="text-gray-600">Browse premium cacao products (Login required to purchase)</p>
+</div>
+
+<!-- Guest Notice -->
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+    <div class="flex items-center">
+        <div class="text-yellow-600 text-xl mr-3">⚠️</div>
+        <div>
+            <h3 class="text-yellow-800 font-semibold">Guest Access</h3>
+            <p class="text-yellow-700">You're browsing as a guest. <a href="{% url 'login' %}" class="underline font-medium">Login</a> or <a href="{% url 'signup' %}" class="underline font-medium">Sign up</a> to make purchases.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Products Grid -->
+{% if products %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for product in products %}
+        <div class="bg-white rounded-lg shadow hover:shadow-lg transition duration-300">
+            {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="w-full h-48 object-cover rounded-t-lg">
+            {% else %}
+                <div class="w-full h-48 bg-gradient-to-br from-green-400 to-green-600 rounded-t-lg flex items-center justify-center">
+                    <span class="text-4xl text-white">🍫</span>
+                </div>
+            {% endif %}
+            
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ product.name }}</h3>
+                <p class="text-gray-600 text-sm mb-4">{{ product.description|truncatewords:15 }}</p>
+                
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-2xl font-bold text-green-600">${{ product.price }}</span>
+                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                        {{ product.category|title }}
+                    </span>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-500">Stock: {{ product.stock }}</span>
+                    <button disabled class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
+                        Login to Buy
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-12">
+        <div class="text-6xl mb-4">🛒</div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">No Products Available</h3>
+        <p class="text-gray-600">Check back later for premium cacao products.</p>
+    </div>
+{% endif %}
+
+<!-- Guest Features Summary -->
+<div class="mt-12 bg-white rounded-lg shadow p-8">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Guest Features Available</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="text-center p-6 border border-gray-200 rounded-lg">
+            <div class="text-4xl mb-4">🐛</div>
+            <h3 class="text-lg font-semibold mb-2">Pest Detection</h3>
+            <p class="text-gray-600 mb-4">Scan plants for pest identification</p>
+            <a href="{% url 'guest_scan_pest' %}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300">
+                Try Now
+            </a>
+        </div>
+        
+        <div class="text-center p-6 border border-gray-200 rounded-lg">
+            <div class="text-4xl mb-4">🦠</div>
+            <h3 class="text-lg font-semibold mb-2">Disease Detection</h3>
+            <p class="text-gray-600 mb-4">Identify plant diseases quickly</p>
+            <a href="{% url 'guest_scan_disease' %}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300">
+                Try Now
+            </a>
+        </div>
+        
+        <div class="text-center p-6 border border-gray-200 rounded-lg">
+            <div class="text-4xl mb-4">🛒</div>
+            <h3 class="text-lg font-semibold mb-2">Marketplace</h3>
+            <p class="text-gray-600 mb-4">Browse cacao products</p>
+            <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
+                Current Page
+            </span>
+        </div>
+    </div>
+    
+    <div class="text-center mt-8">
+        <p class="text-gray-600 mb-4">Want unlimited access and the ability to purchase?</p>
+        <div class="space-x-4">
+            <a href="{% url 'signup' %}" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition duration-300">
+                Sign Up Free
+            </a>
+            <a href="{% url 'login' %}" class="border border-green-600 text-green-600 px-6 py-2 rounded hover:bg-green-50 transition duration-300">
+                Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

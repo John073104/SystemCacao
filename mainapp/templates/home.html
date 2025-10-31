@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+<!-- Hero Section with Full-Width Background Video -->
+<div class="relative overflow-hidden">
+  <!-- Overlay for video to ensure text readability -->
+  <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+  
+  <!-- Background Video -->
+  <video class="absolute w-full h-full object-cover" autoplay loop muted playsinline>
+    <source src="{% static 'video/cacao.mp4' %}" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+  
+  <!-- Hero Content -->
+  <div class="relative z-20 max-w-7xl mx-auto px-4 py-24 md:py-32 text-white">
+    <div class="flex flex-col md:flex-row items-center justify-between">
+      <!-- Left Side: Hero Text Content -->
+      <div class="w-full md:w-1/2 space-y-6">
+        <h1 class="text-5xl md:text-6xl font-bold leading-tight">
+          Smart <span class="text-yellow-400">Cacao</span> Farming
+        </h1>
+        <p class="text-xl md:text-2xl font-light max-w-lg">
+          Empowering farmers with AI-powered solutions to detect diseases, optimize yields, and connect with global markets.
+        </p>
+        <div class="pt-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <a href="{% url 'signup' %}" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-8 py-4 rounded-lg shadow-lg transition duration-300 text-center">
+            Get Started
+          </a>
+          <a href="{% url 'about' %}" class="inline-block bg-transparent border-2 border-white hover:bg-white hover:text-black text-white font-semibold px-8 py-4 rounded-lg transition duration-300 text-center">
+            Learn More
+          </a>
+        </div>
+      </div>
+      
+      <!-- Right Side: Floating Statistics -->
+      <div class="w-full md:w-1/2 mt-12 md:mt-0 flex justify-center">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-6 rounded-xl border border-white border-opacity-20">
+            <div class="text-4xl font-bold text-yellow-400">70%</div>
+            <div class="text-sm text-white">Accuracy in Disease Detection</div>
+          </div>
+          <div class="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-6 rounded-xl border border-white border-opacity-20">
+            <div class="text-4xl font-bold text-yellow-400">50+</div>
+            <div class="text-sm text-white">Farmers Connected</div>
+          </div>
+          <div class="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-6 rounded-xl border border-white border-opacity-20">
+            <div class="text-4xl font-bold text-yellow-400">10%</div>
+            <div class="text-sm text-white">Yield Increase</div>
+          </div>
+          <div class="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-6 rounded-xl border border-white border-opacity-20">
+            <div class="text-4xl font-bold text-yellow-400">4+</div>
+            <div class="text-sm text-white">Diseases Detected</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Brand Section with Animated Text -->
+<div class="bg-white py-20 text-center">
+  <div class="max-w-7xl mx-auto px-4">
+    <h1 class="text-4xl md:text-5xl font-bold mb-6">
+      Welcome to <span class="text-green-700">CacaoGuard</span>
+      <div class="inline-block relative">
+        <div class="ml-2 h-12 overflow-hidden">
+          <div class="animate-slide">
+            <div class="h-12 text-blue-600">Detection</div>
+            <div class="h-12 text-green-600">Mapping</div>
+            <div class="h-12 text-yellow-600">E-commerce</div>
+            <div class="h-12 text-red-600">Analytics</div>
+          </div>
+        </div>
+      </div>
+    </h1>
+    <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-16">
+      An all-in-one platform revolutionizing cacao farming with cutting-edge artificial intelligence, high-precision mapping, and a global marketplace.
+    </p>
+
+    <!-- Interactive Feature Cards Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Disease Detection Card -->
+      <div class="bg-white rounded-xl shadow-xl overflow-hidden transform transition duration-500 hover:scale-105 cursor-pointer" onclick="openModal('disease')">
+        <div class="h-48 bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center">
+          <i class="fas fa-search-plus text-6xl text-white"></i>
+        </div>
+        <div class="p-6">
+          <h3 class="text-2xl font-bold mb-2">AI Disease Detection</h3>
+          <p class="text-gray-600 mb-4">Advanced computer vision algorithms to identify pests and diseases with 85% accuracy before they spread.</p>
+          <div class="inline-flex items-center text-blue-600 font-semibold">
+            Click to explore <i class="fas fa-arrow-right ml-2"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Farm Mapping Card -->
+      <div class="bg-white rounded-xl shadow-xl overflow-hidden transform transition duration-500 hover:scale-105 cursor-pointer" onclick="openModal('mapping')">
+        <div class="h-48 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
+          <i class="fas fa-map-marked-alt text-6xl text-white"></i>
+        </div>
+        <div class="p-6">
+          <h3 class="text-2xl font-bold mb-2">Precision Mapping</h3>
+          <p class="text-gray-600 mb-4">GPS-powered farm mapping with soil analysis, weather data, and crop health tracking for optimized yield.</p>
+          <div class="inline-flex items-center text-green-600 font-semibold">
+            Click to explore <i class="fas fa-arrow-right ml-2"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- E-Commerce Card -->
+      <div class="bg-white rounded-xl shadow-xl overflow-hidden transform transition duration-500 hover:scale-105 cursor-pointer" onclick="openModal('marketplace')">
+        <div class="h-48 bg-gradient-to-br from-yellow-600 to-yellow-800 flex items-center justify-center">
+          <i class="fas fa-store text-6xl text-white"></i>
+        </div>
+        <div class="p-6">
+          <h3 class="text-2xl font-bold mb-2">Global Marketplace</h3>
+          <p class="text-gray-600 mb-4">Connect directly with international buyers and suppliers, eliminating middlemen and increasing profits.</p>
+          <div class="inline-flex items-center text-yellow-600 font-semibold">
+            Click to explore <i class="fas fa-arrow-right ml-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- How It Works Section with Circular Video -->
+<div class="bg-gray-100 py-20">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold">How CacaoGuard Works</h2>
+      <p class="text-xl text-gray-600 mt-4 max-w-3xl mx-auto">
+        Our simple three-step process helps you identify issues, implement solutions, and maximize your cacao production.
+      </p>
+    </div>
+    
+    <div class="flex flex-col md:flex-row items-center justify-between">
+      <!-- Step by Step Process -->
+      <div class="w-full md:w-1/2 space-y-8">
+        <!-- Step 1 -->
+        <div class="flex items-start">
+          <div class="flex-shrink-0 bg-green-700 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">1</div>
+          <div class="ml-4">
+            <h3 class="text-xl font-bold">Scan Your Cacao</h3>
+            <p class="text-gray-600 mt-2">Take a photo of your cacao fruit, leaves, or trees using the CacaoGuard mobile app.</p>
+          </div>
+        </div>
+        
+        <!-- Step 2 -->
+        <div class="flex items-start">
+          <div class="flex-shrink-0 bg-green-700 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">2</div>
+          <div class="ml-4">
+            <h3 class="text-xl font-bold">Get Instant Analysis</h3>
+            <p class="text-gray-600 mt-2">Our AI algorithm analyzes the image to detect diseases, pests, or nutrient deficiencies.</p>
+          </div>
+        </div>
+        
+        <!-- Step 3 -->
+        <div class="flex items-start">
+          <div class="flex-shrink-0 bg-green-700 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">3</div>
+          <div class="ml-4">
+            <h3 class="text-xl font-bold">Receive Treatment Recommendations</h3>
+            <p class="text-gray-600 mt-2">Get customized solutions and connect with suppliers for necessary products.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Circular Video -->
+      <div class="w-full md:w-1/2 flex justify-center mt-12 md:mt-0">
+        <div class="w-80 h-80 md:w-96 md:h-96 rounded-full overflow-hidden relative" style="box-shadow: 0 0 30px 10px rgba(73, 160, 85, 0.5);">
+          <video class="w-full h-full object-cover" autoplay loop muted playsinline>
+            <source src="{% static 'video/cacaopreview.mp4' %}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <!-- Play button overlay -->
+          <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-20 transition duration-300">
+            <div class="w-20 h-20 bg-white bg-opacity-70 rounded-full flex items-center justify-center">
+              <i class="fas fa-play text-2xl text-green-700"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA Section -->
+<div class="bg-green-700 text-white py-16">
+  <div class="max-w-7xl mx-auto px-4 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Cacao Farming?</h2>
+    <p class="text-xl max-w-3xl mx-auto mb-8">
+      Join thousands of farmers who are using CacaoGuard to detect diseases early, increase yields, and connect with global markets.
+    </p>
+    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+      <a href="{% url 'signup' %}" class="inline-block bg-white text-green-700 hover:bg-gray-100 font-bold px-8 py-4 rounded-lg shadow-lg transition duration-300">
+        Create Free Account
+      </a>
+      <a href="{% url 'about' %}" class="inline-block bg-transparent border-2 border-white hover:bg-white hover:text-green-700 text-white font-bold px-8 py-4 rounded-lg transition duration-300">
+        Learn More
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Overlay for Interactive Cards -->
+<div id="modalOverlay" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div id="modalContent">
+      <!-- Dynamic content will be inserted here -->
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Animation for sliding text */
+  @keyframes slide {
+    0% { transform: translateY(0); }
+    25% { transform: translateY(-3rem); }
+    50% { transform: translateY(-6rem); }
+    75% { transform: translateY(-9rem); }
+    100% { transform: translateY(0); }
+  }
+
+  .animate-slide {
+    animation: slide 10s infinite;
+  }
+
+  /* Modal styles */
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+  }
+
+  .step-item {
+    position: relative;
+    padding-left: 2rem;
+  }
+
+  .step-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-item:nth-child(1)::before { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+  .step-item:nth-child(2)::before { background: linear-gradient(135deg, #10b981, #059669); }
+  .step-item:nth-child(3)::before { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .step-item:nth-child(4)::before { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .step-item:nth-child(5)::before { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+  .step-number {
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+
+  .guide-section {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-left: 4px solid #3b82f6;
+  }
+
+  .benefit-item {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-left: 3px solid #10b981;
+  }
+
+  /* Cacao-specific color adjustments */
+  .bg-blue-600 { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+  .bg-green-600 { background: linear-gradient(135deg, #059669, #047857); }
+  .bg-yellow-600 { background: linear-gradient(135deg, #d97706, #b45309); }
+</style>
+
+<script>
+  const modalData = {
+    disease: {
+      title: "AI Disease Detection",
+      icon: "fas fa-search-plus",
+      color: "blue",
+      description: "Revolutionize cacao protection with AI-powered early detection system",
+      steps: [
+        {
+          title: "Cacao Image Capture",
+          description: "Use smartphone camera to capture high-resolution images of cacao leaves, pods, or affected areas",
+          details: "Focus on diseased areas with good lighting. Multiple angles provide better analysis"
+        },
+        {
+          title: "AI Analysis Processing",
+          description: "Our neural network analyzes visual patterns, comparing against cacao disease database",
+          details: "Specialized for cacao diseases: Black Pod, Witches' Broom, Frosty Pod Rot, and more"
+        },
+        {
+          title: "Disease Identification",
+          description: "Receive detailed diagnosis with confidence scores and severity assessment",
+          details: "Identifies specific cacao diseases with treatment urgency recommendations"
+        },
+        {
+          title: "Treatment Recommendations",
+          description: "Get customized treatment plans specific to cacao cultivation practices",
+          details: "Includes organic and chemical options suitable for cacao farming conditions"
+        },
+        {
+          title: "Monitoring & Prevention",
+          description: "Track treatment effectiveness and receive preventive care alerts",
+          details: "Seasonal disease forecasting and farm-specific prevention strategies"
+        }
+      ],
+      benefits: [
+        "Early detection prevents up to 60% crop loss in cacao farms",
+        "Reduces fungicide costs by targeting specific diseases",
+        "Improves cacao bean quality and market value",
+        "Connects with local agricultural extension services"
+      ],
+      guide: "Start by downloading the CacaoGuard mobile app, create your farm profile with cacao variety information, and begin scanning your crops. The system learns your local growing conditions and seasonal patterns."
+    },
+    mapping: {
+      title: "Precision Mapping",
+      icon: "fas fa-map-marked-alt",
+      color: "green",
+      description: "Transform your cacao plantation with GPS-powered precision agriculture",
+      steps: [
+        {
+          title: "Cacao Farm GPS Survey",
+          description: "Deploy GPS sensors to map your cacao plantation boundaries and tree locations",
+          details: "High-precision mapping of individual cacao trees and growing zones"
+        },
+        {
+          title: "Soil Analysis Integration",
+          description: "Collect soil samples from different zones and integrate with GPS coordinates",
+          details: "Maps soil pH, drainage, and nutrient levels specific to cacao requirements"
+        },
+        {
+          title: "Climate Data Synchronization",
+          description: "Connect weather stations and rainfall data to optimize cacao growing conditions",
+          details: "Tracks humidity, temperature, and rainfall patterns for cacao cultivation"
+        },
+        {
+          title: "Cacao Tree Health Monitoring",
+          description: "Use drone surveys and satellite imagery for plantation health assessment",
+          details: "Monitors cacao tree vigor, canopy coverage, and yield potential"
+        },
+        {
+          title: "Harvest Optimization",
+          description: "Generate harvest timing maps and yield prediction for different plantation zones",
+          details: "Optimizes harvest schedules and predicts cacao bean quality by zone"
+        }
+      ],
+      benefits: [
+        "Increase cacao yield by 25-35% through precision management",
+        "Optimize shade tree placement for better cacao growth",
+        "Improve cacao bean quality through targeted interventions",
+        "Reduce labor costs with efficient plantation management"
+      ],
+      guide: "Begin with a comprehensive plantation survey using our GPS mapping service. Our cacao specialists will establish reference points and create detailed plantation maps for optimal management."
+    },
+    marketplace: {
+      title: "Global Marketplace",
+      icon: "fas fa-store",
+      color: "yellow",
+      description: "Connect your cacao harvest with premium chocolate manufacturers worldwide",
+      steps: [
+        {
+          title: "Cacao Farm Certification",
+          description: "Set up your farm profile with cacao variety, certifications, and production capacity",
+          details: "Include Fairtrade, Organic, or Rainforest Alliance certifications"
+        },
+        {
+          title: "Cacao Bean Listing",
+          description: "List your cacao beans with quality grades, flavor profiles, and harvest dates",
+          details: "Highlight unique characteristics: origin, fermentation methods, flavor notes"
+        },
+        {
+          title: "Chocolate Manufacturer Matching",
+          description: "Connect with premium chocolate makers seeking specific cacao bean profiles",
+          details: "Matches based on bean quality, flavor profile, and ethical sourcing requirements"
+        },
+        {
+          title: "Quality Assessment & Pricing",
+          description: "Professional cacao bean evaluation and fair price negotiation",
+          details: "Industry-standard quality tests and premium pricing for specialty cacao"
+        },
+        {
+          title: "Direct Trade & Shipping",
+          description: "Secure payment processing and logistics for international cacao trade",
+          details: "Handles export documentation, quality insurance, and shipping coordination"
+        }
+      ],
+      benefits: [
+        "Premium prices for specialty cacao beans (up to 50% above commodity rates)",
+        "Direct relationships with ethical chocolate manufacturers",
+        "Guaranteed payments through secure escrow services",
+        "Support for sustainable cacao farming practices"
+      ],
+      guide: "Start by registering your cacao farm with photos and certifications. Our cacao quality experts will help you create compelling listings that attract premium chocolate manufacturers."
+    }
+  };
+
+  function openModal(cardType) {
+    const data = modalData[cardType];
+    const modal = document.getElementById('modalOverlay');
+    const content = document.getElementById('modalContent');
+    
+    content.innerHTML = `
+      <div class="p-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center">
+            <div class="w-16 h-16 bg-${data.color}-600 rounded-full flex items-center justify-center mr-4">
+              <i class="${data.icon} text-2xl text-white"></i>
+            </div>
+            <div>
+              <h2 class="text-3xl font-bold text-gray-800">${data.title}</h2>
+              <p class="text-lg text-gray-600">${data.description}</p>
+            </div>
+          </div>
+          <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Implementation Steps -->
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-list-ol text-${data.color}-600 mr-3"></i>
+            Implementation Steps
+          </h3>
+          <div class="space-y-6">
+            ${data.steps.map((step, index) => `
+              <div class="step-item bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div class="step-number bg-${data.color}-600">${index + 1}</div>
+                <div class="ml-2">
+                  <h4 class="text-xl font-semibold text-gray-800 mb-2">${step.title}</h4>
+                  <p class="text-gray-700 mb-2">${step.description}</p>
+                  <p class="text-sm text-gray-600 italic">${step.details}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Benefits Section -->
+        <div class="mb-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-chart-line text-${data.color}-600 mr-3"></i>
+            Key Benefits
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${data.benefits.map(benefit => `
+              <div class="benefit-item p-4 rounded-lg">
+                <div class="flex items-start">
+                  <i class="fas fa-check-circle text-green-600 mr-3 mt-1"></i>
+                  <p class="text-gray-700">${benefit}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Getting Started Guide -->
+        <div class="guide-section p-6 rounded-lg mb-6">
+          <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <i class="fas fa-rocket text-${data.color}-600 mr-3"></i>
+            Getting Started
+          </h3>
+          <p class="text-gray-700 leading-relaxed">${data.guide}</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+          <a href="{% url 'signup' %}" class="flex-1 bg-${data.color}-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-${data.color}-700 transition duration-300 text-center">
+            <i class="fas fa-play mr-2"></i>
+            Start Implementation
+          </a>
+        
+          <a href="{% url 'about' %}" class="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition duration-300 text-center">
+            <i class="fas fa-phone mr-2"></i>
+            Contact Expert
+          </a>
+        </div>
+      </div>
+    `;
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('modalOverlay');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Close modal when clicking outside
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeModal();
+    }
+  });
+
+  // Close modal with Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+</script>
+
+{% endblock %}

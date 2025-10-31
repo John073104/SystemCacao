@@ -1,0 +1,204 @@
+{% load tz %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Preview - CacaoGuard Scan Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body { 
+                font-size: 12px; 
+                color: black !important;
+                background: white !important;
+            }
+            .no-print { display: none !important; }
+            .print-break { page-break-after: always; }
+
+            .print-table { 
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important; /* ✅ keeps columns stable */
+            }
+
+            .print-table th, .print-table td { 
+                border: 1px solid #000 !important; 
+                padding: 8px !important;
+                font-size: 10px !important;
+                word-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow-wrap: anywhere !important;
+                text-align: left;
+            }
+
+            /* ✅ Column widths (adjust if needed) */
+            .print-table th:nth-child(1), .print-table td:nth-child(1) { width: 20%; }
+            .print-table th:nth-child(2), .print-table td:nth-child(2) { width: 10%; }
+            .print-table th:nth-child(3), .print-table td:nth-child(3) { width: 20%; }
+            .print-table th:nth-child(4), .print-table td:nth-child(4) { width: 10%; }
+            .print-table th:nth-child(5), .print-table td:nth-child(5) { width: 25%; }
+            .print-table th:nth-child(6), .print-table td:nth-child(6) { width: 15%; }
+
+            .print-header {
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+            .print-summary {
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-around;
+            }
+            .print-summary div {
+                text-align: center;
+                padding: 10px;
+                border: 1px solid #000;
+                margin: 5px;
+            }
+        }
+        
+        @media screen {
+            .print-preview {
+                max-width: 8.5in;
+                margin: 0 auto;
+                background: white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                padding: 1in;
+            }
+
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed; /* ✅ keeps columns stable */
+            }
+
+            .print-table th, .print-table td {
+                word-wrap: break-word;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+            }
+
+            /* ✅ Column widths for screen preview too */
+            .print-table th:nth-child(1), .print-table td:nth-child(1) { width: 20%; }
+            .print-table th:nth-child(2), .print-table td:nth-child(2) { width: 10%; }
+            .print-table th:nth-child(3), .print-table td:nth-child(3) { width: 20%; }
+            .print-table th:nth-child(4), .print-table td:nth-child(4) { width: 10%; }
+            .print-table th:nth-child(5), .print-table td:nth-child(5) { width: 25%; }
+            .print-table th:nth-child(6), .print-table td:nth-child(6) { width: 15%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+{% timezone "Asia/Manila" %}
+     <!-- Print Controls  -->
+    <div class="no-print bg-white shadow-lg p-4 mb-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-900">Print Preview</h1>
+            <div class="flex space-x-3">
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                    <i class="fas fa-print mr-2"></i>Print
+                </button>
+                <a href="{% url 'export_pdf' %}?{{ request.GET.urlencode }}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md">
+                    <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                </a>
+                <button onclick="window.close()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
+                    <i class="fas fa-times mr-2"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Content -->
+    <div class="print-preview">
+        <!-- Header -->
+        <div class="print-header text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">CacaoGuard</h1>
+            <h2 class="text-xl text-gray-700 mb-2">Scan Results Report</h2>
+            <p class="text-sm text-gray-500 mt-4">Generated on {{ generated_date|localtime|date:"F d, Y" }} at {{ generated_date|localtime|time:"g:i A" }}</p>
+            
+            {% if filters.type or filters.confidence or filters.date %}
+            <div class="mt-4 text-sm text-gray-600">
+                <strong>Applied Filters:</strong>
+                {% if filters.type %} Type: {{ filters.type|title }} {% endif %}
+                {% if filters.confidence %} Confidence: {{ filters.confidence|title }} {% endif %}
+                {% if filters.date %} Date: {{ filters.date }} {% endif %}
+                {% if filters.show_hidden %} Including Hidden Scans {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="print-summary grid grid-cols-3 gap-4 mb-8">
+            <div class="text-center p-4 border border-gray-300 rounded">
+                <div class="text-2xl font-bold text-blue-600">{{ total_scans }}</div>
+                <div class="text-sm text-gray-600">Total Scans</div>
+            </div>
+            <div class="text-center p-4 border border-gray-300 rounded">
+                <div class="text-2xl font-bold text-red-600">{{ disease_scans }}</div>
+                <div class="text-sm text-gray-600">Disease Scans</div>
+            </div>
+            <div class="text-center p-4 border border-gray-300 rounded">
+                <div class="text-2xl font-bold text-orange-600">{{ pest_scans }}</div>
+                <div class="text-sm text-gray-600">Pest Scans</div>
+            </div>
+        </div>
+
+        <!-- Scan Results Table -->
+        {% if scans %}
+        <div class="mb-8">
+            <h3 class="text-lg font-semibold mb-4">Scan Results ({{ scans|length }} records)</h3>
+            <table class="print-table w-full border-collapse border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th>Image Name</th>
+                        <th>Type</th>
+                        <th>Result</th>
+                        <th>Confidence</th>
+                        <th>User Email</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in scans %}
+                    <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+                        <td>{{ scan.image_name|default:"N/A" }} {% if scan.hidden %}<span class="text-red-600 text-xs">(Hidden)</span>{% endif %}</td>
+                        <td class="capitalize">{{ scan.type|default:"N/A" }}</td>
+                        <td>{{ scan.primary_class|default:"N/A" }}</td>
+                        <td>
+                            <span class="{% if scan.primary_confidence > 80 %}text-green-600{% elif scan.primary_confidence > 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                {{ scan.primary_confidence|floatformat:1 }}%
+                            </span>
+                        </td>
+                        <td>{{ scan.user_email|default:"N/A" }}</td>
+                        <td>{{ scan.timestamp|date:"M d, Y H:i"|default:"N/A" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <p class="text-gray-500">No scan results found with the applied filters.</p>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 mt-8 pt-4 border-t border-gray-300">
+            <p>CacaoGuard - Image Analysis System</p>
+            <p>Report generated on {{ print_date|date:"F d, Y \a\t H:i" }}</p>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            document.title = 'CacaoGuard Scan Results - ' + new Date().toLocaleDateString();
+        };
+        function printReport() { window.print(); }
+        function closePreview() { if (window.opener) { window.close(); } else { window.history.back(); } }
+    </script>
+{% endtimezone %}
+</body>
+</html>

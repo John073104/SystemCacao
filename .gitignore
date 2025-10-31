@@ -1,0 +1,57 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/media/
+/staticfiles/
+
+# Environment Variables
+.env
+.env.local
+
+# Firebase Credentials (CRITICAL - Do not commit)
+*firebase*.json
+systemcacao-firebase-adminsdk*.json
+!firebase.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp_uploads/
+temp_scans/
+*.tmp
+
+# Model files (large files - excluded from git, download separately)
+models/*.pth
+models/*.h5
+models/*.pkl
+*.onnx
+*.pt
+*.tflite
+

@@ -1,0 +1,142 @@
+{% extends "admin/admin_dashboard.html" %}
+{% load static %}
+
+{% block title %}Edit User - {{ username }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'admin_user_list' %}" 
+               class="text-blue-600 hover:text-blue-800 transition duration-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <h1 class="text-3xl font-bold text-gray-900">Edit User</h1>
+        </div>
+        <p class="text-gray-600 mt-2">Editing profile for {{ username }}</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} bg-{{ message.tags == 'error' and 'red' or 'green' }}-100 border border-{{ message.tags == 'error' and 'red' or 'green' }}-400 text-{{ message.tags == 'error' and 'red' or 'green' }}-700 px-4 py-3 rounded mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Edit Form -->
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <!-- User Info Header -->
+            <div class="flex items-center space-x-6 mb-8 pb-6 border-b border-gray-200">
+                <img src="{{ user_data.profile.profile_image|default:'/static/img/default-avatar.png' }}" 
+                     alt="{{ user_data.display_name }}" 
+                     class="w-20 h-20 rounded-full object-cover border-4 border-gray-200">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ user_data.display_name }}</h2>
+                    <p class="text-gray-600">{{ user_data.email }}</p>
+                    <span class="inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium 
+                                {% if user_data.role == 'admin' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                        {{ user_data.role|title }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Edit Form -->
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left Column -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Personal Information</h3>
+                        
+                        <div>
+                            <label for="full_name" class="block text-sm font-medium text-gray-700">Full Name *</label>
+                            <input type="text" 
+                                   id="full_name" 
+                                   name="full_name" 
+                                   value="{{ user_data.profile.full_name }}" 
+                                   required 
+                                   maxlength="100"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel" 
+                                   id="phone_number" 
+                                   name="phone_number" 
+                                   value="{{ user_data.profile.phone_number }}" 
+                                   maxlength="20"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
+                            <input type="text" 
+                                   id="location" 
+                                   name="location" 
+                                   value="{{ user_data.profile.location }}" 
+                                   maxlength="100"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-gray-700">User Role</label>
+                            <select id="role" 
+                                    name="role" 
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="user" {% if user_data.role == 'user' %}selected{% endif %}>User</option>
+                                <option value="admin" {% if user_data.role == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Additional Information</h3>
+                        
+                        <div>
+                            <label for="bio" class="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea id="bio" 
+                                      name="bio" 
+                                      rows="8" 
+                                      maxlength="500"
+                                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">{{ user_data.profile.bio }}</textarea>
+                            <p class="mt-1 text-sm text-gray-500">Maximum 500 characters</p>
+                        </div>
+                        
+                        <!-- Account Information (Read-only) -->
+                        <div class="bg-gray-50 p-4 rounded-md">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Account Information</h4>
+                            <div class="space-y-2 text-sm text-gray-600">
+                                <div><strong>Email:</strong> {{ user_data.email }}</div>
+                                <div><strong>User ID:</strong> {{ user_data.uid }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="mt-8 flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <a href="{% url 'admin_user_list' %}" 
+                       class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition duration-200">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

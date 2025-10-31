@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLBB Tournament Bracket - 10 Teams</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c 0%, #2c3e50 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        header {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            text-align: center;
+            padding: 25px 20px;
+            position: relative;
+        }
+        
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-weight: 400;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .logo {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 2.5rem;
+            color: gold;
+        }
+        
+        .bracket-section {
+            padding: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .bracket-section h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .bracket-container {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px 10px;
+            background: #f8f9fa;
+            min-height: 600px;
+        }
+        
+        .round {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+        
+        .round-title {
+            text-align: center;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .match {
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .team-box {
+            width: 180px;
+            height: 60px;
+            background: white;
+            border: 3px solid #2c3e50;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin: 8px 0;
+        }
+        
+        .loser-bracket .team-box {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #f9f9f9 0%, #ffeceb 100%);
+        }
+        
+        .team-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            border-color: #3498db;
+        }
+        
+        .connector {
+            position: absolute;
+            background: #3498db;
+        }
+        
+        .loser-connector {
+            background: #e74c3c;
+        }
+        
+        .horizontal {
+            height: 3px;
+            width: 30px;
+            top: 50%;
+            right: -30px;
+        }
+        
+        .vertical {
+            width: 3px;
+            height: 100%;
+            top: 0;
+            right: -30px;
+        }
+        
+        .final-match {
+            margin: 40px 0;
+        }
+        
+        .final-match .team-box {
+            width: 220px;
+            height: 70px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+            border-width: 4px;
+        }
+        
+        .champion-box {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+            border: 4px solid #ff9900 !important;
+            color: #333;
+            font-size: 24px !important;
+            font-weight: 800;
+            width: 250px !important;
+            height: 80px !important;
+        }
+        
+        .trophy {
+            font-size: 30px;
+            margin-left: 10px;
+        }
+        
+        .round-1 .team-box:nth-child(odd) {
+            background: #f8f9fa;
+        }
+        
+        .loser-indicator {
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .info-section {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 12px;
+            margin-top: 20px;
+            max-width: 1400px;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        
+        .info-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            text-align: left;
+            margin-top: 20px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .info-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-card h3 i {
+            margin-right: 10px;
+            color: #3498db;
+        }
+        
+        .team-list {
+            list-style-type: none;
+        }
+        
+        .team-list li {
+            padding: 8px 5px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .team-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .seed {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 1200px) {
+            .bracket-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .round {
+                min-height: auto;
+                margin-bottom: 30px;
+                width: 100%;
+            }
+            
+            .match {
+                margin: 20px 0;
+            }
+            
+            .connector {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mobile Legends: Bang Bang Tournament</h1>
+            <div class="subtitle">10-Team Double Elimination Bracket - Best of 3</div>
+            <div class="logo">⚔️</div>
+        </header>
+        
+        <!-- Initial Seeding -->
+        <div class="info-section">
+            <h2>Tournament Teams & Seeding</h2>
+            <div class="info-content">
+                <div class="info-card">
+                    <h3><i class="fas fa-trophy"></i> Top Seeds</h3>
+                    <ul class="team-list">
+                        <li>ONYX <span class="seed">Seed 1</span></li>
+                        <li>HEXEN <span class="seed">Seed 2</span></li>
+                        <li>IGNIS <span class="seed">Seed 3</span></li>
+                        <li>VENOM <span class="seed">Seed 4</span></li>
+                        <li>A7URA <span class="seed">Seed 5</span></li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h3><i class="fas fa-users"></i> Remaining Teams</h3>
+                    <ul class="team-list">
+                        <li>ASTRA <span class="seed">Seed 6</span></li>
+                        <li>RELIC <span class="seed">Seed 7</span></li>
+                        <li>SYREN <span class="seed">Seed 8</span></li>
+                        <li>ZYPHR <span class="seed">Seed 9</span></li>
+                        <li>LUMINA <span class="seed">Seed 10</span></li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> Format Details</h3>
+                    <p>10 teams compete in a double elimination bracket. Higher seeds get byes in the first round where applicable.</p>
+                    <p>All matches are Best of 3, except Grand Finals which is Best of 5.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Winner Bracket -->
+        <div class="bracket-section">
+            <h2>Winner Bracket</h2>
+            <div class="bracket-container">
+                <!-- Round 1 -->
+                <div class="round round-1">
+                    <h3 class="round-title">Round 1</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">ONYX <span class="seed">1</span></div>
+                        <div class="team-box">BYE</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">HEXEN <span class="seed">2</span></div>
+                        <div class="team-box">BYE</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">IGNIS <span class="seed">3</span></div>
+                        <div class="team-box">LUMINA <span class="seed">10</span></div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">VENOM <span class="seed">4</span></div>
+                        <div class="team-box">ZYPHR <span class="seed">9</span></div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">A7URA <span class="seed">5</span></div>
+                        <div class="team-box">SYREN <span class="seed">8</span></div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">ASTRA <span class="seed">6</span></div>
+                        <div class="team-box">RELIC <span class="seed">7</span></div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                </div>
+                
+                <!-- Quarterfinals -->
+                <div class="round">
+                    <h3 class="round-title">Quarterfinals</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">ONYX <span class="seed">1</span></div>
+                        <div class="team-box">ASTRA/RELIC</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">HEXEN <span class="seed">2</span></div>
+                        <div class="team-box">A7URA/SYREN</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">IGNIS/LUMINA</div>
+                        <div class="team-box">VENOM/ZYPHR</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                </div>
+                
+                <!-- Semifinals -->
+                <div class="round">
+                    <h3 class="round-title">Semifinals</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">QF Winner 1</div>
+                        <div class="team-box">QF Winner 2</div>
+                        <div class="connector horizontal"></div>
+                        <div class="connector vertical"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">QF Winner 3</div>
+                    </div>
+                </div>
+                
+                <!-- Final -->
+                <div class="round">
+                    <h3 class="round-title">Winner Finals</h3>
+                    
+                    <div class="match final-match">
+                        <div class="team-box">SF Winner 1</div>
+                        <div class="team-box">SF Winner 2</div>
+                        <div class="connector horizontal"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">WB Finalist</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loser Bracket -->
+        <div class="bracket-section">
+            <h2>Loser Bracket</h2>
+            <div class="bracket-container loser-bracket">
+                <!-- Loser Round 1 -->
+                <div class="round">
+                    <h3 class="round-title">Loser Round 1</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">LUMINA <span class="loser-indicator">L</span></div>
+                        <div class="team-box">ZYPHR <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">SYREN <span class="loser-indicator">L</span></div>
+                        <div class="team-box">RELIC <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                </div>
+                
+                <!-- Loser Round 2 -->
+                <div class="round">
+                    <h3 class="round-title">Loser Round 2</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">LR1 Winner</div>
+                        <div class="team-box">A7URA <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">LR1 Winner</div>
+                        <div class="team-box">ASTRA <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                </div>
+                
+                <!-- Loser Quarterfinals -->
+                <div class="round">
+                    <h3 class="round-title">Loser Quarterfinals</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">LR2 Winner</div>
+                        <div class="team-box">VENOM <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">LR2 Winner</div>
+                        <div class="team-box">IGNIS <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                    </div>
+                </div>
+                
+                <!-- Loser Semifinals -->
+                <div class="round">
+                    <h3 class="round-title">Loser Semifinals</h3>
+                    
+                    <div class="match">
+                        <div class="team-box">LQF Winner</div>
+                        <div class="team-box">HEXEN <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                        <div class="connector vertical loser-connector"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">LQF Winner</div>
+                        <div class="team-box">ONYX <span class="loser-indicator">L</span></div>
+                        <div class="connector horizontal loser-connector"></div>
+                    </div>
+                </div>
+                
+                <!-- Loser Finals -->
+                <div class="round">
+                    <h3 class="round-title">Loser Finals</h3>
+                    
+                    <div class="match final-match">
+                        <div class="team-box">LSF Winner</div>
+                        <div class="team-box">LSF Winner</div>
+                        <div class="connector horizontal loser-connector"></div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box">LB Finalist</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grand Finals -->
+        <div class="bracket-section">
+            <h2>Grand Finals</h2>
+            <div class="bracket-container">
+                <div class="round" style="margin: 0 auto;">
+                    <div class="match final-match">
+                        <div class="team-box">WB Winner</div>
+                        <div class="team-box">LB Winner</div>
+                    </div>
+                    
+                    <div class="match">
+                        <div class="team-box champion-box">CHAMPION <span class="trophy">🏆</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-section">
+        <h2>How to Use This Bracket</h2>
+        <div class="info-content">
+            <div class="info-card">
+                <h3><i class="fas fa-screenshot"></i> Save as Image</h3>
+                <p>Take a screenshot of this bracket or use your browser's print function (Ctrl+P or Cmd+P) to save it as a PDF or image.</p>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-edit"></i> Customize</h3>
+                <p>You can edit team names directly in the HTML file or use design tools like Canva, Photoshop, or PowerPoint to customize the bracket.</p>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-download"></i> Print Ready</h3>
+                <p>The bracket is designed to be print-friendly. Use the print dialog and choose "Save as PDF" for a high-quality version.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

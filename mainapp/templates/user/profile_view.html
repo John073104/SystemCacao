@@ -1,0 +1,956 @@
+{% extends "user/userdashboard.html" %}
+{% load static %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+}
+
+.profile-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 2rem 2.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-header p {
+  color: #4a5568;
+  font-size: 1.125rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Profile Header - FIXED LAYOUT */
+.profile-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  min-height: 140px;
+}
+
+.profile-image-section {
+  position: relative;
+  flex-shrink: 0;
+  width: 100px;
+}
+
+.profile-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.profile-image:hover {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+}
+
+.profile-image-section:hover .image-overlay {
+  opacity: 1;
+}
+
+.overlay-button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}
+
+.overlay-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.spinner {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
+  display: none;
+}
+
+.spinner.active {
+  display: block;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Profile Info - TAKES HALF THE HEADER SPACE */
+.profile-info {
+  flex: 1;
+  min-width: 0;
+  max-width: 50%;
+  padding-right: 1rem;
+}
+
+.profile-name {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  word-wrap: break-word;
+}
+
+.profile-email {
+  color: #4a5568;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  word-wrap: break-word;
+}
+
+.profile-location {
+  color: #718096;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  word-wrap: break-word;
+}
+
+.edit-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.edit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.profile-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-item {
+  margin-bottom: 1.5rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.info-value {
+  color: #2d3748;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.bio-text {
+  line-height: 1.7;
+  color: #4a5568;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  color: #718096;
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background-color: #f7fafc;
+  color: #2d3748;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+  font-family: inherit;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.character-count {
+  font-size: 0.75rem;
+  color: #718096;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.button-secondary {
+  background: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button-secondary:hover {
+  background: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+.button-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Icons */
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-lg {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-xl {
+  width: 24px;
+  height: 24px;
+}
+
+/* Alert Messages */
+.alert {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .profile-header,
+  .page-header {
+    padding: 1.5rem;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    min-height: auto;
+  }
+
+  .profile-info {
+    max-width: 100%;
+    padding-right: 0;
+  }
+
+  .profile-name {
+    font-size: 1.75rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .profile-email {
+    font-size: 0.95rem;
+  }
+
+  .profile-location {
+    font-size: 0.85rem;
+  }
+
+  .modal-content {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-image {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-name {
+    font-size: 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .edit-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Messages -->
+    {% if messages %}
+        <div class="profile-wrapper">
+            {% for message in messages %}
+                {% if message.tags == 'error' %}
+                    <div class="alert alert-error">
+                {% else %}
+                    <div class="alert alert-success">
+                {% endif %}
+                        {{ message }}
+                    </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="profile-wrapper">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <svg class="icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                My Profile
+            </h1>
+            <p>View and manage your profile information</p>
+        </div>
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="header-content">
+                <!-- Profile Image -->
+                <div class="profile-image-section">
+                    <img id="profileImage"
+                         src="{% if profile.profile_image %}{{ profile.profile_image }}{% else %}{{ default_avatar }}{% endif %}"
+                         alt="Profile Image"
+                         class="profile-image">
+                    <div class="image-overlay">
+                        <div class="spinner" id="imageUploadSpinner"></div>
+                        <button type="button" class="overlay-button" onclick="document.getElementById('imageInput').click()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                            Change
+                        </button>
+                        {% if profile.profile_image %}
+                        <button type="button" class="overlay-button" onclick="deleteProfileImage()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a1,1 0 0,1 1,-1h4a1,1 0 0,1 1,1v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Remove
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Profile Info -->
+                <div class="profile-info">
+                    <h1 class="profile-name">{{ profile.full_name|default:"Your Name" }}</h1>
+                    <div class="profile-email">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        {{ user_email }}
+                    </div>
+                    <div class="profile-location">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        {{ profile.location|default:"Location not set" }}
+                    </div>
+                </div>
+
+                <!-- Edit Button -->
+                <div>
+                    <button class="edit-button" onclick="openEditModal()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Content -->
+        <div class="profile-content">
+            <div class="content-grid">
+                <!-- Contact Information -->
+                <div>
+                    <h3 class="section-title">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Contact Information
+                    </h3>
+                    <div class="info-item">
+                        <label class="info-label">Full Name</label>
+                        <div class="info-value">{{ profile.full_name|default:"Not set" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Email</label>
+                        <div class="info-value">{{ user_email }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Phone Number</label>
+                        <div class="info-value">{{ profile.phone_number|default:"Not set" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label class="info-label">Location</label>
+                        <div class="info-value">{{ profile.location|default:"Not set" }}</div>
+                    </div>
+                </div>
+
+                <!-- About Section -->
+                <div>
+                    <h3 class="section-title">About</h3>
+                    <div class="info-item">
+                        <label class="info-label">Bio</label>
+                        <div class="info-value bio-text">{{ profile.bio|default:"No bio added yet." }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Profile</h2>
+                <button class="close-button" onclick="closeEditModal()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <form method="post" action="{% url 'profile_edit' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Hidden field for email (read-only) -->
+                <input type="hidden" name="email" value="{{ user_email }}">
+                
+                <div class="form-group">
+                    <label class="form-label" for="full_name">Full Name *</label>
+                    <input type="text"
+                           id="full_name"
+                           name="full_name"
+                           value="{{ profile.full_name|default:'' }}"
+                           required
+                           maxlength="100"
+                           class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email_display">Email (Read Only)</label>
+                    <input type="email"
+                           id="email_display"
+                           value="{{ user_email }}"
+                           readonly
+                           class="form-input"
+                           style="background-color: #f1f5f9; cursor: not-allowed;">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="phone_number">Phone Number</label>
+                    <input type="tel"
+                           id="phone_number"
+                           name="phone_number"
+                           value="{{ profile.phone_number|default:'' }}"
+                           maxlength="20"
+                           class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="location">Location</label>
+                    <input type="text"
+                           id="location"
+                           name="location"
+                           value="{{ profile.location|default:'' }}"
+                           maxlength="100"
+                           class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="bio">Bio</label>
+                    <textarea id="bio"
+                              name="bio"
+                              maxlength="500"
+                              class="form-textarea"
+                              oninput="updateCharacterCount(this)">{{ profile.bio|default:'' }}</textarea>
+                    <div class="character-count">
+                        <span id="bioCharCount">{{ profile.bio|length|default:0 }}</span>/500 characters
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="profile_image_input">Profile Image</label>
+                    <input type="file"
+                           id="profile_image_input"
+                           name="profile_image"
+                           accept="image/jpeg,image/png,image/gif,image/webp"
+                           class="form-input">
+                    <div class="character-count">
+                        Maximum file size: 5MB. Supported formats: JPG, PNG, GIF, WebP
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="button-secondary" onclick="closeEditModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="button-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden file input for quick image upload -->
+    <input type="file"
+           id="imageInput"
+           name="profile_image"
+           accept="image/jpeg,image/png,image/gif,image/webp"
+           class="hidden"
+           onchange="uploadImageAjax(this)">
+</div>
+
+<script>
+    // Modal Functions
+    function openEditModal() {
+        const modal = document.getElementById('editModal');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeEditModal() {
+        const modal = document.getElementById('editModal');
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditModal();
+        }
+    });
+
+    // Character count for bio
+    function updateCharacterCount(textarea) {
+        const count = textarea.value.length;
+        document.getElementById('bioCharCount').textContent = count;
+        
+        // Change color based on character count
+        const countElement = document.getElementById('bioCharCount');
+        if (count > 450) {
+            countElement.style.color = '#e53e3e';
+        } else if (count > 400) {
+            countElement.style.color = '#dd6b20';
+        } else {
+            countElement.style.color = '#718096';
+        }
+    }
+
+    // Replace the uploadImageAjax function in your template
+
+function uploadImageAjax(input) {
+  const spinner = document.getElementById("imageUploadSpinner")
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+
+    // Validate file size (1MB for Firestore)
+    if (file.size > 1 * 1024 * 1024) {
+      alert("File size must be less than 1MB for Firestore storage")
+      input.value = ""
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      alert("Only JPG, PNG, GIF, and WebP images are allowed")
+      input.value = ""
+      return
+    }
+
+    spinner.classList.add("active")
+
+    // Create FormData for AJAX upload
+    const formData = new FormData()
+    formData.append("profile_image", file)
+
+    // Get CSRF token
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value
+    formData.append("csrfmiddlewaretoken", csrfToken)
+
+    // Upload via AJAX
+    fetch("/profile/image/upload/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then((data) => {
+        spinner.classList.remove("active")
+        if (data.success) {
+          // Update image preview with the base64 data URL
+          document.getElementById("profileImage").src = data.image_url
+
+          // Show success message
+          showMessage("Profile image updated successfully!", "success")
+        } else {
+          console.error("Upload failed:", data.message)
+          alert(data.message || "Error uploading image")
+          input.value = ""
+        }
+      })
+      .catch((error) => {
+        spinner.classList.remove("active")
+        console.error("Upload error:", error)
+        alert("An error occurred while uploading the image. Please try again.")
+        input.value = ""
+      })
+  }
+}
+
+function deleteProfileImage() {
+  if (confirm("Are you sure you want to delete your profile image?")) {
+    fetch("/profile/image/delete/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          document.getElementById("profileImage").src = "/static/img/default-avatar.jpg"
+          showMessage(data.message, "success")
+        } else {
+          alert(data.message)
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error)
+        alert("An error occurred while deleting the image.")
+      })
+  }
+}
+
+function showMessage(message, type) {
+  const alertDiv = document.createElement("div")
+  alertDiv.className = `alert alert-${type}`
+  alertDiv.textContent = message
+
+  const wrapper = document.querySelector(".profile-wrapper")
+  wrapper.insertBefore(alertDiv, wrapper.firstChild)
+
+  // Remove message after 5 seconds
+  setTimeout(() => {
+    alertDiv.remove()
+  }, 5000)
+}
+
+</script>
+{% endblock %}

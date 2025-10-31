@@ -1,0 +1,58 @@
+{% extends 'user/userdashboard.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Scan Results</h4>
+                    <a href="{% url 'scan_diagnose' %}" class="btn btn-primary btn-sm">New Scan</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <img src="{{ image_url }}" class="img-fluid rounded" alt="Scanned Image">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert {% if result.class == 'Healthy' %}alert-success{% else %}alert-warning{% endif %}">
+                                <h5>{{ scan_type|title }} Detection Result:</h5>
+                                <h3>{{ result.class }}</h3>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5>Confidence Score</h5>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar 
+                                        {% if result.confidence > 0.8 %}bg-success
+                                        {% elif result.confidence > 0.6 %}bg-info
+                                        {% elif result.confidence > 0.4 %}bg-warning
+                                        {% else %}bg-danger{% endif %}" 
+                                        role="progressbar" 
+                                        style-width= {{ result.confidence|floatformat:2 }}%;
+                                        aria-valuenow="{{ result.confidence|floatformat:0 }}" 
+                                        aria-valuemin="0" 
+                                        aria-valuemax="100">
+                                        {{ result.confidence|floatformat:2 }}%
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5>Recommendation</h5>
+                                <div class="alert alert-info">
+                                    {{ result.recommendation }}
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'user_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

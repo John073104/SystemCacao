@@ -1,0 +1,470 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - CacaoGuard</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <style>
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      33% { transform: translateY(-10px) rotate(1deg); }
+      66% { transform: translateY(5px) rotate(-1deg); }
+    }
+    
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    .floating { animation: float 6s ease-in-out infinite; }
+    .slide-in { animation: slideInUp 0.6s ease-out; }
+    .fade-in { animation: fadeIn 0.8s ease-out; }
+    .pulse-btn { transition: all 0.3s ease; }
+    .pulse-btn:hover { animation: pulse 0.6s ease-in-out; }
+    .shake { animation: shake 0.5s ease-in-out; }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .gradient-bg::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.2"/><circle cx="10" cy="50" r="0.5" fill="white" opacity="0.2"/><circle cx="90" cy="30" r="0.5" fill="white" opacity="0.2"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      animation: float 20s ease-in-out infinite;
+    }
+    
+    .glass-card {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+    
+    .input-group {
+      transition: all 0.3s ease;
+    }
+    
+    .input-group:focus-within {
+      transform: translateY(-2px);
+    }
+    
+    .input-group input {
+      transition: all 0.3s ease;
+    }
+    
+    .input-group input:focus {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      border-color: #3b82f6;
+    }
+    
+    .strength-indicator {
+      height: 4px;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+    
+    .cacao-pattern {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      opacity: 0.1;
+      color: #8B4513;
+    }
+    
+    .success-checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: block;
+      stroke-width: 2;
+      stroke: #4ade80;
+      stroke-miterlimit: 10;
+      margin: 10% auto;
+      box-shadow: inset 0px 0px 0px #4ade80;
+      animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+    }
+    
+    .success-checkmark__circle {
+      stroke-dasharray: 166;
+      stroke-dashoffset: 166;
+      stroke-width: 2;
+      stroke-miterlimit: 10;
+      stroke: #4ade80;
+      fill: none;
+      animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+    
+    .success-checkmark__check {
+      transform-origin: 50% 50%;
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+    }
+    
+    @keyframes stroke {
+      100% { stroke-dashoffset: 0; }
+    }
+    
+    @keyframes scale {
+      0%, 100% { transform: none; }
+      50% { transform: scale3d(1.1, 1.1, 1); }
+    }
+    
+    @keyframes fill {
+      100% { box-shadow: inset 0px 0px 0px 30px #4ade80; }
+    }
+  </style>
+  
+  <script>
+    function togglePassword(id, iconId) {
+      var passwordField = document.getElementById(id);
+      var passwordIcon = document.getElementById(iconId);
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        passwordIcon.classList.remove('fa-eye-slash');
+        passwordIcon.classList.add('fa-eye');
+      } else {
+        passwordField.type = 'password';
+        passwordIcon.classList.remove('fa-eye');
+        passwordIcon.classList.add('fa-eye-slash');
+      }
+    }
+    
+    function checkPasswordStrength(password) {
+      let strength = 0;
+      const strengthBar = document.getElementById('password-strength');
+      const strengthText = document.getElementById('strength-text');
+      
+      if (password.length >= 6) strength += 1;
+      if (password.match(/[a-z]/)) strength += 1;
+      if (password.match(/[A-Z]/)) strength += 1;
+      if (password.match(/[0-9]/)) strength += 1;
+      if (password.match(/[^a-zA-Z0-9]/)) strength += 1;
+      
+      const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+      const texts = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+      const widths = ['20%', '40%', '60%', '80%', '100%'];
+      
+      if (password.length === 0) {
+        strengthBar.style.width = '0%';
+        strengthText.textContent = '';
+        return;
+      }
+      
+      strengthBar.style.width = widths[strength - 1] || '20%';
+      strengthBar.style.backgroundColor = colors[strength - 1] || colors[0];
+      strengthText.textContent = texts[strength - 1] || texts[0];
+      strengthText.style.color = colors[strength - 1] || colors[0];
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add entrance animations
+      document.querySelector('.glass-card').classList.add('slide-in');
+      
+      // Add floating cacao decorations
+      createCacaoDecorations();
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4",
+        authDomain: "systemcacao.firebaseapp.com",
+        databaseURL: "https://systemcacao-default-rtdb.firebaseio.com",
+        projectId: "systemcacao",
+        storageBucket: "systemcacao.appspot.com",
+        messagingSenderId: "35186667542",
+        appId: "1:35186667542:web:14fcda24f86fee52f60537",
+        measurementId: "G-S90GVN477H"
+      };
+      
+      firebase.initializeApp(firebaseConfig);
+      
+      const signupForm = document.getElementById('signup-form');
+      const passwordField = document.getElementById('password');
+      const confirmPasswordField = document.getElementById('confirm-password');
+      
+      // Password strength checker
+      passwordField.addEventListener('input', function() {
+        checkPasswordStrength(this.value);
+        validatePasswordMatch();
+      });
+      
+      confirmPasswordField.addEventListener('input', validatePasswordMatch);
+      
+      function validatePasswordMatch() {
+        const password = passwordField.value;
+        const confirmPassword = confirmPasswordField.value;
+        const matchIndicator = document.getElementById('password-match');
+        
+        if (confirmPassword.length === 0) {
+          matchIndicator.textContent = '';
+          return;
+        }
+        
+        if (password === confirmPassword) {
+          matchIndicator.textContent = '✓ Passwords match';
+          matchIndicator.className = 'text-green-600 text-sm mt-1';
+        } else {
+          matchIndicator.textContent = '✗ Passwords do not match';
+          matchIndicator.className = 'text-red-600 text-sm mt-1';
+        }
+      }
+      
+      signupForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        
+        hideError();
+        
+        if (password !== confirmPassword) {
+          showError("Passwords do not match");
+          document.getElementById('error-container').classList.add('shake');
+          setTimeout(() => document.getElementById('error-container').classList.remove('shake'), 500);
+          return;
+        }
+        
+        if (password.length < 6) {
+          showError("Password must be at least 6 characters");
+          document.getElementById('error-container').classList.add('shake');
+          setTimeout(() => document.getElementById('error-container').classList.remove('shake'), 500);
+          return;
+        }
+        
+        const submitBtn = document.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating account...';
+        submitBtn.classList.add('opacity-75');
+        
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+          .then((userCredential) => {
+            const user = userCredential.user;
+            return firebase.firestore().collection('users').doc(user.uid).set({
+              name: name,
+              email: email,
+              createdAt: new Date(),
+              role: 'user'
+            });
+          })
+          .then(() => {
+            // Show success with animated checkmark
+            showSuccessMessage();
+            
+            // Delay then redirect
+            setTimeout(() => {
+              window.location.href = "{% url 'login' %}?message=" + encodeURIComponent("Account created successfully! Please login.");
+            }, 3000);
+          })
+          .catch((error) => {
+            showError(error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Sign Up';
+            submitBtn.classList.remove('opacity-75');
+            document.getElementById('error-container').classList.add('shake');
+            setTimeout(() => document.getElementById('error-container').classList.remove('shake'), 500);
+          });
+      });
+      
+      function showError(message) {
+        document.getElementById('error-message').textContent = message;
+        document.getElementById('error-container').classList.remove('hidden');
+      }
+      
+      function hideError() {
+        document.getElementById('error-container').classList.add('hidden');
+      }
+      
+      function showSuccessMessage() {
+        const messageContainer = document.createElement('div');
+        messageContainer.className = "bg-gradient-to-r from-green-400 to-green-600 text-white px-6 py-4 rounded-xl relative mb-6 text-center slide-in";
+        messageContainer.innerHTML = `
+          <svg class="success-checkmark" viewBox="0 0 52 52">
+            <circle class="success-checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="success-checkmark__check" fill="none" d="l-1.5,1.5l-3.0,3.0l-7.5,-7.5l-1.5,1.5l9.0,9.0l16.5,-16.5l-1.5,-1.5l-15.0,15.0"/>
+          </svg>
+          <p class="text-lg font-semibold mb-2">Account Created Successfully!</p>
+          <p class="text-sm opacity-90">Redirecting to login page...</p>
+        `;
+        
+        document.querySelector('.glass-card').prepend(messageContainer);
+      }
+      
+      function createCacaoDecorations() {
+        const decorations = [
+          { icon: 'fas fa-seedling', top: '10%', left: '5%', delay: '0s' },
+          { icon: 'fas fa-leaf', top: '20%', right: '8%', delay: '2s' },
+          { icon: 'fas fa-seedling', bottom: '15%', left: '3%', delay: '4s' },
+          { icon: 'fas fa-spa', bottom: '25%', right: '5%', delay: '1s' },
+          { icon: 'fas fa-leaf', top: '60%', left: '2%', delay: '3s' }
+        ];
+        
+        decorations.forEach(deco => {
+          const elem = document.createElement('i');
+          elem.className = `${deco.icon} cacao-pattern floating`;
+          elem.style.position = 'absolute';
+          elem.style.animationDelay = deco.delay;
+          
+          if (deco.top) elem.style.top = deco.top;
+          if (deco.bottom) elem.style.bottom = deco.bottom;
+          if (deco.left) elem.style.left = deco.left;
+          if (deco.right) elem.style.right = deco.right;
+          
+          document.body.appendChild(elem);
+        });
+      }
+    });
+  </script>
+</head>
+<body class="gradient-bg min-h-screen">
+
+  <div class="flex items-center justify-center min-h-screen px-4 relative z-10 py-8">
+    <div class="glass-card rounded-2xl p-8 w-full max-w-md relative">
+      <div class="absolute top-6 right-6">
+        <!-- <a href="{% url 'home' %}" class="text-gray-400 hover:text-gray-600 transition-colors duration-300 hover:scale-110 transform">
+          <i class="fas fa-times text-2xl"></i>
+        </a> -->
+      </div>
+      
+     <div class="text-center mb-8">
+  <!-- Logo without background -->
+  <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 shadow-none overflow-hidden">
+    <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-16 h-16 object-contain" />
+  </div>
+
+  <!-- Dark blue CacaoGuard text -->
+  <h2 class="text-3xl font-bold text-[#1e3a8a] mb-2">Join CacaoGuard</h2>
+  <p class="text-gray-600">Create your account to get started</p>
+</div>
+
+      
+      <div id="error-container" class="hidden bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-xl relative mb-6">
+        <span id="error-message">Error message here</span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer hover:bg-red-700 rounded-r-xl transition-colors">
+          <i class="fas fa-times" onclick="document.getElementById('error-container').classList.add('hidden')"></i>
+        </span>
+      </div>
+      
+      <form id="signup-form" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="input-group">
+          <label class="block text-gray-700 font-medium mb-2" for="name">
+            <i class=" mr-2 text-gray-500"></i>Full Name
+          </label>
+          <div class="relative">
+            <input id="name" type="text" name="name" 
+                   class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-0 focus:border-blue-500 pl-12 transition-all duration-300" 
+                   placeholder="Enter your full name" required>
+            <i class="fas fa-user absolute left-4 top-4 text-gray-400"></i>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="block text-gray-700 font-medium mb-2" for="email">
+            <i class=" mr-2 text-gray-500"></i>Email Address
+          </label>
+          <div class="relative">
+            <input id="email" type="email" name="email" 
+                   class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-0 focus:border-blue-500 pl-12 transition-all duration-300" 
+                   placeholder="Enter your email" required>
+            <i class="fas fa-envelope absolute left-4 top-4 text-gray-400"></i>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="block text-gray-700 font-medium mb-2" for="password">
+            <i class="mr-2 text-gray-500"></i>Password
+          </label>
+          <div class="relative">
+            <input id="password" type="password" name="password" 
+                   class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-0 focus:border-blue-500 pl-12 pr-12 transition-all duration-300" 
+                   placeholder="Create a strong password" required>
+            <i class="fas fa-lock absolute left-4 top-4 text-gray-400"></i>
+            <i id="password-icon" onclick="togglePassword('password', 'password-icon')" 
+               class="fas fa-eye-slash absolute right-4 top-4 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors"></i>
+          </div>
+          <div class="strength-indicator bg-gray-200 rounded-full mt-2">
+            <div id="password-strength" class="h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+          <p id="strength-text" class="text-xs mt-1"></p>
+        </div>
+
+        <div class="input-group">
+          <label class="block text-gray-700 font-medium mb-2" for="confirm-password">
+            <i class="mr-2 text-gray-500"></i>Confirm Password
+          </label>
+          <div class="relative">
+            <input id="confirm-password" type="password" name="confirm_password" 
+                   class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-0 focus:border-blue-500 pl-12 pr-12 transition-all duration-300" 
+                   placeholder="Confirm your password" required>
+            <i class="fas fa-lock absolute left-4 top-4 text-gray-400"></i>
+            <i id="confirm-password-icon" onclick="togglePassword('confirm-password', 'confirm-password-icon')" 
+               class="fas fa-eye-slash absolute right-4 top-4 cursor-pointer text-gray-400 hover:text-gray-600 transition-colors"></i>
+          </div>
+          <p id="password-match" class="text-sm mt-1"></p>
+        </div>
+
+        <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 pulse-btn transform hover:shadow-lg">
+          <i class="fas fa-user-plus mr-2"></i>Create Account
+        </button>
+      </form>
+
+      <div class="mt-8 text-center">
+        <p class="text-gray-600">
+          Already have an account?
+          <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all duration-300">
+            Login here
+          </a>
+        </p>
+      </div>
+      
+      <div class="mt-6 text-center">
+        <p class="text-xs text-gray-500">
+          By creating an account, you agree to our 
+          <a href="{% url 'terms' %}" class="text-blue-600 hover:underline">Terms of Service</a> and 
+          <a href="{% url 'privacy' %}" class="text-blue-600 hover:underline">Privacy Policy</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

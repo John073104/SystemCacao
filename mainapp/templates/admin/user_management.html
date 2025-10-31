@@ -1,0 +1,671 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>User Management - CacaoGuard Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+    <style>
+        /* Fixed sidebar and scrollable content */
+        .main-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .sidebar-fixed {
+            width: 280px;
+            flex-shrink: 0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 40;
+        }
+        
+        .content-scrollable {
+            flex: 1;
+            margin-left: 280px;
+            overflow-y: auto;
+            height: 100vh;
+            background-color: #f9fafb;
+        }
+
+        /* Card styles - rectangular with clear visibility */
+        .stat-card-rect {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card-rect:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .gradient-header {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table thead {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        .user-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .user-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .user-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-admin {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-user {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-inactive {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-hide {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-hide:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-hide:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .search-box {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .filter-select {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #e5e7eb;
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #d1d5db;
+        }
+
+        .btn-confirm {
+            flex: 1;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .sidebar-fixed {
+                width: 250px;
+            }
+            .content-scrollable {
+                margin-left: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-fixed {
+                transform: translateX(-100%);
+            }
+            .content-scrollable {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter">
+    {% block content %}
+    <div class="main-container">
+        <!-- Fixed Sidebar -->
+        <div class="sidebar-fixed">
+            {% include 'admin/sidebar.html' %}
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="content-scrollable">
+            <div class="p-8">
+                <!-- Header -->
+              <div class="gradient-header">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center animate-bounce">
+                <i class="fas fa-users-cog text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-white">User Management</h1>
+                <p class="text-white text-opacity-90 text-sm">Manage registered users</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <!-- Statistics Cards - Rectangular -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card-rect">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm mb-1">Total Users</p>
+                                <h3 class="text-3xl font-bold text-gray-900">{{ total_users }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-users text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-rect">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm mb-1">Active Users</p>
+                                <h3 class="text-3xl font-bold text-gray-900">{{ active_users }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-check text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-rect">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm mb-1">Admins</p>
+                                <h3 class="text-3xl font-bold text-gray-900">{{ admin_users }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user-shield text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-rect">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm mb-1">Regular Users</p>
+                                <h3 class="text-3xl font-bold text-gray-900">{{ regular_users }}</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-user text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filters -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search Users</label>
+                            <input 
+                                type="text" 
+                                name="search" 
+                                value="{{ search_query }}"
+                                placeholder="Search by name or email..." 
+                                class="search-box"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Role</label>
+                            <select name="role" class="filter-select w-full">
+                                <option value="">All Roles</option>
+                                <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                                <option value="user" {% if role_filter == 'user' %}selected{% endif %}>User</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+                            <select name="status" class="filter-select w-full">
+                                <option value="">All Status</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-3 flex gap-4">
+                            <button type="submit" class="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all">
+                                <i class="fas fa-search mr-2"></i>Apply Filters
+                            </button>
+                            <a href="{% url 'admin_user_management' %}" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-all">
+                                <i class="fas fa-redo mr-2"></i>Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Users Table -->
+                <div class="table-container">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-user mr-2"></i>User</th>
+                                <th><i class="fas fa-envelope mr-2"></i>Email</th>
+                                <th><i class="fas fa-shield-alt mr-2"></i>Role</th>
+                                <th><i class="fas fa-toggle-on mr-2"></i>Status</th>
+                                <th><i class="fas fa-cog mr-2"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if users %}
+                                {% for user in users %}
+                                <tr id="user-row-{{ user.id }}">
+                                    <td>
+                                        <div class="flex items-center gap-3">
+                                            <div class="user-avatar">
+                                                {{ user.name|slice:":1"|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="font-semibold text-gray-900">{{ user.name }}</div>
+                                                <div class="text-xs text-gray-500">ID: {{ user.id }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-gray-700">{{ user.email }}</td>
+                                    <td>
+                                        {% if user.role == 'admin' %}
+                                            <span class="badge badge-admin">
+                                                <i class="fas fa-shield-alt mr-1"></i>Admin
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-user">
+                                                <i class="fas fa-user mr-1"></i>User
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge badge-active">
+                                                <i class="fas fa-check-circle mr-1"></i>Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-inactive">
+                                                <i class="fas fa-times-circle mr-1"></i>Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button 
+                                            onclick="showHideModal('{{ user.id }}', '{{ user.name }}')" 
+                                            class="btn-hide"
+                                            id="hide-btn-{{ user.id }}"
+                                        >
+                                            <i class="fas fa-eye-slash"></i>
+                                            Hide
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-users text-4xl mb-4 text-gray-300"></i>
+                                        <p>No users found</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hide Confirmation Modal -->
+    <div id="hideModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">
+                    <i class="fas fa-eye-slash text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Hide User</h2>
+                    <p class="text-sm text-gray-500">This action will hide the user from the list</p>
+                </div>
+            </div>
+            <p class="text-gray-700 mb-4">
+                Are you sure you want to hide <strong id="userName"></strong>? 
+                The user account and all their data will remain intact, but they will not appear in this list.
+            </p>
+            <div class="modal-buttons">
+                <button onclick="closeHideModal()" class="btn-cancel">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </button>
+                <button onclick="confirmHide()" class="btn-confirm" id="confirmHideBtn">
+                    <i class="fas fa-eye-slash mr-2"></i>Hide User
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    {% csrf_token %}
+
+    <script>
+    let currentUserId = null;
+
+    function showHideModal(userId, userName) {
+        currentUserId = userId;
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('hideModal').style.display = 'block';
+    }
+
+    function closeHideModal() {
+        document.getElementById('hideModal').style.display = 'none';
+        currentUserId = null;
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.style.display = 'block';
+        
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
+    }
+
+    function confirmHide() {
+        if (!currentUserId) return;
+        
+        const confirmBtn = document.getElementById('confirmHideBtn');
+        const hideBtn = document.getElementById(`hide-btn-${currentUserId}`);
+        
+        // Disable buttons
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Hiding...';
+        
+        if (hideBtn) {
+            hideBtn.disabled = true;
+            hideBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Hiding...';
+        }
+        
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Send hide request
+        fetch(`/admin/user-management/hide/${currentUserId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the row from table
+                const row = document.getElementById(`user-row-${currentUserId}`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s ease';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 300);
+                }
+                
+                // Close modal
+                closeHideModal();
+                
+                // Show success message
+                showToast('User hidden successfully', 'success');
+                
+                // Reload page after 1 second to update statistics
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showToast(data.message || 'Error hiding user', 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide User';
+                if (hideBtn) {
+                    hideBtn.disabled = false;
+                    hideBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Network error. Please try again.', 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide User';
+            if (hideBtn) {
+                hideBtn.disabled = false;
+                hideBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide';
+            }
+        });
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('hideModal');
+        if (event.target == modal) {
+            closeHideModal();
+        }
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,708 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin Dashboard - CacaoGuard</title>
+     <!-- Fonts  -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+     <!-- Tailwind CSS  -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Gradient Styles -->
+    <link rel="stylesheet" href="{% static 'css/gradients.css' %}">
+     <!-- Chart.js  -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+     <!-- Font Awesome  -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+     <!-- Alpine.js  -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        .icon-gradient-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .icon-gradient-2 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .icon-gradient-3 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .icon-gradient-4 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .icon-gradient-5 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+        .icon-gradient-6 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        
+    </style>
+     {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen overflow-hidden">
+         <!-- Sidebar  -->
+        {% include 'admin/sidebar.html' %}
+        
+         <!-- Main Content  -->
+        <div class="flex-1 p-8 overflow-y-auto">
+            {% block content %}
+             <!-- Updated header with orange gradient and glassmorphism effects  -->
+            <div class="relative overflow-hidden rounded-2xl shadow-2xl mb-8 animate-fade-in admin-header-gradient">
+                
+                 <!-- Glassmorphism Overlay  -->
+                <div class="relative backdrop-blur-sm bg-white/10 border border-white/20 p-8">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-6">
+                            <div class="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center animate-float border border-white/30 shadow-xl">
+                                <i class="fas fa-leaf text-white text-3xl"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-4xl font-bold text-white mb-2 drop-shadow-lg">CacaoGuard Admin</h1>
+                                <p class="text-emerald-50 text-lg font-medium">Agricultural Management Dashboard</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="px-5 py-2.5 bg-white/20 backdrop-blur-md text-white rounded-full text-sm font-semibold border border-white/30 shadow-lg">
+                                <i class="fas fa-circle text-green-300 mr-2 animate-pulse"></i>
+                                System Online
+                            </span>
+                            <div class="text-right bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20">
+                                <p class="text-sm text-white font-medium" id="current-time">
+                                    <script>
+                                        const now = new Date();
+                                        document.currentScript.parentElement.innerText = now.toLocaleString();
+                                    </script>
+                                </p>
+                                <p class="text-xs text-emerald-100">Philippines</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Stats Grid  -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                 <!-- Total Scans (All)  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg stat-card animate-slide-up">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 icon-gradient-1 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-search text-white text-lg"></i>
+                        </div>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Scans</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Total Scans (All)</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-2">{{ total_scan_count }}</p>
+                    <p class="text-gray-600 text-sm">All scans across users</p>
+                </div>
+
+                 <!-- Total Orders  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg stat-card animate-slide-up" style="animation-delay: 0.1s">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 icon-gradient-4 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-shopping-cart text-white text-lg"></i>
+                        </div>
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">E-commerce</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Total Orders</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-2">{{ order_count }}</p>
+                    <p class="text-gray-600 text-sm">Completed transactions</p>
+                </div>
+
+                 <!-- Total Revenue  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg stat-card animate-slide-up" style="animation-delay: 0.2s">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 icon-gradient-2 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-money-bill-wave text-white text-lg"></i>
+                        </div>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Revenue</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Total Revenue</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-2">₱{{ total_revenue|floatformat:2 }}</p>
+                    <p class="text-gray-600 text-sm">From all completed orders</p>
+                </div>
+
+                 <!-- Total Farms Mapped  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg stat-card animate-slide-up" style="animation-delay: 0.3s">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 icon-gradient-3 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-map-marked-alt text-white text-lg"></i>
+                        </div>
+                        <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Farms</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Farms Mapped</h3>
+                    <p class="text-3xl font-bold text-gray-900 mb-2">{{ farm_count }}</p>
+                    <p class="text-gray-600 text-sm">Registered in the system</p>
+                </div>
+            </div>
+
+             <!-- Updated Charts Section with 4 charts in 2x2 grid  -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                 <!-- Revenue Chart  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-line text-teal-500 mr-2"></i>
+                        Revenue Analysis
+                    </h3>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                 <!-- Scan Growth Chart  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-purple-500 mr-2"></i>
+                        Scan Activity Growth
+                    </h3>
+                    <div class="chart-container relative h-[300px]">
+                        <canvas id="scanChart"></canvas>
+                    </div>
+                </div>
+
+                 <!-- New Disease Distribution Pie Chart  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-rose-500 mr-2"></i>
+                        Disease Distribution
+                    </h3>
+                    <div class="chart-container relative h-[300px] flex items-center justify-center">
+                        <canvas id="diseaseChart" style="max-width: 280px; max-height: 280px; margin: 0 auto;"></canvas>
+                    </div>
+                </div>
+<!-- 
+                 New Order Status Distribution Doughnut Chart  -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-amber-500 mr-2"></i>
+                        Order Status Distribution
+                    </h3>
+                    <div class="chart-container relative h-[300px] flex items-center justify-center">
+                        <canvas id="orderStatusChart" style="max-width: 280px; max-height: 280px; margin: 0 auto;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Recent Activity Section  -->
+            <div class="glass-card p-6 rounded-2xl shadow-lg mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Recent Activity</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <!-- New Farm Locations  -->
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-3 flex items-center">
+                            <i class="fas fa-map-marker-alt text-green-500 mr-2"></i> New Farm Locations
+                        </h4>
+                        <ul class="space-y-3">
+                            {% for farm in recent_farms %}
+                            <li class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-leaf text-green-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium">{{ farm.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ farm.barangay }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                     <!-- Recent Orders  -->
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-3 flex items-center">
+                            <i class="fas fa-shopping-cart text-green-500 mr-2"></i> Recent Orders
+                        </h4>
+                        <ul class="space-y-3">
+                            {% for order in recent_orders %}
+                            <li class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-receipt text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium">Order #{{ order.id|slice:":8" }}</p>
+                                    <p class="text-xs text-gray-500">₱{{ order.amount|floatformat:2 }} • {{ order.status }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                     <!-- Recent Scans  -->
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-3 flex items-center">
+                            <i class="fas fa-camera text-purple-500 mr-2"></i> Recent Scans
+                        </h4>
+                        <ul class="space-y-3">
+                            {% for scan in recent_scans %}
+                            <li class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-qrcode text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium">{{ scan.result }}</p>
+                                     <!-- Confidence is now already multiplied by 100 in views.py  -->
+                                    <p class="text-xs text-gray-500">{{ scan.confidence }}% • {{ scan.date|date:"M d" }}</p>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Print Report Section  -->
+            <div id="print-report" class="hidden print:block p-6">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800">CacaoGuard System Report</h1>
+                    <p class="text-gray-600">Generated on {{ current_date|date:"F j, Y" }}</p>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 mb-8">
+                    <div class="border p-4 rounded-lg text-center">
+                        <h3 class="text-lg font-bold">Total Scans</h3>
+                        <p class="text-2xl">{{ total_scan_count }}</p>
+                    </div>
+                    <div class="border p-4 rounded-lg text-center">
+                        <h3 class="text-lg font-bold">Total Orders</h3>
+                        <p class="text-2xl">{{ order_count }}</p>
+                    </div>
+                    <div class="border p-4 rounded-lg text-center">
+                        <h3 class="text-lg font-bold">Total Revenue</h3>
+                        <p class="text-2xl">₱{{ total_revenue|floatformat:2 }}</p>
+                    </div>
+                    <div class="border p-4 rounded-lg text-center">
+                        <h3 class="text-lg font-bold">Farms Mapped</h3>
+                        <p class="text-2xl">{{ farm_count }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h3 class="text-xl font-bold border-b pb-2 mb-4">Scan Growth</h3>
+                        <div style="height: 300px;">
+                            <canvas id="printScanChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold border-b pb-2 mb-4">Revenue Analysis</h3>
+                        <div style="height: 300px;">
+                            <canvas id="printRevenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold border-b pb-2 mb-4">Recent Activity Summary</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <h4 class="font-bold mb-2">New Farm Locations</h4>
+                            <ul class="space-y-2">
+                                {% for farm in recent_farms %}
+                                <li class="text-sm">{{ farm.name }} - {{ farm.barangay }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold mb-2">Recent Orders</h4>
+                            <ul class="space-y-2">
+                                {% for order in recent_orders %}
+                                <li class="text-sm">Order #{{ order.id|slice:":8" }} - ₱{{ order.amount|floatformat:2 }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold mb-2">Recent Scans</h4>
+                            <ul class="space-y-2">
+                                {% for scan in recent_scans %}
+                                <li class="text-sm">{{ scan.result }} ({{ scan.confidence }}%)</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center text-sm text-gray-500 mt-8">
+                    <p>This report was automatically generated by the CacaoGuard Admin Dashboard</p>
+                </div>
+            </div>
+            {% endblock %}
+        </div>
+    </div>
+<!-- 
+     JavaScript for Sidebar and Charts  -->
+    <script>
+        // Sidebar Toggle Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar toggle
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('transform');
+                    sidebar.classList.toggle('-translate-x-full');
+                    sidebar.classList.toggle('ml-0');
+
+                    // Toggle main content margin
+                    const mainContent = document.querySelector('.ml-64');
+                    if (mainContent) {
+                        mainContent.classList.toggle('ml-64');
+                        mainContent.classList.toggle('ml-0');
+                    }
+                });
+            }
+
+            // Chart data from Django
+            const chartData = {
+                revenueLabels: JSON.parse('{{ revenue_labels|default:"[]"|escapejs }}'),
+                revenueData: JSON.parse('{{ revenue_data|default:"[]"|escapejs }}'),
+                scanLabels: JSON.parse('{{ scan_labels|default:"[]"|escapejs }}'),
+                scanData: JSON.parse('{{ scan_data|default:"[]"|escapejs }}'),
+                diseaseLabels: JSON.parse('{{ disease_labels|default:"[]"|escapejs }}'),
+                diseaseData: JSON.parse('{{ disease_data|default:"[]"|escapejs }}'),
+                orderStatusLabels: JSON.parse('{{ order_status_labels|default:"[]"|escapejs }}'),
+                orderStatusData: JSON.parse('{{ order_status_data|default:"[]"|escapejs }}')
+            };
+
+            // Initialize Charts
+            function initializeCharts() {
+                // Revenue Chart
+                const revenueCtx = document.getElementById('revenueChart');
+                if (revenueCtx) {
+                    try {
+                        new Chart(revenueCtx, {
+                            type: 'line',
+                            data: {
+                                labels: chartData.revenueLabels,
+                                datasets: [{
+                                    label: 'Revenue (₱)',
+                                    data: chartData.revenueData,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 3,
+                                    tension: 0.4,
+                                    fill: true,
+                                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                                    pointBorderColor: '#fff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return '₱' + context.raw.toLocaleString();
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            callback: function(value) {
+                                                return '₱' + value.toLocaleString();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing revenue chart:', e);
+                    }
+                }
+
+                // Scan Activity Chart
+                const scanCtx = document.getElementById('scanChart');
+                if (scanCtx) {
+                    try {
+                        new Chart(scanCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: chartData.scanLabels,
+                                datasets: [{
+                                    label: 'Daily Scans',
+                                    data: chartData.scanData,
+                                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                                    borderColor: 'rgba(102, 126, 234, 1)',
+                                    borderWidth: 1,
+                                    borderRadius: 8,
+                                    borderSkipped: false,
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            stepSize: 1
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing scan chart:', e);
+                    }
+                }
+
+                const diseaseCtx = document.getElementById('diseaseChart');
+                if (diseaseCtx) {
+                    try {
+                        new Chart(diseaseCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: chartData.diseaseLabels,
+                                datasets: [{
+                                    label: 'Disease Count',
+                                    data: chartData.diseaseData,
+                                    backgroundColor: [
+                                        'rgba(239, 68, 68, 0.8)',   // Red
+                                        'rgba(249, 115, 22, 0.8)',  // Orange
+                                        'rgba(234, 179, 8, 0.8)',   // Yellow
+                                        'rgba(34, 197, 94, 0.8)',   // Green
+                                        'rgba(59, 130, 246, 0.8)',  // Blue
+                                        'rgba(168, 85, 247, 0.8)',  // Purple
+                                    ],
+                                    borderColor: [
+                                        'rgba(239, 68, 68, 1)',
+                                        'rgba(249, 115, 22, 1)',
+                                        'rgba(234, 179, 8, 1)',
+                                        'rgba(34, 197, 94, 1)',
+                                        'rgba(59, 130, 246, 1)',
+                                        'rgba(168, 85, 247, 1)',
+                                    ],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 15,
+                                            font: {
+                                                size: 11
+                                            }
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const label = context.label || '';
+                                                const value = context.parsed || 0;
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = ((value / total) * 100).toFixed(1);
+                                                return label + ': ' + value + ' (' + percentage + '%)';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing disease chart:', e);
+                    }
+                }
+
+                const orderStatusCtx = document.getElementById('orderStatusChart');
+                if (orderStatusCtx) {
+                    try {
+                        new Chart(orderStatusCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: chartData.orderStatusLabels,
+                                datasets: [{
+                                    label: 'Order Count',
+                                    data: chartData.orderStatusData,
+                                    backgroundColor: [
+                                        'rgba(251, 146, 60, 0.8)',  // Orange - Pending
+                                        'rgba(6, 182, 212, 0.8)',   // Cyan - Confirmed
+                                        'rgba(59, 130, 246, 0.8)',  // Blue - Processing
+                                        'rgba(34, 197, 94, 0.8)',   // Green - Delivered
+                                        'rgba(239, 68, 68, 0.8)',   // Red - Cancelled
+                                    ],
+                                    borderColor: [
+                                        'rgba(251, 146, 60, 1)',
+                                        'rgba(6, 182, 212, 1)',
+                                        'rgba(59, 130, 246, 1)',
+                                        'rgba(34, 197, 94, 1)',
+                                        'rgba(239, 68, 68, 1)',
+                                    ],
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 15,
+                                            font: {
+                                                size: 11
+                                            }
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const label = context.label || '';
+                                                const value = context.parsed || 0;
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = ((value / total) * 100).toFixed(1);
+                                                return label + ': ' + value + ' (' + percentage + '%)';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing order status chart:', e);
+                    }
+                }
+
+                // Print versions of charts
+                const printScanCtx = document.getElementById('printScanChart');
+                if (printScanCtx) {
+                    try {
+                        new Chart(printScanCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: chartData.scanLabels,
+                                datasets: [{
+                                    data: chartData.scanData,
+                                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                                    borderColor: 'rgba(102, 126, 234, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing print scan chart:', e);
+                    }
+                }
+
+                const printRevenueCtx = document.getElementById('printRevenueChart');
+                if (printRevenueCtx) {
+                    try {
+                        new Chart(printRevenueCtx, {
+                            type: 'line',
+                            data: {
+                                labels: chartData.revenueLabels,
+                                datasets: [{
+                                    data: chartData.revenueData,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.3,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        ticks: {
+                                            callback: function(value) {
+                                                return '₱' + value.toLocaleString();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Error initializing print revenue chart:', e);
+                    }
+                }
+            }
+
+            // Initialize charts when DOM is loaded
+            initializeCharts();
+        });
+    </script>
+</body>
+</html>

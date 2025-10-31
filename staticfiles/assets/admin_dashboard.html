@@ -1,0 +1,137 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+    <div class="bg-white shadow-lg rounded-lg p-6 w-96 text-center">
+        <h2 class="text-2xl font-bold text-gray-700">Admin Dashboard</h2>
+        <p class="text-gray-500 mt-2">Welcome, <span class="font-semibold text-red-600">{{ user.email }}</span>!</p>
+        
+        <button onclick="confirmLogout()" 
+            class="mt-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded">
+            Logout
+        </button>
+    </div>
+
+    <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = "{% url 'logout' %}";
+            }
+        }
+    </script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin dashboard for managing cacao farm system, including user management, product management, and system monitoring">
+    <meta name="keywords" content="admin dashboard, cacao farm, management system, e-commerce, farm mapping">
+    <meta property="og:title" content="Cacao Farm Admin Dashboard">
+    <meta property="og:description" content="Comprehensive admin dashboard for managing cacao farm system">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Cacao Farm Admin Dashboard">
+    <meta name="twitter:description" content="Comprehensive admin dashboard for managing cacao farm system">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 bg-gray-800 text-white fixed h-full flex flex-col">
+            <div class="sidebar-header flex flex-col items-center p-4 border-b border-gray-700">
+                <img 
+                    src="hero.png" 
+                    alt="CacaoGuard Logo" 
+                    class="w-16 h-16 rounded-full mb-2"
+                />
+                <h1 class="text-xl font-bold">Admin Dashboard</h1>
+            </div>
+            <nav class="mt-6 flex flex-col items-center">
+                <div class="nav-item w-full text-center p-4 cursor-default flex items-center justify-center">
+                    <i class="nav-icon fas fa-user-shield mr-2"></i> Welcome Admin
+                </div>
+                <a href="/templates/admin/dashboard" class="nav-item w-full text-center p-4 hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                    <i class="nav-icon fas fa-gauge-high mr-2"></i> Dashboard
+                </a>
+                <a href="#analysis" class="nav-item w-full text-center p-4 hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                    <i class="nav-icon fas fa-image mr-2"></i> Image Analysis Reports
+                </a>
+                <a href="#ecommerce" class="nav-item w-full text-center p-4 hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                    <i class="nav-icon fas fa-store mr-2"></i> E-commerce Management
+                </a>
+                <a href="#farms" class="nav-item w-full text-center p-4 hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                    <i class="nav-icon fas fa-map-location-dot mr-2"></i> Farm Mapping & Users
+                </a>
+                <a href="#settings" class="nav-item w-full text-center p-4 hover:bg-gray-700 cursor-pointer flex items-center justify-center">
+                    <i class="nav-icon fas fa-gear mr-2"></i> System Logs & Settings
+                </a>
+                <button onclick="confirmLogout()" class="nav-item w-full text-center p-4 mt-auto hover:bg-red-600 cursor-pointer flex items-center justify-center text-red-400" onclick="console.log('Logout clicked')">
+                    <i class="nav-icon fa-solid fa-right-from-bracket mr-2"></i> Logout
+                </button>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 ml-64 p-6">
+            <div class="bg-white p-4 rounded-lg shadow mb-6 flex justify-between items-center">
+                <div class="relative">
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500"
+                    />
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="text-gray-600 hover:text-gray-900">
+                        <i class="fa-solid fa-bell text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <img
+                            src="https://i.pravatar.cc/40"
+                            alt="Admin Profile"
+                            class="w-10 h-10 rounded-full"
+                        />
+                        <div class="hidden md:block">
+                            <p class="font-medium">Admin User</p>
+                            <p class="text-sm text-gray-500">Super Admin</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold mb-6">Dashboard Overview</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-green-200 p-6 rounded-lg shadow">
+                    <h3 class="text-gray-500 text-sm">Total Users</h3>
+                    <p class="text-3xl font-bold">1,234</p>
+                </div>
+                <div class="bg-blue-200 p-6 rounded-lg shadow">
+                    <h3 class="text-gray-500 text-sm">Active Farms</h3>
+                    <p class="text-3xl font-bold">856</p>
+                </div>
+                <div class="bg-purple-200 p-6 rounded-lg shadow">
+                    <h3 class="text-gray-500 text-sm">Total Products</h3>
+                    <p class="text-3xl font-bold">432</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = "{% url 'logout' %}";
+            }
+        }
+    </script>
+</body>
+</html>

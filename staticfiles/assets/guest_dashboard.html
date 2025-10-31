@@ -1,0 +1,276 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Guest Dashboard</title>
+</head>
+<body>
+    <h1>Welcome, Guest!</h1>
+    <p>Your login time: {{ request.session.guest_uid }}</p>
+    
+    <h2>Available Features</h2>
+    <ul>
+        <li>🔍 View Image Detection Results</li>
+        <li>🛍️ Browse E-commerce Products</li>
+        <li>📍 Explore Farm Mapping</li>
+        <li>📜 Read Cacao Farming Guides</li>
+        <li>📢 View Latest Cacao Market Trends</li>
+    </ul>
+
+    <a href="{% url 'logout' %}">Logout</a>
+</body>
+</html> -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>CacaoGuard - Cacao Disease Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        .hidden { display: none; }
+        .nav-link {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .nav-link:hover {
+            background-color: #e5e7eb; /* Light gray background on hover */
+            color: #4a5568; /* Darker text color on hover */
+        }
+        .nav-link.active {
+            background-color: #6b46c1; /* Purple background when active */
+            color: white; /* White text when active */
+        }
+        .logo {
+            border-radius: 50%; /* Make logo circular */
+            width: 40px; /* Medium size */
+            height: 40px; /* Medium size */
+        }
+        footer {
+            background-color: #4a5568; /* Dark gray background */
+            color: white;
+        }
+        .map-container {
+            height: 400px; /* Set a fixed height for the map */
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .municipality-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .municipality-button {
+            transition: all 0.2s ease;
+            padding: 0.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+        .municipality-button:hover {
+            background-color: #f3f4f6;
+        }
+        .municipality-button.active {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <img alt="CacaoGuard logo" class="logo" src="{% static 'images/hero.png' %}"/>
+                        <span class="ml-2 font-semibold text-xl text-gray-800">CacaoGuard</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium" href="#" onclick="showSection('diseaseDetection'); setActiveLink(this)">
+                        <i class="fas fa-virus mr-2"></i> Disease Detection
+                    </a>
+                    <a class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium" href="#" onclick="showSection('marketplace'); setActiveLink(this)">
+                        <i class="fas fa-shopping-cart mr-2"></i> Marketplace
+                    </a>
+                    <a class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium" href="#" onclick="showSection('farmMapping'); setActiveLink(this)">
+                        <i class="fas fa-map-marker-alt mr-2"></i> Farm Mapping
+                    </a>
+                    
+                    <button onclick="confirmLogout()" class="nav-item w-full text-center p-4 mt-auto hover:bg-red-400 cursor-pointer flex items-center justify-center text-red-200" onclick="console.log('Logout clicked')">
+                        <i class="nav-icon fa-solid fa-right-from-bracket mr-2"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+        <!-- Disease Detection Section -->
+        <div id="diseaseDetection" class="section">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Cacao Disease Detection</h1>
+            <div class="flex flex-col items-center">
+                <div class="w-full max-w-3xl bg-white p-8 rounded-lg shadow-md mb-8"> <!-- Enlarged container -->
+                    <div class="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600 mb-4">Drag and drop an image or</p>
+                        <button class="bg-purple-600 text-white px-4 py-2 rounded-md">Choose File</button>
+                    </div>
+                </div>
+                <div class="w-full max-w-3xl bg-white p-6 rounded-lg shadow-md flex">
+                    <img alt="Cacao pod with disease" class="w-1/2 rounded-lg" src="https://storage.googleapis.com/a1aa/image/cl92E94qMULIG78BkX4m_KPq5h2HnoLg7DP9EPlKeXI.jpg"/>
+                    <div class="ml-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Detection Result</h2>
+                        <p class="text-gray-600">Error processing image</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marketplace Section -->
+        <div id="marketplace" class="section hidden">
+            <h1 class="text-3xl font-bold mb-8">Cacao Marketplace</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Product 1 -->
+                <div class="bg-white shadow rounded-lg p-4">
+                    <img alt="Fresh Cacao Pods" class="w-full h-48 object-cover mb-4" src="https://storage.googleapis.com/a1aa/image/kTiJ42RurokivdDpLCFUN6R6U7XUmIy7mR8AWEYDAog.jpg"/>
+                    <h2 class="text-xl font-bold mb-2">Fresh Cacao Pods</h2>
+                    <p class="text-gray-600 mb-2">Freshly harvested cacao pods from Oriental Mindoro</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold">₱150</span>
+                        <button class="bg-green-600 text-white px-4 py-2 rounded flex items-center">
+                            <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
+                        </button>
+                    </div>
+                </div>
+                <!-- Product 2 -->
+                <div class="bg-white shadow rounded-lg p-4">
+                    <img alt="Cacao Seeds" class="w-full h-48 object-cover mb-4" src="https://storage.googleapis.com/a1aa/image/FNShMgurc_oo19IWgz1R1zR9JmSx-IPT2wvPdlj54Kc.jpg"/>
+                    <h2 class="text-xl font-bold mb-2">Cacao Seeds</h2>
+                    <p class="text-gray-600 mb-2">Fresh cacao seeds ready for fermentation</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xl font-bold">₱200</span>
+                        <button class="bg-green-600 text-white px-4 py-2 rounded flex items-center">
+                            <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Farm Mapping Section -->
+        <div id="farmMapping" class="section hidden">
+            <h1 class="text-2xl font-bold mb-4">Oriental Mindoro Cacao Farms</h1>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="md:col-span-1">
+                    <h2 class="text-lg font-semibold mb-4">Municipalities</h2>
+                    <div class="municipality-list">
+                        <button class="municipality-button" onclick="selectMunicipality('Calapan City')">Calapan City</button>
+                        <button class="municipality-button" onclick="selectMunicipality('Naujan')">Naujan</button>
+                        <button class="municipality-button" onclick="selectMunicipality('Victoria')">Victoria</button>
+                        <button class="municipality-button" onclick="selectMunicipality('Socorro')">Socorro</button>
+                    </div>
+                </div>
+                <div class="md:col-span-3">
+                    <div id="map" class="map-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-8">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-xl font-bold mb-2">CacaoGuard</h2>
+            <p class="mb-4">Protecting your cacao harvest with AI</p>
+            <p>© 2025 CacaoGuard. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let cacaoFarms = {
+            'Calapan City': [
+                { id: 'c1', name: 'Guinobatan Cacao Farm', barangay: 'Guinobatan', coordinates: [13.4108, 121.1747], trees: 500 },
+                { id: 'c2', name: 'Masipit Green Farm', barangay: 'Masipit', coordinates: [13.3956, 121.1845], trees: 350 },
+                { id: 'c3', name: 'Pachoca Valley Farm', barangay: 'Pachoca', coordinates: [13.4234, 121.1654], trees: 420 }
+            ],
+            'Naujan': [
+                { id: 'n1', name: 'Bagong Buhay Plantation', barangay: 'Bagong Buhay', coordinates: [13.3167, 121.3000], trees: 600 },
+                { id: 'n2', name: 'Mulawin Heights Farm', barangay: 'Mulawin', coordinates: [13.3265, 121.3156], trees: 450 },
+                { id: 'n3', name: 'Tagumpay Eco Farm', barangay: 'Tagumpay', coordinates: [13.3089, 121.2897], trees: 380 }
+            ],
+            'Victoria': [
+                { id: 'v1', name: 'Alcate Cacao Center', barangay: 'Alcate', coordinates: [13.1500, 121.3333], trees: 520 },
+                { id: 'v2', name: 'Duongan Farm Estate', barangay: 'Duongan', coordinates: [13.1623, 121.3245], trees: 470 }
+            ],
+            'Socorro': [
+                { id: 's1', name: 'Happy Valley Cacao', barangay: 'Happy Valley', coordinates: [13.0833, 121.3833], trees: 550 },
+                { id: 's2', name: 'Mabuhay Green Farm', barangay: 'Mabuhay', coordinates: [13.0756, 121.3967], trees: 430 },
+                { id: 's3', name: 'Malubay Organic Farm', barangay: 'Malubay', coordinates: [13.0912, 121.3756], trees: 480 }
+            ]
+        };
+
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        function setActiveLink(link) {
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        }
+
+        function selectMunicipality(municipality) {
+            const buttons = document.querySelectorAll('.municipality-button');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+            });
+            const selectedButton = Array.from(buttons).find(button => button.textContent === municipality);
+            selectedButton.classList.add('active');
+
+            updateMap(municipality);
+        }
+
+        function updateMap(municipality) {
+            if (map) {
+                map.remove(); // Remove existing map instance
+            }
+
+            // Initialize the map
+            map = L.map('map').setView([13.4, 121.2], 10); // Centered on Oriental Mindoro
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            // Add cacao farms markers
+            const farms = cacaoFarms[municipality];
+            farms.forEach(farm => {
+                const marker = L.marker(farm.coordinates).addTo(map);
+                marker.bindPopup(`<h3>${farm.name}</h3><p>Barangay: ${farm.barangay}</p><p>Trees: ${farm.trees}</p>`);
+            });
+        }
+        // Show the disease detection section by default
+        showSection('diseaseDetection');
+        updateMap('Calapan City'); // Initialize the map with the first municipality
+
+    </script>
+      <script>
+        function confirmLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = "{% url 'logout' %}";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriTech Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- White Sidebar with Line Divider -->
+        <div class="w-64 bg-white text-gray-800 shadow-lg border-r border-gray-200">
+            <!-- Admin Profile -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                        <span class="text-lg font-semibold text-white">A</span>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">AgriTech Admin</h3>
+                        <p class="text-xs text-gray-500">Farm Manager</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="relative">
+                    <input type="text" placeholder="Search..." 
+                           class="w-full py-2 pl-10 pr-4 text-sm text-gray-700 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-200">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 1: Image Processing -->
+            <div class="px-4 py-2 border-b border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-green-50 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-green-500 bg-opacity-20 group-hover:bg-opacity-30">
+                        <i class="fas fa-image text-green-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium">Image Processing</h4>
+                        <p class="text-xs text-gray-500">Analyze crop images</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 2: Crop Detection -->
+            <div class="px-4 py-2 border-b border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-green-50 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-blue-500 bg-opacity-20 group-hover:bg-opacity-30">
+                        <i class="fas fa-leaf text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium">Crop Detection</h4>
+                        <p class="text-xs text-gray-500">Identify crop types</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 3: Farm Mapping -->
+            <div class="px-4 py-2 border-b border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-green-50 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-yellow-500 bg-opacity-20 group-hover:bg-opacity-30">
+                        <i class="fas fa-map-marked-alt text-yellow-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium">Farm Mapping</h4>
+                        <p class="text-xs text-gray-500">View aerial farm maps</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 4: E-Commerce -->
+            <div class="px-4 py-2 border-b border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-green-50 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-purple-500 bg-opacity-20 group-hover:bg-opacity-30">
+                        <i class="fas fa-shopping-cart text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium">E-Commerce</h4>
+                        <p class="text-xs text-gray-500">Sell farm products</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 5: Disease Scanner -->
+            <div class="px-4 py-2 border-b border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-green-50 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-red-500 bg-opacity-20 group-hover:bg-opacity-30">
+                        <i class="fas fa-bug text-red-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium">Disease Scanner</h4>
+                        <p class="text-xs text-gray-500">Detect plant diseases</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logout -->
+            <div class="absolute bottom-0 w-64 p-4 border-t border-gray-200">
+                <div class="flex items-center p-2 rounded-lg hover:bg-gray-100 cursor-pointer group">
+                    <div class="w-8 h-8 mr-3 flex items-center justify-center rounded-lg bg-gray-200 group-hover:bg-gray-300">
+                        <i class="fas fa-sign-out-alt text-gray-600"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">Logout</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 p-8">
+            <h1 class="text-2xl font-semibold text-gray-800">Farm Management Dashboard</h1>
+            <p class="text-gray-600">Welcome to your agricultural technology platform. Monitor and manage your farm with advanced imaging tools.</p>
+            
+           
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple script to demonstrate functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const featureItems = document.querySelectorAll('.cursor-pointer');
+            
+            featureItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // Here you would typically handle navigation or content loading
+                    const featureName = this.querySelector('h4')?.textContent || this.querySelector('span')?.textContent;
+                    if (featureName) {
+                        console.log(`Selected feature: ${featureName}`);
+                        // Example: document.getElementById('content-area').innerHTML = `Content for ${featureName}`;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

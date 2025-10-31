@@ -1,0 +1,555 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CacaoGuard - Guest Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <!-- Custom Gradient Styles -->
+    <link rel="stylesheet" href="{% static 'css/gradients.css' %}">
+      <!-- Tailwind CSS (if not already included) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    rel="stylesheet"
+  />
+    <style>
+        .scan-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .scan-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .limit-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            z-index: 10;
+        }
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover {
+            border-color: #7c3aed;
+            background-color: #f5f3ff;
+        }
+        .drop-zone.dragover {
+            border-color: #7c3aed;
+            background-color: #f5f3ff;
+        }
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        .error-notification {
+            background-color: #ef4444;
+        }
+        .success-notification {
+            background-color: #10b981;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <img alt="CacaoGuard logo" class="w-10 h-10 rounded-full" src="{% static 'images/NOBGHERO.png' %}"/>
+                        <span class="ml-2 font-semibold text-xl text-gray-800">CacaoGuard</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a class="flex items-center px-4 py-2 rounded-md text-sm font-medium bg-purple-600 text-white"
+                       href="{% url 'guest_dashboard' %}">
+                        <i class="fas fa-virus mr-2"></i> Dashboard
+                    </a>
+                    <a class="flex items-center px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-100 transition-colors"
+                       href="{% url 'guest_marketplace' %}">
+                        <i class="fas fa-shopping-cart mr-2"></i> Marketplace
+                    </a>
+                    <a class="flex items-center px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-100 transition-colors"
+                       href="{% url 'guest_farm_mapping' %}">
+                        <i class="fas fa-map-marker-alt mr-2"></i> Farm Mapping
+                    </a>
+                    <a href="{% url 'login' %}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Exit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Header Section -->
+      <div class="mb-6 guest-header-gradient p-6 rounded-2xl shadow-lg">
+    <div class="flex items-center mb-2">
+        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg mr-4 animate-bounce border border-white/30">
+            <i class="fas fa-search text-white text-2xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-white">Cacao Disease & Pest Detection</h1>
+    </div>
+    <p class="text-brown-100 ml-18">Upload images to detect diseases and pests in your cacao plants</p>
+    
+    <!-- Guest Limitations Notice -->
+    <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+            <div>
+                <p class="text-blue-800">
+                    <strong>Guest Mode:</strong> You can perform up to 5 scans per type per day. 
+                    <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-800 underline font-semibold">Sign up</a> 
+                    for unlimited scans and additional features.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- Scan Limits Display -->
+        <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-virus text-red-500 text-xl mr-3"></i>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">Disease Scans</h3>
+                            <p class="text-sm text-gray-600">Remaining today</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-red-500" id="diseaseRemaining">{{ disease_remaining }}</div>
+                        <div class="text-sm text-gray-500">/ 5</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-lg shadow-md">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-bug text-green-500 text-xl mr-3"></i>
+                        <div>
+                            <h3 class="font-semibold text-gray-800">Pest Scans</h3>
+                            <p class="text-sm text-gray-600">Remaining today</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-green-500" id="pestRemaining">{{ pest_remaining }}</div>
+                        <div class="text-sm text-gray-500">/ 5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Types -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Disease Detection -->
+            <div class="scan-card bg-white rounded-lg shadow-md overflow-hidden relative">
+                <div id="diseaseOverlay" class="limit-overlay {% if disease_remaining <= 0 %}flex{% else %}hidden{% endif %}">
+                    <div class="text-center text-white">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Daily Limit Reached</h3>
+                        <p class="mb-4">You've used all 5 disease scans for today.</p>
+                        <a href="{% url 'login' %}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md">
+                            Sign up for unlimited scans
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-virus text-red-500 text-2xl mr-3"></i>
+                        <h2 class="text-xl font-semibold text-gray-800">Disease Detection</h2>
+                    </div>
+                    
+                    <div id="diseaseDropZone" class="drop-zone p-6 rounded-lg text-center mb-4">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-red-400 mb-4"></i>
+                        <p class="text-gray-600 mb-4">Drag and drop an image or</p>
+                        <input type="file" id="diseaseFileInput" class="hidden" accept="image/jpeg, image/png" onchange="handleFileSelect(event, 'disease')">
+                        <label for="diseaseFileInput" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md cursor-pointer transition duration-300">
+                            Choose Disease Image
+                        </label>
+                        <p class="text-xs text-gray-500 mt-2">Supports JPEG, PNG (Max 5MB)</p>
+                    </div>
+                    
+                    <div id="diseasePreview" class="hidden mb-4">
+                        <img id="diseasePreviewImg" class="w-full h-48 object-cover rounded-lg" src="#" alt="Disease Preview">
+                        <button onclick="clearResults('disease')" class="mt-2 bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-sm">
+                            <i class="fas fa-times mr-1"></i>Clear
+                        </button>
+                    </div>
+                    
+                    <div id="diseaseProgress" class="hidden mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Analyzing for diseases...</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="diseaseProgressBar" class="bg-red-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="diseaseResult" class="hidden">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-red-800 mb-2">Detection Result</h3>
+                            <div id="diseaseResultContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pest Detection -->
+            <div class="scan-card bg-white rounded-lg shadow-md overflow-hidden relative">
+                <div id="pestOverlay" class="limit-overlay {% if pest_remaining <= 0 %}flex{% else %}hidden{% endif %}">
+                    <div class="text-center text-white">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Daily Limit Reached</h3>
+                        <p class="mb-4">You've used all 5 pest scans for today.</p>
+                        <a href="{% url 'login' %}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md">
+                            Sign up for unlimited scans
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-bug text-green-500 text-2xl mr-3"></i>
+                        <h2 class="text-xl font-semibold text-gray-800">Pest Detection</h2>
+                    </div>
+                    
+                    <div id="pestDropZone" class="drop-zone p-6 rounded-lg text-center mb-4">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-green-400 mb-4"></i>
+                        <p class="text-gray-600 mb-4">Drag and drop an image or</p>
+                        <input type="file" id="pestFileInput" class="hidden" accept="image/jpeg, image/png" onchange="handleFileSelect(event, 'pest')">
+                        <label for="pestFileInput" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md cursor-pointer transition duration-300">
+                            Choose Pest Image
+                        </label>
+                        <p class="text-xs text-gray-500 mt-2">Supports JPEG, PNG (Max 5MB)</p>
+                    </div>
+                    
+                    <div id="pestPreview" class="hidden mb-4">
+                        <img id="pestPreviewImg" class="w-full h-48 object-cover rounded-lg" src="#" alt="Pest Preview">
+                        <button onclick="clearResults('pest')" class="mt-2 bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-sm">
+                            <i class="fas fa-times mr-1"></i>Clear
+                        </button>
+                    </div>
+                    
+                    <div id="pestProgress" class="hidden mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Analyzing for pests...</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="pestProgressBar" class="bg-green-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="pestResult" class="hidden">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-green-800 mb-2">Detection Result</h3>
+                            <div id="pestResultContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="mt-12 bg-gradient-to-r from-purple-600 to-green-600 rounded-lg p-8 text-center text-white">
+            <h2 class="text-2xl font-bold mb-4">Want Unlimited Scans?</h2>
+            <p class="text-lg mb-6">Join CacaoGuard to get unlimited disease and pest detection, access to the marketplace, and more features.</p>
+            <div class="space-x-4">
+                <a href="{% url 'login' %}" class="bg-white text-purple-600 px-6 py-3 rounded-md font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </a>
+                <a href="{% url 'signup' %}" class="bg-transparent border-2 border-white text-white px-6 py-3 rounded-md font-semibold hover:bg-white hover:text-purple-600 transition-colors">
+                    <i class="fas fa-user-plus mr-2"></i> Sign Up
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="fixed top-4 right-4 z-50 hidden max-w-sm w-full">
+        <div class="flex items-center p-4 rounded-lg shadow-lg">
+            <i id="notificationIcon" class="fas fa-check-circle mr-3 text-xl"></i>
+            <span id="notificationText" class="flex-1"></span>
+            <button onclick="document.getElementById('notification').classList.add('hidden')" class="ml-2" title="Close notification">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let diseaseRemaining = {{ disease_remaining }};
+        let pestRemaining = {{ pest_remaining }};
+        let isProcessing = false;
+
+        // Initialize drop zones
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDropZone('diseaseDropZone', 'disease');
+            setupDropZone('pestDropZone', 'pest');
+        });
+
+        function setupDropZone(zoneId, scanType) {
+            const dropZone = document.getElementById(zoneId);
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (isProcessing) return;
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect({ target: { files } }, scanType);
+                }
+            });
+        }
+
+        function handleFileSelect(event, scanType) {
+            if (isProcessing) {
+                showNotification('Please wait while current scan completes', 'warning');
+                return;
+            }
+
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                showNotification('Only JPEG and PNG images are supported', 'error');
+                return;
+            }
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('Image must be smaller than 5MB', 'error');
+                return;
+            }
+
+            // Check scan limits
+            const remaining = scanType === 'disease' ? diseaseRemaining : pestRemaining;
+            if (remaining <= 0) {
+                showNotification(`Daily ${scanType} scan limit reached!`, 'error');
+                return;
+            }
+
+            // Show preview
+            const preview = document.getElementById(`${scanType}Preview`);
+            const previewImg = document.getElementById(`${scanType}PreviewImg`);
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+
+            // Perform analysis
+            performAnalysis(file, scanType);
+        }
+
+        async function performAnalysis(file, scanType) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const progressContainer = document.getElementById(`${scanType}Progress`);
+            const progressBar = document.getElementById(`${scanType}ProgressBar`);
+            const resultContainer = document.getElementById(`${scanType}Result`);
+
+            // Reset UI
+            resultContainer.classList.add('hidden');
+            progressBar.style.width = '0%';
+            progressContainer.classList.remove('hidden');
+
+            // Animate progress
+            for (let i = 0; i <= 80; i += 10) {
+                progressBar.style.width = i + '%';
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Create FormData for the request
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('scan_type', scanType);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            try {
+                const response = await fetch('/guest-scan-image/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Complete progress animation
+                progressBar.style.width = '100%';
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update remaining scans
+                    if (data.remaining_scans) {
+                        diseaseRemaining = data.remaining_scans.disease;
+                        pestRemaining = data.remaining_scans.pest;
+                        
+                        document.getElementById('diseaseRemaining').textContent = diseaseRemaining;
+                        document.getElementById('pestRemaining').textContent = pestRemaining;
+                        
+                        // Show overlays if limits reached
+                        document.getElementById('diseaseOverlay').classList.toggle('hidden', diseaseRemaining > 0);
+                        document.getElementById('pestOverlay').classList.toggle('hidden', pestRemaining > 0);
+                    }
+
+                    // Display result
+                    displayResult(data, scanType);
+                    showNotification(`Scan completed: ${data.result} detected`, 'success');
+                } else {
+                    throw new Error(data.message || 'Analysis failed');
+                }
+            } catch (error) {
+                console.error('Scan error:', error);
+                
+                // Reset preview on error
+                const preview = document.getElementById(`${scanType}Preview`);
+                preview.classList.add('hidden');
+                
+                let errorMessage = 'Analysis failed. Please try again.';
+                if (error.message.includes('limit reached')) {
+                    errorMessage = error.message;
+                    document.getElementById(`${scanType}Overlay`).classList.remove('hidden');
+                } else if (error.message.includes('NetworkError')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                } else if (error.message.includes('JSON')) {
+                    errorMessage = 'Server processing error. Please try again.';
+                }
+                
+                showNotification(errorMessage, 'error');
+            } finally {
+                progressContainer.classList.add('hidden');
+                isProcessing = false;
+            }
+        }
+
+        function displayResult(data, scanType) {
+            const resultContent = document.getElementById(`${scanType}ResultContent`);
+            
+            // Safe number conversion to handle potential float32 issues
+            let confidence = 0;
+            if (data.confidence !== undefined && data.confidence !== null) {
+                confidence = typeof data.confidence === 'number' ? 
+                    Math.round(data.confidence * 100) / 100 : 
+                    parseFloat(data.confidence) || 0;
+            }
+            
+            let confidenceColor;
+            if (confidence > 80) {
+                confidenceColor = 'text-green-600';
+            } else if (confidence > 60) {
+                confidenceColor = 'text-yellow-600';
+            } else {
+                confidenceColor = 'text-red-600';
+            }
+            
+            let recommendationsHtml = '';
+            if (data.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0) {
+                recommendationsHtml = `
+                    <div class="mt-3">
+                        <h4 class="font-medium text-gray-800 mb-2">Recommendations:</h4>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            resultContent.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">Result:</span>
+                        <span class="font-medium">${data.result || 'Unknown'}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">Confidence:</span>
+                        <span class="font-medium ${confidenceColor}">${confidence.toFixed(1)}%</span>
+                    </div>
+                    ${recommendationsHtml}
+                </div>
+            `;
+            
+            document.getElementById(`${scanType}Result`).classList.remove('hidden');
+        }
+
+        function clearResults(scanType) {
+            const preview = document.getElementById(`${scanType}Preview`);
+            const result = document.getElementById(`${scanType}Result`);
+            const progress = document.getElementById(`${scanType}Progress`);
+            const fileInput = document.getElementById(`${scanType}FileInput`);
+            
+            preview.classList.add('hidden');
+            result.classList.add('hidden');
+            progress.classList.add('hidden');
+            fileInput.value = '';
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            const notificationIcon = document.getElementById('notificationIcon');
+            
+            // Set notification content
+            notificationText.textContent = message;
+            
+            // Update notification style based on type
+            notification.className = `fixed top-4 right-4 z-50 max-w-sm w-full`;
+            
+            if (type === 'error') {
+                notification.classList.add('bg-red-500', 'text-white');
+                notificationIcon.className = 'fas fa-exclamation-circle mr-3 text-xl';
+            } else if (type === 'warning') {
+                notification.classList.add('bg-yellow-500', 'text-white');
+                notificationIcon.className = 'fas fa-exclamation-triangle mr-3 text-xl';
+            } else if (type === 'info') {
+                notification.classList.add('bg-blue-500', 'text-white');
+                notificationIcon.className = 'fas fa-info-circle mr-3 text-xl';
+            } else {
+                notification.classList.add('bg-green-500', 'text-white');
+                notificationIcon.className = 'fas fa-check-circle mr-3 text-xl';
+            }
+            
+            // Show notification
+            notification.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

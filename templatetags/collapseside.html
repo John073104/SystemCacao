@@ -1,0 +1,229 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CacaoGuard User Dashboard</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+</head>
+
+<body class="bg-gray-100 p-2 md:p-8" x-data="{ sidebarOpen: false }">
+
+  <!-- Mobile Burger Menu Button -->
+  <div class="md:hidden fixed top-4 left-4 z-50">
+    <button 
+      @click="sidebarOpen = !sidebarOpen"
+      class="p-3 bg-white rounded-xl shadow-lg text-gray-700 hover:bg-gray-50 transition-colors"
+    >
+      <i class="fas fa-bars text-lg" x-show="!sidebarOpen"></i>
+      <i class="fas fa-times text-lg" x-show="sidebarOpen"></i>
+    </button>
+  </div>
+
+  <!-- Mobile Overlay -->
+  <div 
+    x-show="sidebarOpen" 
+    x-transition:enter="transition-opacity ease-linear duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-linear duration-300"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click="sidebarOpen = false"
+    class="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+  ></div>
+
+  <!-- Sidebar -->
+  <div 
+    class="fixed md:relative w-72 bg-white text-black shadow-2xl rounded-2xl overflow-hidden h-screen flex flex-col z-40 transition-transform duration-300 ease-in-out md:transform-none"
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+  >
+
+    <!-- Top Section -->
+    <div>
+      <div class="p-6 border-b border-gray-300">
+        <div class="flex items-center space-x-4">
+          <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center">
+            <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-gradient bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">CacaoGuard</h3>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-gray-600">Registered User</span>
+              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if request.session.name %}
+      <div class="px-4 mt-4">
+        <div class="flex items-center p-3 rounded-xl bg-white text-black shadow">
+          <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg bg-gray-100">
+            {% if request.session.role == "admin" %}
+              <i class="fas fa-user-shield text-yellow-400 text-lg"></i>
+            {% else %}
+              <i class="fas fa-smile-beam text-green-400 text-lg"></i>
+            {% endif %}
+          </div>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold">Welcome back</h4>
+            <p class="text-xs text-gray-500">{{ request.session.name }}</p>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Navigation with Welcome Message & Dashboard Feature Title -->
+    <div class="px-4 pb-20 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent mt-4">
+
+      <nav class="space-y-2">
+        <!-- Dashboard -->
+        <a href="{% url 'userdashboard' %}" class="block" @click="sidebarOpen = false">
+          <div class="flex items-center p-3 rounded-xl cursor-pointer group
+            {% if request.resolver_match.url_name == 'userdashboard' %}
+              bg-blue-50 border-l-4 border-blue-500
+            {% else %}
+              hover:bg-gray-100
+            {% endif %}">
+            <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg
+              {% if request.resolver_match.url_name == 'userdashboard' %}
+                bg-blue-100 text-blue-600
+              {% else %}
+                bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600
+              {% endif %} transition">
+              <i class="fas fa-chart-pie text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold">Dashboard</h4>
+              <p class="text-xs text-gray-500">System Overview</p>
+            </div>
+          </div>
+        </a>
+
+        <!-- Scan and Diagnose -->
+        <a href="{% url 'scan_diagnose' %}" class="block" @click="sidebarOpen = false">
+          <div class="flex items-center p-3 rounded-xl cursor-pointer group
+            {% if request.resolver_match.url_name == 'scan_diagnose' %}
+              bg-blue-50 border-l-4 border-blue-500
+            {% else %}
+              hover:bg-gray-100
+            {% endif %}">
+            <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg
+              {% if request.resolver_match.url_name == 'scan_diagnose' %}
+                bg-blue-100 text-blue-600
+              {% else %}
+                bg-purple-100 text-purple-600 group-hover:bg-purple-200 group-hover:text-purple-700
+              {% endif %} transition">
+              <i class="fas fa-microscope text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold">Scan and Diagnose</h4>
+              <p class="text-xs text-gray-500">Detect Pest and Diseases</p>
+            </div>
+          </div>
+        </a>
+
+        <!-- Marketplace -->
+        <a href="{% url 'marketplace' %}" class="block" @click="sidebarOpen = false">
+          <div class="flex items-center p-3 rounded-xl cursor-pointer group
+            {% if request.resolver_match.url_name == 'marketplace' %}
+              bg-blue-50 border-l-4 border-blue-500
+            {% else %}
+              hover:bg-gray-100
+            {% endif %}">
+            <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg
+              {% if request.resolver_match.url_name == 'marketplace' %}
+                bg-blue-100 text-blue-600
+              {% else %}
+                bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200 group-hover:text-emerald-700
+              {% endif %} transition">
+              <i class="fas fa-store text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold">Marketplace</h4>
+              <p class="text-xs text-gray-500">Orders and Products</p>
+            </div>
+          </div>
+        </a>
+
+        <!-- Farm Mapping -->
+        <a href="{% url 'farm_mapping' %}" class="block" @click="sidebarOpen = false">
+          <div class="flex items-center p-3 rounded-xl cursor-pointer group
+            {% if request.resolver_match.url_name == 'farm_mapping' %}
+              bg-blue-50 border-l-4 border-blue-500
+            {% else %}
+              hover:bg-gray-100
+            {% endif %}">
+            <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg
+              {% if request.resolver_match.url_name == 'farm_mapping' %}
+                bg-blue-100 text-blue-600
+              {% else %}
+                bg-amber-100 text-amber-600 group-hover:bg-amber-200 group-hover:text-amber-700
+              {% endif %} transition">
+              <i class="fas fa-map-marked-alt text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold">Farm Mapping</h4>
+              <p class="text-xs text-gray-500">View Farms</p>
+            </div>
+          </div>
+        </a>
+
+        <!-- Accounts -->
+        <a href="{% url 'profile_view' %}" class="block" @click="sidebarOpen = false">
+          <div class="flex items-center p-3 rounded-xl cursor-pointer group
+            {% if request.resolver_match.url_name == 'accounts' %}
+              bg-blue-50 border-l-4 border-blue-500
+            {% else %}
+              hover:bg-gray-100
+            {% endif %}">
+            <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg
+              {% if request.resolver_match.url_name == 'accounts' %}
+                bg-blue-100 text-blue-600
+              {% else %}
+                bg-cyan-100 text-cyan-600 group-hover:bg-cyan-200 group-hover:text-cyan-700
+              {% endif %} transition">
+              <i class="fas fa-users-cog text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-sm font-semibold">My Profile</h4>
+              <p class="text-xs text-gray-500">Manage your profile</p>
+            </div>
+          </div>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Logout -->
+    <div class="absolute bottom-0 w-full p-4 border-t border-gray-300 bg-gray-50">
+      <a href="{% url 'logout' %}" onclick="return confirm('Are you sure you want to log out?')" class="w-full block" @click="sidebarOpen = false">
+        <div class="flex items-center p-3 rounded-xl cursor-pointer group hover:bg-red-100 transition">
+          <div class="w-10 h-10 mr-4 flex items-center justify-center rounded-lg bg-red-100 text-red-600 group-hover:bg-red-200 group-hover:text-red-700 transition">
+            <i class="fas fa-sign-out-alt text-lg"></i>
+          </div>
+          <div class="flex-1 text-left">
+            <h4 class="text-sm font-semibold">Log Out</h4>
+            <p class="text-xs text-gray-500">End Session</p>
+          </div>
+          <i class="fas fa-chevron-right text-gray-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Content Area (you can add your page content here) -->
+  <div class="md:ml-72 p-4">
+    <!-- Your main content goes here -->
+  </div>
+
+</body>
+</html>

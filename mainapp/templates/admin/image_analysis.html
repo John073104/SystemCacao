@@ -1,0 +1,602 @@
+{% extends "admin/admin_dashboard.html" %}
+{% block content %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CacaoGuard - Image Analysis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+<div class="bg-gradient-to-r from-indigo-700 via-sky-600 to-cyan-500 text-white py-6 shadow-lg rounded-b-3xl mb-8">
+    <div class="container mx-auto px-6">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold tracking-tight mb-1 flex items-center gap-3">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shadow-lg animate-bounce">
+                        <i class="fas fa-magnifying-glass text-white text-xl"></i>
+                    </div>
+                    Image Analysis
+                </h1>
+                <p class="text-sky-100 text-sm">
+                    Manage <span class="font-semibold underline underline-offset-4">users scans</span> and reports
+                </p>
+            </div>
+            <div class="flex space-x-2 ml-4">
+                <button onclick="openPrintPreview()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm border border-white/20 transition-all duration-200">
+                    <i class="fas fa-print mr-2"></i>Print Preview
+                </button>
+                <button onclick="exportToPDF()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm border border-white/20 transition-all duration-200">
+                    <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Messages -->
+    <!-- {% if messages %}
+        <div class="mb-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {% for message in messages %}
+                {% if message.tags == 'error' %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% elif message.tags == 'success' %}
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %} -->
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Scans</p>
+            <p class="text-3xl font-bold text-gray-900">{{ total_scans }}</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-camera text-blue-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Disease Scans</p>
+            <p class="text-3xl font-bold text-red-600">{{ disease_scans }}</p>
+          </div>
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-virus text-red-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Pest Scans</p>
+            <p class="text-3xl font-bold text-orange-600">{{ pest_scans }}</p>
+          </div>
+          <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-bug text-orange-600"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Today's Scans</p>
+            <p class="text-3xl font-bold text-green-600">{{ today_scans }}</p>
+          </div>
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-calendar-day text-green-600"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Information (only show if no scans found) -->
+    {% if total_scans == 0 %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <h4 class="text-yellow-800 font-medium mb-2">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            No Scans Found - Debug Information
+        </h4>
+        <p class="text-yellow-700 text-sm mb-3">
+            If users have been scanning but no data appears here, there might be a collection name mismatch.
+        </p>
+        <div class="flex space-x-2">
+            <a href="{% url 'debug_firestore_collections' %}" target="_blank"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-sm">
+                <i class="fas fa-database mr-2"></i>Debug Firestore Collections
+            </a>
+            <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm">
+                <i class="fas fa-refresh mr-2"></i>Refresh Page
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <h3 class="text-lg font-semibold mb-4">Scan Activity (Last 7 Days)</h3>
+        <canvas id="scanChart" width="400" height="200"></canvas>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <h3 class="text-lg font-semibold mb-4">Scan Distribution</h3>
+        <canvas id="pieChart" width="400" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Image Analysis Results</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">All scan results and analysis data</p>
+          </div>
+          <div class="flex space-x-2">
+            <button onclick="toggleHiddenScans()" id="toggleHiddenBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm">
+              <i class="fas fa-eye-slash mr-2"></i>Show Hidden
+            </button>
+            <button onclick="refreshData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm">
+              <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+            <a href="{% url 'export_scan_data' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+              <i class="fas fa-file-export mr-2"></i>Export CSV
+            </a>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="border-t border-gray-200 px-4 py-4">
+          <div class="flex flex-wrap gap-4">
+            <select id="typeFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="filterTable()">
+              <option value="">All Types</option>
+              <option value="disease">Disease</option>
+              <option value="pest">Pest</option>
+            </select>
+            <select id="confidenceFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="filterTable()">
+              <option value="">All Confidence Levels</option>
+              <option value="high">High (80%+)</option>
+              <option value="medium">Medium (60-80%)</option>
+              <option value="low">Low (<60%)</option>
+            </select>
+            <input type="date" id="dateFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm" onchange="filterTable()">
+            <button onclick="clearFilters()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+              <i class="fas fa-times mr-2"></i>Clear Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200" id="scansTable">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scan Details</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type & Result</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for scan in scans %}
+                <tr class="hover:bg-gray-50 scan-row {% if scan.hidden %}hidden-scan bg-red-50{% endif %}"
+                     data-type="{{ scan.type|default:'unknown' }}"
+                     data-confidence="{{ scan.confidence|default:'0' }}"
+                     data-date="{{ scan.timestamp|date:'Y-m-d' }}">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-10 w-10">
+                        {% if scan.type == 'disease' %}
+                          <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <i class="fas fa-virus text-red-600"></i>
+                          </div>
+                        {% else %}
+                          <div class="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                            <i class="fas fa-bug text-orange-600"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-900">
+                          {{ scan.image_name|default:"Unknown Image" }}
+                          {% if scan.hidden %}
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              <i class="fas fa-eye-slash mr-1"></i>Hidden
+                            </span>
+                          {% endif %}
+                        </div>
+                        <div class="text-sm text-gray-500">ID: {{ scan.id|slice:":8" }}...</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ scan.result|default:"No Result" }}</div>
+                    <div class="text-sm text-gray-500 capitalize">{{ scan.type|default:"unknown" }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                       {% if scan.confidence >= 80 %}bg-green-100 text-green-800
+                       {% elif scan.confidence >= 60 %}bg-yellow-100 text-yellow-800
+                       {% else %}bg-red-100 text-red-800{% endif %}">
+                      {{ scan.confidence|floatformat:1 }}%
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div class="flex items-center">
+                      <div class="text-sm font-medium text-gray-900">{{ scan.user }}</div>
+                      {% if scan.user_email %}
+                        <div class="text-xs text-gray-500 ml-2">{{ scan.user_email }}</div>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ scan.timestamp|date:"M d, Y g:i A" }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewDetails('{{ scan.id }}')" class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="toggleScanVisibility('{{ scan.id }}', {{ scan.hidden|yesno:'true,false' }})"
+                             class="{% if scan.hidden %}text-green-600 hover:text-green-900{% else %}text-yellow-600 hover:text-yellow-900{% endif %} mr-3"
+                             title="{% if scan.hidden %}Show Scan{% else %}Hide Scan{% endif %}">
+                      <i class="fas {% if scan.hidden %}fa-eye{% else %}fa-eye-slash{% endif %}"></i>
+                    </button>
+                    <form method="post" action="{% url 'delete_scan' scan.id %}" class="inline" onsubmit="return confirm('Are you sure you want to delete this scan?')">
+                      {% csrf_token %}
+                      <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Scan">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                    <div class="py-8">
+                      <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                      <p class="text-lg">No scan results available</p>
+                      <p class="text-sm text-gray-400">Scans will appear here when users upload images</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+      <div class="flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium">Scan Details</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div id="modalContent">
+            <!-- Content will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let showingHidden = false;
+
+      // Toggle hidden scans visibility
+      function toggleHiddenScans() {
+        showingHidden = !showingHidden;
+        const hiddenRows = document.querySelectorAll('.hidden-scan');
+        const toggleBtn = document.getElementById('toggleHiddenBtn');
+        
+        if (showingHidden) {
+          hiddenRows.forEach(row => row.style.display = 'table-row');
+          toggleBtn.innerHTML = '<i class="fas fa-eye mr-2"></i>Hide Hidden';
+          toggleBtn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+          toggleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        } else {
+          hiddenRows.forEach(row => row.style.display = 'none');
+          toggleBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Show Hidden';
+          toggleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+          toggleBtn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+        }
+      }
+
+      // Initialize hidden scans as hidden
+      document.addEventListener('DOMContentLoaded', function() {
+        if (!showingHidden) {
+          const hiddenRows = document.querySelectorAll('.hidden-scan');
+          hiddenRows.forEach(row => row.style.display = 'none');
+        }
+      });
+
+      // Toggle individual scan visibility
+      async function toggleScanVisibility(scanId, isCurrentlyHidden) {
+        try {
+          const response = await fetch(`/admin/toggle-scan/${scanId}/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken'),
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            location.reload(); // Refresh to show updated state
+          } else {
+            alert('Error: ' + data.message);
+          }
+        } catch (error) {
+          alert('Error toggling scan visibility: ' + error.message);
+        }
+      }
+
+      // Refresh data
+      function refreshData() {
+        location.reload();
+      }
+
+      // Filter table functionality
+      function filterTable() {
+        const typeFilter = document.getElementById('typeFilter').value;
+        const confidenceFilter = document.getElementById('confidenceFilter').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        const rows = document.querySelectorAll('.scan-row');
+
+        rows.forEach(row => {
+          let show = true;
+          
+          // Type filter
+          if (typeFilter && row.dataset.type !== typeFilter) {
+            show = false;
+          }
+          
+          // Confidence filter
+          if (confidenceFilter) {
+            const confidence = parseFloat(row.dataset.confidence) || 0;
+            if (confidenceFilter === 'high' && confidence < 80) show = false;
+            if (confidenceFilter === 'medium' && (confidence < 60 || confidence >= 80)) show = false;
+            if (confidenceFilter === 'low' && confidence >= 60) show = false;
+          }
+          
+          // Date filter
+          if (dateFilter && row.dataset.date !== dateFilter) {
+            show = false;
+          }
+          
+          // Don't show hidden scans unless toggle is active
+          if (row.classList.contains('hidden-scan') && !showingHidden) {
+            show = false;
+          }
+          
+          row.style.display = show ? 'table-row' : 'none';
+        });
+      }
+
+      // Clear all filters
+      function clearFilters() {
+        document.getElementById('typeFilter').value = '';
+        document.getElementById('confidenceFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        filterTable();
+      }
+
+      // Modal functions
+      function viewDetails(scanId) {
+        // Find the scan data from the table row
+        const row = document.querySelector(`[onclick="viewDetails('${scanId}')"]`).closest('tr');
+        const cells = row.querySelectorAll('td');
+        
+        const imageName = cells[0].querySelector('.text-sm.font-medium').textContent.trim();
+        const result = cells[1].querySelector('.text-sm.text-gray-900').textContent.trim();
+        const type = cells[1].querySelector('.text-sm.text-gray-500').textContent.trim();
+        const confidence = cells[2].querySelector('span').textContent.trim();
+        const user = cells[3].textContent.trim();
+        const date = cells[4].textContent.trim();
+        
+        document.getElementById('modalContent').innerHTML = `
+          <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Scan ID</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${scanId}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Image Name</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${imageName}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Scan Type</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border capitalize">${type}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Result</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${result}</p>
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Confidence Level</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${confidence}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${user}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">${date}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded border">Processed</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t pt-4">
+              <h4 class="text-sm font-medium text-gray-700 mb-2">Additional Information</h4>
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p class="text-sm text-blue-800">
+                  <i class="fas fa-info-circle mr-2"></i>
+                  This scan was processed successfully. All analysis data has been stored and is available for review.
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('detailsModal').classList.remove('hidden');
+      }
+
+      function closeModal() {
+        document.getElementById('detailsModal').classList.add('hidden');
+      }
+
+      // Print functionality
+      function openPrintPreview() {
+        const typeFilter = document.getElementById("typeFilter")?.value || ""
+        const confidenceFilter = document.getElementById("confidenceFilter")?.value || ""
+        const dateFilter = document.getElementById("dateFilter")?.value || ""
+        const toggleBtn = document.getElementById("toggleHiddenBtn")
+        const showHidden = toggleBtn?.classList.contains("bg-red-600") ? "true" : "false"
+
+        const params = new URLSearchParams()
+        if (typeFilter) params.append("type", typeFilter)
+        if (confidenceFilter) params.append("confidence", confidenceFilter)
+        if (dateFilter) params.append("date", dateFilter)
+        params.append("show_hidden", showHidden)
+
+        const printUrl = `/admin/print-preview/?${params.toString()}`
+        window.open(printUrl, "printPreview", "width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=yes")
+      }
+
+      function exportToPDF() {
+        const typeFilter = document.getElementById("typeFilter")?.value || ""
+        const confidenceFilter = document.getElementById("confidenceFilter")?.value || ""
+        const dateFilter = document.getElementById("dateFilter")?.value || ""
+        const toggleBtn = document.getElementById("toggleHiddenBtn")
+        const showHidden = toggleBtn?.classList.contains("bg-red-600") ? "true" : "false"
+
+        const params = new URLSearchParams()
+        if (typeFilter) params.append("type", typeFilter)
+        if (confidenceFilter) params.append("confidence", confidenceFilter)
+        if (dateFilter) params.append("date", dateFilter)
+        params.append("show_hidden", showHidden)
+
+        const pdfUrl = `/admin/export-pdf/?${params.toString()}`
+        window.location.href = pdfUrl
+      }
+
+      // CSRF token helper
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      // Chart data from Django
+      const chartData = {{ chart_data|safe }};
+
+      // Line Chart
+      const ctx = document.getElementById('scanChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.map(d => d.date),
+          datasets: [{
+            label: 'Daily Scans',
+            data: chartData.map(d => d.count),
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Pie Chart
+      const pieCtx = document.getElementById('pieChart').getContext('2d');
+      const diseaseScans = parseInt("{{ disease_scans|default_if_none:'0' }}");
+      const pestScans = parseInt("{{ pest_scans|default_if_none:'0' }}");
+      
+      new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Disease Scans', 'Pest Scans'],
+          datasets: [{
+            data: [diseaseScans, pestScans],
+            backgroundColor: [
+              'rgba(239, 68, 68, 0.8)',
+              'rgba(249, 115, 22, 0.8)'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          aspectRatio: 1,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    </script>
+  </main>
+</body>
+</html>
+{% endblock %}

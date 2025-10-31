@@ -1,0 +1,393 @@
+{% extends 'user/userdashboard.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CacaoGuard - Scan History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-green-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-seedling text-2xl mr-3"></i>
+                    <h1 class="text-xl font-bold">CacaoGuard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'mainapp:user_dashboard' %}" class="hover:bg-green-700 px-3 py-2 rounded">Dashboard</a>
+                    <a href="{% url 'mainapp:scan_diagnose' %}" class="hover:bg-green-700 px-3 py-2 rounded">Scan</a>
+                    <a href="{% url 'mainapp:scan_history' %}" class="bg-green-700 px-3 py-2 rounded">History</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Scan History</h3>
+                    <p class="mt-1 max-w-2xl text-sm text-gray-500">Your previous disease and pest detection results</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="toggleHistoryBtn" onclick="toggleHistoryVisibility()" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+                        <i class="fas fa-eye mr-2"></i>
+                        <span id="toggleText">Hide History</span>
+                    </button>
+                    <button onclick="exportHistory()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="border-t border-gray-200 px-4 py-4">
+                <div class="flex flex-wrap gap-4">
+                    <select id="typeFilter" onchange="filterHistory()" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <option value="">All Types</option>
+                        <option value="disease">Disease</option>
+                        <option value="pest">Pest</option>
+                    </select>
+                    <select id="confidenceFilter" onchange="filterHistory()" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <option value="">All Confidence Levels</option>
+                        <option value="high">High (80%+)</option>
+                        <option value="medium">Medium (60-80%)</option>
+                        <option value="low">Low (<60%)</option>
+                    </select>
+                    <input type="date" id="dateFilter" onchange="filterHistory()" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <button onclick="clearFilters()" class="text-gray-600 hover:text-gray-800 text-sm">
+                        <i class="fas fa-times mr-1"></i>Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- History Content -->
+            <div id="historyContent">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Detection
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Type & Result
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Confidence
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="historyTableBody">
+                            {% for scan in scans %}
+                            <tr class="hover:bg-gray-50 scan-row" data-type="{{ scan.type }}" data-confidence="{{ scan.primary_confidence }}" data-date="{{ scan.timestamp|date:'Y-m-d' }}">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            {% if scan.type == 'disease' %}
+                                                <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                                                    <i class="fas fa-virus text-red-600"></i>
+                                                </div>
+                                            {% else %}
+                                                <div class="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                                    <i class="fas fa-bug text-orange-600"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">{{ scan.image_name }}</div>
+                                            <div class="text-sm text-gray-500">ID: {{ scan.id|slice:":8" }}...</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ scan.primary_class }}</div>
+                                    <div class="text-sm text-gray-500 capitalize">{{ scan.type }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if scan.primary_confidence > 0.8 %}bg-green-100 text-green-800
+                                        {% elif scan.primary_confidence > 0.6 %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ scan.primary_confidence|floatformat:1 }}%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ scan.timestamp|date:"M d, Y H:i" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="viewScanDetails('{{ scan.id }}')" class="text-blue-600 hover:text-blue-900 mr-3">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="deleteScan('{{ scan.id }}')" class="text-red-600 hover:text-red-900">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                    <div class="py-8">
+                                        <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                                        <p class="text-lg">No scan history yet</p>
+                                        <p class="text-sm">Your scan results will appear here</p>
+                                        <a href="{% url 'mainapp:scan_diagnose' %}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                            <i class="fas fa-camera mr-2"></i>
+                                            Start Scanning
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Hidden State -->
+            <div id="hiddenState" class="hidden p-8 text-center text-gray-500">
+                <i class="fas fa-eye-slash text-4xl text-gray-300 mb-4"></i>
+                <p class="text-lg">History is hidden</p>
+                <p class="text-sm">Click "Show History" to view your scan results</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Details Modal -->
+    <div id="scanModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium">Scan Details</h3>
+                        <button onclick="closeScanModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="scanModalContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let historyVisible = true;
+
+        function toggleHistoryVisibility() {
+            historyVisible = !historyVisible;
+            const historyContent = document.getElementById('historyContent');
+            const hiddenState = document.getElementById('hiddenState');
+            const toggleText = document.getElementById('toggleText');
+            const toggleBtn = document.getElementById('toggleHistoryBtn');
+
+            if (historyVisible) {
+                historyContent.classList.remove('hidden');
+                hiddenState.classList.add('hidden');
+                toggleText.textContent = 'Hide History';
+                toggleBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i><span id="toggleText">Hide History</span>';
+            } else {
+                historyContent.classList.add('hidden');
+                hiddenState.classList.remove('hidden');
+                toggleText.textContent = 'Show History';
+                toggleBtn.innerHTML = '<i class="fas fa-eye mr-2"></i><span id="toggleText">Show History</span>';
+            }
+
+            // Save preference
+            fetch('{% url "mainapp:toggle_history" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ show_history: historyVisible })
+            });
+        }
+
+        function filterHistory() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const confidenceFilter = document.getElementById('confidenceFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+            const rows = document.querySelectorAll('.scan-row');
+
+            rows.forEach(row => {
+                let show = true;
+
+                // Type filter
+                if (typeFilter && row.dataset.type !== typeFilter) {
+                    show = false;
+                }
+
+                // Confidence filter
+                if (confidenceFilter) {
+                    const confidence = parseFloat(row.dataset.confidence);
+                    if (confidenceFilter === 'high' && confidence < 0.8) show = false;
+                    if (confidenceFilter === 'medium' && (confidence < 0.6 || confidence >= 0.8)) show = false;
+                    if (confidenceFilter === 'low' && confidence >= 0.6) show = false;
+                }
+
+                // Date filter
+                if (dateFilter && row.dataset.date !== dateFilter) {
+                    show = false;
+                }
+
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('confidenceFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            filterHistory();
+        }
+
+        function viewScanDetails(scanId) {
+            // Find scan data from the table
+            const row = document.querySelector(`[data-scan-id="${scanId}"]`);
+            
+            const modalContent = document.getElementById('scanModalContent');
+            modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-2">Scan Information</h4>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500">Scan ID:</span>
+                                <span class="ml-2 font-mono">${scanId}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Date:</span>
+                                <span class="ml-2">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">Detection Results</h4>
+                        <p class="text-sm text-blue-800">Loading detailed results...</p>
+                    </div>
+                    
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <h4 class="font-medium text-green-900 mb-2">Recommendations</h4>
+                        <p class="text-sm text-green-800">Loading recommendations...</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('scanModal').classList.remove('hidden');
+        }
+
+        function closeScanModal() {
+            document.getElementById('scanModal').classList.add('hidden');
+        }
+
+        async function deleteScan(scanId) {
+            if (!confirm('Are you sure you want to delete this scan? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`{% url 'mainapp:delete_user_scan' 'SCAN_ID' %}`.replace('SCAN_ID', scanId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove the row from the table
+                    const row = document.querySelector(`[data-scan-id="${scanId}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                    
+                    // Show success message
+                    showNotification('Scan deleted successfully', 'success');
+                } else {
+                    showNotification(data.error || 'Failed to delete scan', 'error');
+                }
+            } catch (error) {
+                showNotification('Network error occurred', 'error');
+            }
+        }
+
+        function exportHistory() {
+            // Create CSV content
+            const rows = document.querySelectorAll('.scan-row:not([style*="display: none"])');
+            let csvContent = 'Date,Type,Detection,Confidence,Image\n';
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const date = row.dataset.date;
+                const type = row.dataset.type;
+                const detection = cells[1].querySelector('.text-gray-900').textContent;
+                const confidence = row.dataset.confidence;
+                const image = cells[0].querySelector('.text-gray-900').textContent;
+                
+                csvContent += `${date},${type},${detection},${confidence},${image}\n`;
+            });
+
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cacao_scan_history_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Add scan-id data attribute to rows for easier targeting
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('.scan-row');
+            rows.forEach((row, index) => {
+                const idCell = row.querySelector('.text-gray-500');
+                if (idCell && idCell.textContent.includes('ID:')) {
+                    const scanId = idCell.textContent.replace('ID: ', '').replace('...', '');
+                    row.setAttribute('data-scan-id', scanId);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+{% endblock %}

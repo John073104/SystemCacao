@@ -1,0 +1,862 @@
+{% extends 'user/userdashboard.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CacaoGuard - Scan & Diagnose</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .image-preview-clickable {
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .image-preview-clickable:hover {
+            transform: scale(1.02);
+        }
+        .image-preview-clickable::after {
+            content: '\f00e';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .image-preview-clickable:hover::after {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<!-- Enhanced Header with Gradient -->
+<div class="mb-8 p-8 bg-gradient-to-br from-emerald-600 via-green-500 to-teal-600 border-l-4 border-emerald-800 rounded-2xl shadow-2xl">
+  <h2 class="text-3xl font-extrabold text-white flex items-center mb-3">
+    <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl mr-5 animate-bounce">
+      <i class="fas fa-microscope text-white text-3xl"></i>
+    </div>
+    <div>
+      <div>Scan & Diagnose</div>
+      <p class="text-base font-normal text-emerald-50 mt-1">AI-Powered Cacao Disease & Pest Detection</p>
+    </div>
+  </h2>
+  <p class="text-white/90 leading-relaxed ml-24 text-base">
+    Upload images of cacao fruits from Oriental Mindoro for instant disease and pest analysis
+  </p>
+</div>
+
+<!-- Two Separate Upload Interfaces -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    
+    <!-- Disease Detection Interface -->
+    <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-amber-100">
+        <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-6 py-5">
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-virus mr-3 text-3xl"></i>
+                Disease Detection
+            </h3>
+            <p class="text-amber-50 mt-2 text-sm">Upload cacao fruit image to detect diseases</p>
+        </div>
+        <div class="p-6">
+            <div id="diseaseUploadSection" class="text-center">
+                <div class="border-2 border-dashed border-amber-300 rounded-xl p-8 hover:border-amber-500 transition-all bg-gradient-to-br from-amber-50 to-orange-50 hover:shadow-lg">
+                    <div class="space-y-4">
+                        <div class="mx-auto h-20 w-20 text-amber-500">
+                            <i class="fas fa-cloud-upload-alt text-5xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold text-amber-900">Upload Disease Image</h4>
+                            <p class="text-amber-700 text-sm mt-1">Drag and drop or click to select</p>
+                        </div>
+                        <div>
+                            <input type="file" id="diseaseImageInput" accept="image/*" class="hidden">
+                            <button onclick="document.getElementById('diseaseImageInput').click()"
+                                     class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all">
+                                <i class="fas fa-camera mr-2"></i>Choose Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disease Preview Section -->
+            <div id="diseasePreviewSection" class="hidden mt-4">
+                <div class="border-2 border-amber-200 rounded-xl overflow-hidden shadow-lg">
+                    <img id="diseaseImagePreview" class="w-full h-64 object-contain bg-gray-50 image-preview-clickable" alt="Disease preview" onclick="viewFullImage('disease')">
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>Click image to view full size
+                </p>
+                <div class="mt-4 flex space-x-3">
+                    <button id="diseaseAnalyzeBtn" onclick="analyzeImage('disease')"
+                             class="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
+                        <i class="fas fa-search mr-2"></i>Analyze Disease
+                    </button>
+                    <button onclick="resetUpload('disease')"
+                             class="px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all">
+                        <i class="fas fa-redo mr-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Disease Results -->
+            <div id="diseaseResultsSection" class="hidden mt-4">
+                <div id="diseaseResultsContent" class="space-y-3">
+                    <!-- Disease results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pest Detection Interface -->
+    <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-green-100">
+        <div class="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 px-6 py-5">
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-bug mr-3 text-3xl"></i>
+                Pest Detection
+            </h3>
+            <p class="text-green-50 mt-2 text-sm">Upload cacao fruit image to detect pests</p>
+        </div>
+        <div class="p-6">
+            <div id="pestUploadSection" class="text-center">
+                <div class="border-2 border-dashed border-green-300 rounded-xl p-8 hover:border-green-500 transition-all bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-lg">
+                    <div class="space-y-4">
+                        <div class="mx-auto h-20 w-20 text-green-500">
+                            <i class="fas fa-cloud-upload-alt text-5xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold text-green-900">Upload Pest Image</h4>
+                            <p class="text-green-700 text-sm mt-1">Drag and drop or click to select</p>
+                        </div>
+                        <div>
+                            <input type="file" id="pestImageInput" accept="image/*" class="hidden">
+                            <button onclick="document.getElementById('pestImageInput').click()"
+                                     class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold text-sm shadow-lg transform hover:scale-105 transition-all">
+                                <i class="fas fa-camera mr-2"></i>Choose Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pest Preview Section -->
+            <div id="pestPreviewSection" class="hidden mt-4">
+                <div class="border-2 border-green-200 rounded-xl overflow-hidden shadow-lg">
+                    <img id="pestImagePreview" class="w-full h-64 object-contain bg-gray-50 image-preview-clickable" alt="Pest preview" onclick="viewFullImage('pest')">
+                </div>
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>Click image to view full size
+                </p>
+                <div class="mt-4 flex space-x-3">
+                    <button id="pestAnalyzeBtn" onclick="analyzeImage('pest')"
+                             class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transform hover:scale-105 transition-all">
+                        <i class="fas fa-search mr-2"></i>Analyze Pest
+                    </button>
+                    <button onclick="resetUpload('pest')"
+                             class="px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all">
+                        <i class="fas fa-redo mr-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pest Results -->
+            <div id="pestResultsSection" class="hidden mt-4">
+                <div id="pestResultsContent" class="space-y-3">
+                    <!-- Pest results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Section (Shared) -->
+<div id="loadingSection" class="hidden text-center py-8 bg-white rounded-2xl shadow-xl mb-6">
+    <div class="inline-flex items-center px-6 py-3 font-semibold leading-6 text-sm shadow-lg rounded-xl text-white bg-gradient-to-r from-emerald-500 to-teal-500">
+        <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Analyzing image with AI...
+    </div>
+    <p class="text-gray-500 mt-3 text-sm">This may take a few seconds</p>
+</div>
+
+<!-- Image Full View Modal (FIXED - Only shows when clicked) -->
+<div id="imageModal" class="fixed inset-0 bg-black bg-opacity-90 hidden z-50 flex items-center justify-center p-4">
+    <div class="relative max-w-7xl max-h-screen" onclick="event.stopPropagation()">
+        <button onclick="closeImageModal()" class="absolute -top-12 right-0 text-white hover:text-gray-300 text-4xl font-bold z-10">
+            <i class="fas fa-times-circle"></i>
+        </button>
+        <img id="modalImage" class="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" alt="Full size preview">
+        <p class="text-white text-center mt-4 text-sm">
+            <i class="fas fa-info-circle mr-1"></i>Click X to close
+        </p>
+    </div>
+</div>
+
+<!-- History Section (Toggleable) -->
+<div class="bg-white shadow-2xl rounded-2xl overflow-hidden mb-6 border border-blue-100">
+    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5 flex justify-between items-center">
+        <div>
+            <h3 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-history mr-3 text-3xl"></i>
+                Scan History
+            </h3>
+            <p class="text-blue-50 mt-2 text-sm">View your previous scan results</p>
+        </div>
+        <button id="toggleHistoryBtn" onclick="toggleHistory()"
+                 class="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-5 py-3 rounded-xl font-semibold shadow-lg transition-all">
+            <i class="fas fa-eye mr-2" id="historyToggleIcon"></i>
+            <span id="historyToggleText">Show History</span>
+        </button>
+    </div>
+
+    <!-- History Content (Initially Hidden) -->
+    <div id="historyContent" class="hidden">
+        <!-- History Filters -->
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+            <div class="flex flex-wrap gap-3 items-center">
+                <select id="historyTypeFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <option value="all">All Types</option>
+                    <option value="disease">Disease Only</option>
+                    <option value="pest">Pest Only</option>
+                </select>
+                <select id="historyResultFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    <option value="all">All Results</option>
+                    <option value="healthy">Healthy Only</option>
+                    <option value="issues">Issues Only</option>
+                </select>
+                <input type="date" id="historyDateFilter" class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                <button onclick="applyHistoryFilters()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm hover:from-blue-700 hover:to-indigo-700 font-semibold shadow-md">
+                    <i class="fas fa-filter mr-2"></i>Filter
+                </button>
+                <button onclick="clearHistoryFilters()" class="px-5 py-2 bg-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-400 font-semibold">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- History List -->
+        <div class="p-6">
+            <div id="historyList" class="space-y-4">
+                <!-- History items will be loaded here -->
+            </div>
+            <div id="historyLoading" class="text-center py-8 hidden">
+                <i class="fas fa-spinner fa-spin text-3xl text-blue-400 mb-3"></i>
+                <p class="text-gray-500">Loading scan history...</p>
+            </div>
+            <div id="historyEmpty" class="text-center py-12 hidden">
+                <i class="fas fa-history text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg font-medium">No scan history found</p>
+                <p class="text-gray-400 text-sm mt-2">Start by uploading an image above</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Details Modal (FIXED - Shows scan details, not image) -->
+<div id="scanDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-900">Scan Details</h3>
+                <button onclick="closeScanDetails()" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
+            <div id="scanDetailsContent">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tips Section -->
+<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 shadow-lg">
+    <h3 class="text-xl font-bold text-blue-900 mb-4 flex items-center">
+        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+            <i class="fas fa-lightbulb text-white text-lg"></i>
+        </div>
+        Tips for Better Results
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ul class="space-y-3 text-blue-900">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Ensure good lighting when taking photos</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Focus on the cacao fruit/pod clearly</span>
+            </li>
+        </ul>
+        <ul class="space-y-3 text-blue-900">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Avoid blurry or distant images</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 text-lg"></i>
+                <span>Include the affected area in the frame</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    let selectedFiles = {
+        disease: null,
+        pest: null
+    };
+    let analyzedResults = {
+        disease: null,
+        pest: null
+    };
+    let allScanHistory = [];
+
+    // Setup file inputs for both types
+    document.getElementById('diseaseImageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFiles.disease = file;
+            analyzedResults.disease = null; // Clear previous result
+            previewImage(file, 'disease');
+        }
+    });
+
+    document.getElementById('pestImageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFiles.pest = file;
+            analyzedResults.pest = null; // Clear previous result
+            previewImage(file, 'pest');
+        }
+    });
+
+    function previewImage(file, type) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(type + 'ImagePreview').src = e.target.result;
+            document.getElementById(type + 'UploadSection').classList.add('hidden');
+            document.getElementById(type + 'PreviewSection').classList.remove('hidden');
+            document.getElementById(type + 'ResultsSection').classList.add('hidden');
+            // Re-enable analyze button for new image
+            document.getElementById(type + 'AnalyzeBtn').disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function viewFullImage(type) {
+        const imgSrc = document.getElementById(type + 'ImagePreview').src;
+        document.getElementById('modalImage').src = imgSrc;
+        document.getElementById('imageModal').classList.remove('hidden');
+        // Prevent body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeImageModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+        // Restore body scroll
+        document.body.style.overflow = 'auto';
+    }
+
+    function resetUpload(type) {
+        // Clear everything
+        selectedFiles[type] = null;
+        analyzedResults[type] = null;
+        document.getElementById(type + 'ImageInput').value = '';
+        document.getElementById(type + 'ImagePreview').src = '';
+        
+        // Show upload section, hide others
+        document.getElementById(type + 'UploadSection').classList.remove('hidden');
+        document.getElementById(type + 'PreviewSection').classList.add('hidden');
+        document.getElementById(type + 'ResultsSection').classList.add('hidden');
+        
+        // Re-enable analyze button
+        document.getElementById(type + 'AnalyzeBtn').disabled = false;
+    }
+
+    async function analyzeImage(type) {
+        if (!selectedFiles[type]) return;
+
+        // STRICT: If already analyzed, show existing result
+        if (analyzedResults[type]) {
+            alert('This image has already been analyzed. Click "Reset" to upload a new image.');
+            return;
+        }
+
+        // Show loading
+        document.getElementById('loadingSection').classList.remove('hidden');
+        document.getElementById(type + 'AnalyzeBtn').disabled = true;
+
+        const formData = new FormData();
+        formData.append('image', selectedFiles[type]);
+        formData.append('scan_type', type);
+
+        try {
+            const response = await fetch('{% url "scan_image" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const data = await response.json();
+
+            // Hide loading
+            document.getElementById('loadingSection').classList.add('hidden');
+
+            if (data.success) {
+                // Store result to prevent re-analysis
+                analyzedResults[type] = data;
+                displayResults(data, type);
+                // Refresh history if visible
+                if (!document.getElementById('historyContent').classList.contains('hidden')) {
+                    loadScanHistory();
+                }
+            } else {
+                document.getElementById(type + 'AnalyzeBtn').disabled = false;
+                showError(data.message || 'Analysis failed', type);
+            }
+        } catch (error) {
+            document.getElementById('loadingSection').classList.add('hidden');
+            document.getElementById(type + 'AnalyzeBtn').disabled = false;
+            showError('Network error occurred', type);
+        }
+    }
+
+    function displayResults(data, type) {
+        const resultsContent = document.getElementById(type + 'ResultsContent');
+        const isHealthy = data.result === 'Healthy';
+        const statusColor = isHealthy ? 'green' : 'red';
+        const typeColor = type === 'disease' ? 'amber' : 'green';
+
+        resultsContent.innerHTML = `
+            <!-- Primary Result -->
+            <div class="bg-${typeColor}-50 border-2 border-${typeColor}-200 rounded-xl p-5 shadow-md">
+                <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-${typeColor}-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-${type === 'disease' ? 'virus' : 'bug'} text-${typeColor}-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-${typeColor}-900 text-lg">${type.charAt(0).toUpperCase() + type.slice(1)} Detection Result</h4>
+                        <p class="text-sm text-${typeColor}-600">Analysis Complete</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 mb-3">
+                    <p class="text-2xl font-bold text-${statusColor}-800 mb-1">${data.result}</p>
+                    <div class="flex items-center">
+                        <div class="flex-1 bg-gray-200 rounded-full h-2 mr-3">
+                            <div class="bg-${statusColor}-500 h-2 rounded-full" style="width: ${data.confidence}%"></div>
+                        </div>
+                        <span class="text-sm font-semibold text-${statusColor}-700">${data.confidence}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-5 shadow-md">
+                <h4 class="font-bold text-green-900 mb-3 flex items-center text-lg">
+                    <i class="fas fa-leaf mr-2 text-green-600"></i>
+                    Recommendations
+                </h4>
+                <ul class="space-y-2">
+                    ${data.recommendations.map(rec => `
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-600 mt-1 mr-2"></i>
+                            <span class="text-green-800">${rec}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex space-x-3">
+                <button onclick="resetUpload('${type}')" class="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all shadow-lg">
+                    <i class="fas fa-camera mr-2"></i>New Scan
+                </button>
+                <button onclick="viewFullImage('${type}')" class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-semibold transition-all">
+                    <i class="fas fa-search-plus mr-2"></i>View Image
+                </button>
+            </div>
+        `;
+
+        document.getElementById(type + 'ResultsSection').classList.remove('hidden');
+    }
+
+    function showError(message, type) {
+        const resultsContent = document.getElementById(type + 'ResultsContent');
+        resultsContent.innerHTML = `
+            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-5 shadow-md">
+                <div class="flex items-center mb-3">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl mr-3"></i>
+                    <h4 class="font-bold text-red-900 text-lg">Analysis Error</h4>
+                </div>
+                <p class="text-red-800 mb-4">${message}</p>
+                <button onclick="resetUpload('${type}')" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-all">
+                    <i class="fas fa-redo mr-2"></i>Try Again
+                </button>
+            </div>
+        `;
+        document.getElementById(type + 'ResultsSection').classList.remove('hidden');
+    }
+
+    // History functionality
+    function toggleHistory() {
+        const historyContent = document.getElementById('historyContent');
+        const historyIcon = document.getElementById('historyToggleIcon');
+        const historyToggleText = document.getElementById('historyToggleText');
+        
+        if (historyContent.classList.contains('hidden')) {
+            historyContent.classList.remove('hidden');
+            historyIcon.className = 'fas fa-eye-slash mr-2';
+            historyToggleText.textContent = 'Hide History';
+            loadScanHistory();
+        } else {
+            historyContent.classList.add('hidden');
+            historyIcon.className = 'fas fa-eye mr-2';
+            historyToggleText.textContent = 'Show History';
+        }
+    }
+
+    function loadScanHistory() {
+        const historyList = document.getElementById('historyList');
+        const historyLoading = document.getElementById('historyLoading');
+        const historyEmpty = document.getElementById('historyEmpty');
+        
+        historyLoading.classList.remove('hidden');
+        historyList.innerHTML = '';
+        historyEmpty.classList.add('hidden');
+
+        fetch('{% url "scan_history" %}')
+            .then(response => response.json())
+            .then(data => {
+                historyLoading.classList.add('hidden');
+                
+                if (data.success && data.scans && data.scans.length > 0) {
+                    allScanHistory = data.scans;
+                    displayScanHistory(allScanHistory);
+                } else {
+                    historyEmpty.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                historyLoading.classList.add('hidden');
+                console.error('Error loading scan history:', error);
+                historyEmpty.classList.remove('hidden');
+            });
+    }
+
+    function displayScanHistory(scans) {
+        const historyList = document.getElementById('historyList');
+        const historyEmpty = document.getElementById('historyEmpty');
+        
+        if (scans.length === 0) {
+            historyList.innerHTML = '';
+            historyEmpty.classList.remove('hidden');
+            return;
+        }
+        
+        historyEmpty.classList.add('hidden');
+        
+        historyList.innerHTML = scans.map(scan => {
+            const isHealthy = scan.result === 'Healthy';
+            const statusColor = isHealthy ? 'green' : 'red';
+            const typeColor = scan.type === 'disease' ? 'amber' : 'green';
+            const typeIcon = scan.type === 'disease' ? 'virus' : 'bug';
+            
+            const displayName = scan.short_name || scan.result;
+            const hasLongName = scan.short_name && scan.short_name !== scan.result;
+            
+            return `
+                <div class="border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all bg-gradient-to-r from-white to-gray-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start space-x-3 flex-1">
+                            <div class="w-12 h-12 rounded-xl bg-${typeColor}-100 flex items-center justify-center shadow-md">
+                                <i class="fas fa-${typeIcon} text-${typeColor}-600 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="px-3 py-1 bg-${typeColor}-100 text-${typeColor}-800 rounded-lg text-xs font-bold uppercase">
+                                        ${scan.type}
+                                    </span>
+                                    <span class="px-3 py-1 bg-${statusColor}-100 text-${statusColor}-800 rounded-lg text-xs font-bold">
+                                        ${displayName}${hasLongName ? '...' : ''}
+                                    </span>
+                                    <span class="text-xs text-gray-500 font-medium">
+                                        ${Math.round(scan.confidence)}% confidence
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-3">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    ${new Date(scan.timestamp).toLocaleString()}
+                                </p>
+                                <div class="flex space-x-3">
+                                    <button onclick="viewScanDetails('${scan.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                        <i class="fas fa-eye mr-1"></i>View Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deleteScan('${scan.id}')" class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-all">
+                            <i class="fas fa-trash text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function viewScanDetails(scanId) {
+        fetch(`{% url "scan_details" "0000" %}`.replace('0000', scanId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showScanDetailsModal(data.scan);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while loading scan details');
+            });
+    }
+
+    function showScanDetailsModal(scan) {
+        const modal = document.getElementById('scanDetailsModal');
+        const content = document.getElementById('scanDetailsContent');
+        
+        const isHealthy = scan.result === 'Healthy';
+        const statusColor = isHealthy ? 'green' : 'red';
+        const typeColor = scan.type === 'disease' ? 'amber' : 'green';
+        const typeIcon = scan.type === 'disease' ? 'virus' : 'bug';
+        
+        content.innerHTML = `
+            <div class="space-y-4">
+                <!-- Scan Type and Result -->
+                <div class="bg-${typeColor}-50 border-2 border-${typeColor}-200 rounded-xl p-5">
+                    <div class="flex items-center mb-4">
+                        <div class="w-14 h-14 rounded-xl bg-${typeColor}-100 flex items-center justify-center mr-4 shadow-md">
+                            <i class="fas fa-${typeIcon} text-${typeColor}-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-${typeColor}-900 text-xl">${scan.type.charAt(0).toUpperCase() + scan.type.slice(1)} Detection</h4>
+                            <p class="text-${typeColor}-700 text-sm">${new Date(scan.timestamp).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-lg p-3">
+                            <p class="text-sm text-${typeColor}-600 font-semibold mb-1">Result</p>
+                            <p class="text-xl font-bold text-${statusColor}-800">${scan.result}</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-3">
+                            <p class="text-sm text-${typeColor}-600 font-semibold mb-1">Confidence</p>
+                            <p class="text-xl font-bold text-${typeColor}-800">${Math.round(scan.confidence)}%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="bg-green-50 border-2 border-green-200 rounded-xl p-5">
+                    <h4 class="font-bold text-green-900 mb-3 flex items-center text-lg">
+                        <i class="fas fa-leaf mr-2"></i>
+                        Recommendations
+                    </h4>
+                    <ul class="space-y-2">
+                        ${scan.recommendations.map(rec => `
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-green-600 mt-1 mr-2"></i>
+                                <span class="text-green-800">${rec}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-5">
+                    <h4 class="font-bold text-gray-900 mb-3">Scan Information</h4>
+                    <div class="grid grid-cols-1 gap-3 text-sm">
+                        <div class="flex justify-between py-2 border-b border-gray-200">
+                            <span class="text-gray-600 font-medium">Scan ID:</span>
+                            <span class="text-gray-900 font-mono text-xs">${scan.id}</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-200">
+                            <span class="text-gray-600 font-medium">Type:</span>
+                            <span class="text-gray-900 capitalize font-semibold">${scan.type}</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-200">
+                            <span class="text-gray-600 font-medium">Date:</span>
+                            <span class="text-gray-900">${new Date(scan.timestamp).toLocaleDateString()}</span>
+                        </div>
+                        <div class="flex justify-between py-2">
+                            <span class="text-gray-600 font-medium">Time:</span>
+                            <span class="text-gray-900">${new Date(scan.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.remove('hidden');
+        // Prevent body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeScanDetails() {
+        document.getElementById('scanDetailsModal').classList.add('hidden');
+        // Restore body scroll
+        document.body.style.overflow = 'auto';
+    }
+
+    function applyHistoryFilters() {
+        const typeFilter = document.getElementById('historyTypeFilter').value;
+        const resultFilter = document.getElementById('historyResultFilter').value;
+        const dateFilter = document.getElementById('historyDateFilter').value;
+        
+        let filteredScans = [...allScanHistory];
+        
+        if (typeFilter !== 'all') {
+            filteredScans = filteredScans.filter(scan => scan.type === typeFilter);
+        }
+        
+        if (resultFilter !== 'all') {
+            if (resultFilter === 'healthy') {
+                filteredScans = filteredScans.filter(scan => scan.result === 'Healthy');
+            } else if (resultFilter === 'issues') {
+                filteredScans = filteredScans.filter(scan => scan.result !== 'Healthy');
+            }
+        }
+        
+        if (dateFilter) {
+            const filterDate = new Date(dateFilter).toDateString();
+            filteredScans = filteredScans.filter(scan => {
+                const scanDate = new Date(scan.timestamp).toDateString();
+                return scanDate === filterDate;
+            });
+        }
+        
+        displayScanHistory(filteredScans);
+    }
+
+    function clearHistoryFilters() {
+        document.getElementById('historyTypeFilter').value = 'all';
+        document.getElementById('historyResultFilter').value = 'all';
+        document.getElementById('historyDateFilter').value = '';
+        displayScanHistory(allScanHistory);
+    }
+
+    function deleteScan(scanId) {
+        if (!confirm('Are you sure you want to delete this scan?')) return;
+        
+        fetch(`{% url "delete_user_scan" "0000" %}`.replace('0000', scanId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                allScanHistory = allScanHistory.filter(scan => scan.id !== scanId);
+                displayScanHistory(allScanHistory);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the scan');
+        });
+    }
+
+    // CSRF token helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Setup drag and drop for both upload areas
+    function setupDragDrop(type) {
+        const uploadSection = document.getElementById(type + 'UploadSection');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => highlight(type), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => unhighlight(type), false);
+        });
+
+        function highlight(type) {
+            const color = type === 'disease' ? 'amber' : 'green';
+            uploadSection.querySelector('div').classList.add('border-' + color + '-500', 'shadow-lg');
+        }
+
+        function unhighlight(type) {
+            const color = type === 'disease' ? 'amber' : 'green';
+            uploadSection.querySelector('div').classList.remove('border-' + color + '-500', 'shadow-lg');
+        }
+
+        uploadSection.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files.length > 0) {
+                selectedFiles[type] = files[0];
+                analyzedResults[type] = null; // Clear previous result
+                previewImage(files[0], type);
+            }
+        }, false);
+    }
+
+    // Initialize drag and drop for both types
+    setupDragDrop('disease');
+    setupDragDrop('pest');
+
+    // Close modals when clicking on backdrop
+    document.getElementById('scanDetailsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeScanDetails();
+        }
+    });
+
+    document.getElementById('imageModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeImageModal();
+        }
+    });
+</script>
+</body>
+</html>
+{% endblock %}

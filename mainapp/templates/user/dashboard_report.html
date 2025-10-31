@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Report - CacaoGuard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body { font-size: 12px; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center border-b-2 border-gray-300 pb-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">CacaoGuard User Dashboard Report</h1>
+            <p class="text-gray-600 mt-2">Generated on: {{ report.generated_at }}</p>
+            <p class="text-gray-600">User: {{ report.user_name }} ({{ report.user_email }})</p>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="text-center p-4 border rounded-lg">
+                <h3 class="text-2xl font-bold text-blue-600">{{ report.total_orders }}</h3>
+                <p class="text-gray-600">Total Orders</p>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+                <h3 class="text-2xl font-bold text-purple-600">{{ report.total_scans }}</h3>
+                <p class="text-gray-600">Total Scans</p>
+            </div>
+            <div class="text-center p-4 border rounded-lg">
+                <h3 class="text-2xl font-bold text-green-600">{{ report.total_maps }}</h3>
+                <p class="text-gray-600">Total Maps</p>
+            </div>
+        </div>
+
+        <!-- Detailed Breakdown -->
+        <div class="grid grid-cols-2 gap-8 mb-8">
+            <!-- Orders Breakdown -->
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Orders Summary</h3>
+                <table class="w-full border-collapse border border-gray-300">
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 p-2 text-left">Status</th>
+                        <th class="border border-gray-300 p-2 text-right">Count</th>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2">Pending</td>
+                        <td class="border border-gray-300 p-2 text-right">{{ report.orders_summary.pending }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2">Delivered</td>
+                        <td class="border border-gray-300 p-2 text-right">{{ report.orders_summary.delivered }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2">Cancelled</td>
+                        <td class="border border-gray-300 p-2 text-right">{{ report.orders_summary.cancelled }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Scans Breakdown -->
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Scans Summary</h3>
+                <table class="w-full border-collapse border border-gray-300">
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 p-2 text-left">Type</th>
+                        <th class="border border-gray-300 p-2 text-right">Count</th>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2">Disease Scans</td>
+                        <td class="border border-gray-300 p-2 text-right">{{ report.scans_summary.disease }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2">Pest Scans</td>
+                        <td class="border border-gray-300 p-2 text-right">{{ report.scans_summary.pest }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Print Button -->
+        <div class="text-center no-print">
+            <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                Print Report
+            </button>
+            <a href="{% url 'userdashboard' %}" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 ml-4">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+</body>
+</html>
