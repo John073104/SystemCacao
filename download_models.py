@@ -9,16 +9,27 @@ from pathlib import Path
 MODELS_DIR = Path(__file__).resolve().parent / 'models'
 MODELS_DIR.mkdir(exist_ok=True)
 
-# Model URLs - You'll need to upload these to a cloud storage (Google Drive, Dropbox, etc.)
+# Model URLs - Google Drive direct download links
 MODELS = {
-    'cacao_disease_resnet_state_dict.pth': 'YOUR_DISEASE_MODEL_URL_HERE',
-    'cacao_pest_resnet_state_dict.pth': 'YOUR_PEST_MODEL_URL_HERE'
+    'cacao_disease_resnet_state_dict.pth': 'https://drive.google.com/uc?export=download&id=1Qe5-6qqUuz8Tz9ygbuhKjqZAHYqku0dC',
+    'cacao_pest_resnet_state_dict.pth': 'https://drive.google.com/uc?export=download&id=1CnLqRFDnURggYAVAdMPJU9HdKH4Uf3T5'
 }
 
 def download_file(url, destination):
     """Download a file from URL to destination"""
     print(f"Downloading {destination.name}...")
-    response = requests.get(url, stream=True)
+    
+    # Handle Google Drive download with confirmation
+    session = requests.Session()
+    response = session.get(url, stream=True)
+    
+    # Check for Google Drive virus scan warning
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            params = {'confirm': value}
+            response = session.get(url, params=params, stream=True)
+            break
+    
     response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
@@ -46,10 +57,6 @@ def main():
         
         if model_path.exists():
             print(f"✓ {model_name} already exists")
-            continue
-        
-        if url == 'YOUR_DISEASE_MODEL_URL_HERE' or url == 'YOUR_PEST_MODEL_URL_HERE':
-            print(f"⚠ Please update the URL for {model_name} in download_models.py")
             continue
         
         try:
