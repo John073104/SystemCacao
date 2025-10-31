@@ -12,7 +12,7 @@ google-cloud-storage==3.1.0
 google-auth==2.38.0
 
 # PyTorch & ML (Linux compatible, Python 3.13 compatible)
-torch==2.5.1
+torch==2.6.0
 torchvision==0.21.0
 numpy==2.0.2
 opencv-python-headless==4.10.0.84
