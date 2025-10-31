@@ -12,14 +12,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 import logging
 import warnings
-import absl.logging
 
-# Suppress TensorFlow and oneDNN logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Optional, disables oneDNN
+# Suppress PyTorch warnings
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 
-# Silence absl and logging messages
-absl.logging.set_verbosity('error')
+# Silence logging messages
 logging.getLogger().setLevel(logging.ERROR)
 
 # Ignore warnings
