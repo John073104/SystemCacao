@@ -11,12 +11,12 @@ google-cloud-firestore==2.20.1
 google-cloud-storage==3.1.0
 google-auth==2.38.0
 
-# PyTorch & ML (Linux compatible, Python 3.11 compatible)
+# PyTorch & ML (Linux compatible, Python 3.13 compatible)
 torch==2.5.1
 torchvision==0.21.0
-numpy==1.26.4
-opencv-python-headless==4.8.1.78
-pillow==10.3.0
+numpy==2.0.2
+opencv-python-headless==4.10.0.84
+pillow==11.0.0
 
 # Utilities
 requests==2.32.3
