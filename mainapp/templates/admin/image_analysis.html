@@ -612,67 +612,89 @@
         return cookieValue;
       }
 
-      // Chart data from Django
-      const chartData = {{ chart_data|safe }};
-
-      // Line Chart
-      const ctx = document.getElementById('scanChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartData.map(d => d.date),
-          datasets: [{
-            label: 'Daily Scans',
-            data: chartData.map(d => d.count),
-            borderColor: 'rgb(59, 130, 246)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
+      // Chart data from Django with error handling
+      let chartData = [];
+      try {
+        chartData = {{ chart_data|safe }};
+        if (!Array.isArray(chartData)) {
+          console.warn('Chart data is not an array, using empty array');
+          chartData = [];
         }
-      });
+      } catch (error) {
+        console.error('Error parsing chart data:', error);
+        chartData = [];
+      }
 
-      // Pie Chart
-      const pieCtx = document.getElementById('pieChart').getContext('2d');
-      const diseaseScans = parseInt("{{ disease_scans|default_if_none:'0' }}");
-      const pestScans = parseInt("{{ pest_scans|default_if_none:'0' }}");
-      
-      new Chart(pieCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Disease Scans', 'Pest Scans'],
-          datasets: [{
-            data: [diseaseScans, pestScans],
-            backgroundColor: [
-              'rgba(239, 68, 68, 0.8)',
-              'rgba(249, 115, 22, 0.8)'
-            ],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          aspectRatio: 1,
-          plugins: {
-            legend: {
-              position: 'bottom'
+      // Line Chart with error handling
+      try {
+        const ctx = document.getElementById('scanChart');
+        if (ctx) {
+          new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: chartData.map(d => d.date || ''),
+              datasets: [{
+                label: 'Daily Scans',
+                data: chartData.map(d => d.count || 0),
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
             }
-          }
+          });
         }
-      });
+      } catch (error) {
+        console.error('Error creating line chart:', error);
+      }
+
+      // Pie Chart with error handling
+      try {
+        const pieCtx = document.getElementById('pieChart');
+        if (pieCtx) {
+          const diseaseScans = parseInt("{{ disease_scans|default_if_none:'0' }}") || 0;
+          const pestScans = parseInt("{{ pest_scans|default_if_none:'0' }}") || 0;
+          
+          new Chart(pieCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: ['Disease Scans', 'Pest Scans'],
+              datasets: [{
+                data: [diseaseScans, pestScans],
+                backgroundColor: [
+                  'rgba(239, 68, 68, 0.8)',
+                  'rgba(249, 115, 22, 0.8)'
+                ],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              aspectRatio: 1,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error creating pie chart:', error);
+      }
     </script>
   </main>
 </body>
