@@ -11,8 +11,10 @@ import json
 import pytz
 from datetime import datetime, timedelta
 from .decorators import user_required
+from . import firebase_config
 
-db = firestore.client()
+# Get Firestore client from centralized config
+db = firebase_config.db
 
 @user_required
 def userdashboard(request):

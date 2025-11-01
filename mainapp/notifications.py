@@ -8,8 +8,10 @@ from django.views.decorators.csrf import csrf_exempt
 from firebase_admin import firestore
 from datetime import datetime, timedelta
 import pytz
+from . import firebase_config
 
-db = firestore.client()
+# Get Firestore client from centralized config
+db = firebase_config.db
 
 def get_notifications(request):
     """Get all notifications for logged-in user"""

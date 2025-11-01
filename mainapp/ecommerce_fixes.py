@@ -16,9 +16,10 @@ import json
 import hashlib
 import base64
 import requests
+from . import firebase_config
 
-# Initialize Firestore
-db = firestore.client()
+# Get Firestore client from centralized config
+db = firebase_config.db
 
 # ===== FIX #1: STOCK DEDUCTION WHEN ORDER COMPLETED =====
 

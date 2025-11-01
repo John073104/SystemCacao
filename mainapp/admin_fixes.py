@@ -10,8 +10,10 @@ from firebase_admin import firestore
 from datetime import datetime
 import pytz
 from .notifications import create_notification
+from . import firebase_config
 
-db = firestore.client()
+# Get Firestore client from centralized config
+db = firebase_config.db
 
 # ===== FIX #2: SCAN HISTORY WITH SHOW/HIDE =====
 

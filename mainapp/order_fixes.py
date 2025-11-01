@@ -8,8 +8,10 @@ from firebase_admin import firestore
 from datetime import datetime
 import pytz
 import logging
+from . import firebase_config
 
-db = firestore.client()
+# Get Firestore client from centralized config
+db = firebase_config.db
 logger = logging.getLogger(__name__)
 
 def get_order_details(request, order_id):
