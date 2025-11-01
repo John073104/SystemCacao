@@ -22,7 +22,12 @@ class FirebaseStorage(Storage):
     def __init__(self):
         if not firebase_admin._apps:
             # Initialize Firebase if not already done
-            cred = credentials.Certificate('mainapp/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
+            # Try production path first, then local path
+            cred_path = '/etc/secrets/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json'
+            if not os.path.exists(cred_path):
+                cred_path = 'mainapp/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json'
+            
+            cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred, {
                 'storageBucket': 'systemcacao.appspot.com'
             })
