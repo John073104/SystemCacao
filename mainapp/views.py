@@ -728,7 +728,7 @@ def scan_image(request):
         if request.session.get('uid'):
             user_type = 'user'
             user_id = request.session.get('uid')
-            user_email = request.session.get('user_email', '')
+            user_email = request.session.get('user_email') or request.session.get('email', 'unknown@example.com')
             user_name = request.session.get('name', 'User')
         else:
             # Guest scan limits
