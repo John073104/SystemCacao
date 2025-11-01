@@ -29,6 +29,13 @@ def complete_order_and_deduct_stock(request, order_id):
     Admin only - called when marking order as 'delivered'
     """
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Database connection unavailable. Please try again later.'
+            })
+        
         # Get order from Firestore
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()

@@ -20,6 +20,13 @@ def get_order_details(request, order_id):
     Fixes the "error loading order details" issue
     """
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Database connection unavailable. Please try again later.'
+            }, status=503)
+        
         uid = request.session.get('uid')
         user_email = request.session.get('user_email') or request.session.get('email')
         
@@ -120,6 +127,13 @@ def get_order_details(request, order_id):
 def get_user_orders(request):
     """Get all orders for current user with error handling"""
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Database connection unavailable. Please try again later.'
+            }, status=503)
+        
         uid = request.session.get('uid')
         user_email = request.session.get('user_email') or request.session.get('email')
         

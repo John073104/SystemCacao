@@ -49,13 +49,14 @@ admin_required = _admin_required
 
 
 def user_required(view_func):
-    """Allow only user role."""
+    """Allow user role and admin role (admins can access user pages)."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not _is_logged_in(request):
             messages.error(request, 'Please log in to continue.')
             return redirect('login')
-        if _normalized_role(request) != 'user':
+        role = _normalized_role(request)
+        if role not in ['user', 'admin']:
             messages.error(request, 'Access denied. User account required.')
             return redirect('unauthorized')
         return view_func(request, *args, **kwargs)

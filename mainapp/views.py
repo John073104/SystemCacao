@@ -1459,6 +1459,18 @@ def is_admin(user):
 def admin_ecommerce(request):
     """Admin ecommerce dashboard with Firestore data"""
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            return render(request, 'admin/ecommerce.html', {
+                'error': 'Database connection unavailable. Please add Firebase credentials.',
+                'total_products': 0,
+                'total_orders': 0,
+                'pending_orders': 0,
+                'total_revenue': 0,
+                'recent_orders': [],
+                'low_stock_products': [],
+            })
+        
         # ===== ORDERS SECTION =====
         orders_ref = db.collection('orders')
         all_orders_docs = list(orders_ref.stream())
