@@ -417,14 +417,7 @@ from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Initialize Firestore
-if not firebase_admin._apps:
-    # Try production path first, then local path
-    cred_path = '/etc/secrets/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json'
-    if not os.path.exists(cred_path):
-        cred_path = 'mainapp/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json'
-    
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
+# Firebase already initialized in firebase_config
 
 db = firestore.client()
 
@@ -1785,9 +1778,7 @@ from collections import defaultdict
 import calendar
 
 # Initialize Firebase if not already done
-if not firebase_admin._apps:
-    cred = credentials.Certificate('mainapp\systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
-    firebase_admin.initialize_app(cred)
+# Firebase already initialized in firebase_config
 
 db = firestore.client()
 
@@ -3038,13 +3029,7 @@ from django.conf import settings
 import os
 
 # Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    # Path to your Firebase service account key
-    cred_path = os.path.join(settings.BASE_DIR, 'firebase-service-account.json')
-    
-    if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
+# Firebase already initialized in firebase_config
     else:
         # For development, you can use environment variables
         firebase_admin.initialize_app()
@@ -8122,9 +8107,7 @@ import pytz
 from .decorators import admin_required, user_required
 
 # Initialize Firestore
-if not firebase_admin._apps:
-    cred = credentials.Certificate('mainapp/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
-    firebase_admin.initialize_app(cred)
+# Firebase already initialized in firebase_config
 
 db = firestore.client()
 

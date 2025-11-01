@@ -236,13 +236,8 @@ import base64
 import os
 from django.conf import settings
 
-# Initialize Firebase if not already done
-if not firebase_admin._apps:
-    # Path to your service account key file
-    cred = credentials.Certificate('path/to/your/serviceAccountKey.json')
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
+# Firebase already initialized in firebase_config module
+# db is already defined earlier in this file from firebase_config
 
 def upload_profile_image(uid, image_file):
     """Store profile image as base64 in Firestore"""
