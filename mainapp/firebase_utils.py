@@ -119,14 +119,12 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import uuid
 
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': settings.FIREBASE_STORAGE_BUCKET
-    })
+# Firebase already initialized in firebase_config module
+# Use the db from FirestoreService class or firebase_config
+from . import firebase_config
 
-db = firestore.client()
+# Get db instance from firebase_config if available
+db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
 
 def get_user_role(uid):
     """
