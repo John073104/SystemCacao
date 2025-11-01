@@ -113,8 +113,8 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         if any(path.startswith(url) for url in self.PUBLIC_URLS):
             return None
         
-        # Skip middleware for API endpoints
-        if path.startswith('/api/'):
+        # Skip middleware for API endpoints and authentication endpoints
+        if path.startswith('/api/') or path.startswith('/accounts/'):
             return None
         
         # Get session data
@@ -122,40 +122,44 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         user_email = request.session.get('user_email') or request.session.get('email')
         user_role = request.session.get('role')
         
-        # Check if user is authenticated
-        if not uid or not user_email:
-            messages.error(request, '🔒 Please log in to access this page.')
-            return redirect('login')
+        # Allow access if user is not yet authenticated (login in progress)
+        # Only enforce RBAC after successful authentication
+        if not uid or not user_email or not user_role:
+            # User not authenticated yet - allow them to reach login
+            return None
+        
+        # Normalize role to lowercase for comparison
+        user_role_lower = user_role.lower() if user_role else None
         
         # SECURITY CHECK 1: Admin-only URLs
         if any(path.startswith(url) for url in self.ADMIN_ONLY_URLS):
-            if user_role != 'Admin':
+            if user_role_lower != 'admin':
                 messages.error(request, '❌ Access Denied: Administrator privileges required.')
                 # Redirect based on user role
-                if user_role == 'User':
+                if user_role_lower == 'user':
                     return redirect('userdashboard')
-                elif user_role == 'Guest':
+                elif user_role_lower == 'guest':
                     return redirect('guest_dashboard')
                 else:
                     return redirect('unauthorized')
         
         # SECURITY CHECK 2: User URLs (Users and Admins can access)
         elif any(path.startswith(url) for url in self.USER_URLS):
-            if user_role not in ['User', 'Admin']:
+            if user_role_lower not in ['user', 'admin']:
                 messages.error(request, '❌ Access Denied: User account required.')
-                if user_role == 'Guest':
+                if user_role_lower == 'guest':
                     return redirect('guest_dashboard')
-                elif user_role == 'Admin':
+                elif user_role_lower == 'admin':
                     return redirect('admin_dashboard')
                 else:
                     return redirect('unauthorized')
         
         # SECURITY CHECK 3: Guest URLs
         elif any(path.startswith(url) for url in self.GUEST_URLS):
-            if user_role == 'Admin':
+            if user_role_lower == 'admin':
                 messages.info(request, 'ℹ️ Redirecting to admin dashboard.')
                 return redirect('admin_dashboard')
-            elif user_role == 'User':
+            elif user_role_lower == 'user':
                 messages.info(request, 'ℹ️ Redirecting to user dashboard.')
                 return redirect('userdashboard')
         
@@ -169,19 +173,28 @@ class SessionValidationMiddleware(MiddlewareMixin):
         public_paths = [
             '/', '/login/', '/signup/', '/about/', '/services/', 
             '/team/', '/terms/', '/privacy/', '/unauthorized/',
-            '/forgot-password/', '/reset-password/'
+            '/forgot-password/', '/reset-password/', '/accounts/'
         ]
         
         # Skip static and media files
         if request.path_info.startswith('/static/') or request.path_info.startswith('/media/'):
             return None
+        
+        # Skip API endpoints
+        if request.path_info.startswith('/api/'):
+            return None
             
-        if request.path_info in public_paths:
+        if any(request.path_info.startswith(path) for path in public_paths):
             return None
         
         uid = request.session.get('uid')
         user_email = request.session.get('user_email') or request.session.get('email')
         user_role = request.session.get('role')
+        
+        # Only validate if user claims to be authenticated
+        # Don't block unauthenticated users trying to reach login
+        if not uid:
+            return None
         
         # If session claims to be authenticated but missing critical data
         if uid and (not user_email or not user_role):
@@ -191,7 +204,7 @@ class SessionValidationMiddleware(MiddlewareMixin):
             return redirect('login')
         
         # Validate role value
-        if user_role and user_role not in ['Admin', 'User', 'Guest']:
+        if user_role and user_role.lower() not in ['admin', 'user', 'guest']:
             # Invalid role detected - possible session tampering
             request.session.flush()
             messages.error(request, '⚠️ Invalid session detected. Please log in again.')
