@@ -7620,15 +7620,33 @@ def image_analysis(request):
                     confidence = 0
                 
                 # Handle different field names for user info
-                username = (scan_data.get('user_email') or 
-                           scan_data.get('username') or 
-                           scan_data.get('user') or 
-                           'Unknown User')
+                user_name = (scan_data.get('user_name') or 
+                            scan_data.get('username') or 
+                            scan_data.get('user') or 
+                            'Unknown User')
+                
+                user_email = (scan_data.get('user_email') or 
+                             scan_data.get('email') or '')
+                
+                # If no user info, try to fetch from users collection
+                if (not user_email or user_email == 'unknown@example.com') and scan_data.get('user_id'):
+                    user_id = scan_data.get('user_id')
+                    if user_id and user_id != 'guest':
+                        try:
+                            user_doc = db.collection('users').document(user_id).get()
+                            if user_doc.exists:
+                                user_data = user_doc.to_dict()
+                                user_email = user_data.get('email', '')
+                                if not user_name or user_name == 'Unknown User':
+                                    user_name = user_data.get('name', 'Unknown User')
+                        except Exception as e:
+                            print(f"[DEBUG] Could not fetch user for {user_id}: {e}")
                 
                 # Handle image name
                 image_name = (scan_data.get('image_name') or 
                              scan_data.get('filename') or 
-                             f'scan_{scan_doc.id[:8]}')
+                             scan_data.get('file_name') or
+                             f'Image_{scan_doc.id[:8]}.jpg')
                 
                 # Count by type
                 if scan_type == 'disease':
@@ -7649,10 +7667,14 @@ def image_analysis(request):
                 scans_list.append({
                     'id': scan_doc.id,
                     'type': scan_type,
+                    'result': result,
                     'primary_class': result,
+                    'confidence': confidence,
                     'primary_confidence': confidence,
                     'image_name': image_name,
-                    'username': username,
+                    'user': user_name,
+                    'username': user_name,
+                    'user_email': user_email,
                     'timestamp': formatted_timestamp,
                     'hidden': scan_data.get('hidden', False),
                     'raw_data': scan_data  # Keep raw data for debugging
@@ -7676,18 +7698,35 @@ def image_analysis(request):
         scans_list.sort(key=lambda x: x['timestamp'], reverse=True)
         
         # Filter out hidden scans unless specifically requested
-        if request.GET.get('show_hidden') != 'true':
+        show_hidden = request.GET.get('show_hidden') == 'true'
+        if not show_hidden:
             visible_scans = [scan for scan in scans_list if not scan.get('hidden', False)]
         else:
             visible_scans = scans_list
+        
+        # Pagination - limit to 50 scans per page
+        page = int(request.GET.get('page', 1))
+        per_page = 50
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_scans = visible_scans[start_idx:end_idx]
+        
+        total_pages = (len(visible_scans) + per_page - 1) // per_page
         
         context.update({
             'total_scans': len(scans_list),
             'disease_scans': disease_count,
             'pest_scans': pest_count,
             'today_scans': today_count,
-            'scans': visible_scans,
+            'scans': paginated_scans,
             'chart_data': json.dumps(chart_data),
+            'show_hidden': show_hidden,
+            'current_page': page,
+            'total_pages': total_pages,
+            'has_previous': page > 1,
+            'has_next': page < total_pages,
+            'visible_count': len(visible_scans),
+            'hidden_count': len(scans_list) - len([s for s in scans_list if not s.get('hidden', False)]),
         })
         
         print(f"[DEBUG] Final counts - Total: {len(scans_list)}, Disease: {disease_count}, Pest: {pest_count}, Today: {today_count}")

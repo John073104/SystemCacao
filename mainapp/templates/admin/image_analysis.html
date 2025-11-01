@@ -156,11 +156,16 @@
         <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
           <div>
             <h3 class="text-lg leading-6 font-medium text-gray-900">Image Analysis Results</h3>
-            <p class="mt-1 max-w-2xl text-sm text-gray-500">All scan results and analysis data</p>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+              Showing {{ scans|length }} of {{ visible_count }} results
+              {% if hidden_count > 0 %}({{ hidden_count }} hidden){% endif %}
+            </p>
           </div>
           <div class="flex space-x-2">
-            <button onclick="toggleHiddenScans()" id="toggleHiddenBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm">
-              <i class="fas fa-eye-slash mr-2"></i>Show Hidden
+            <button onclick="toggleHiddenScans()" id="toggleHiddenBtn" 
+                    class="{% if show_hidden %}bg-gray-700{% else %}bg-gray-600{% endif %} hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm transition-colors">
+              <i class="fas {% if show_hidden %}fa-eye{% else %}fa-eye-slash{% endif %} mr-2"></i>
+              {% if show_hidden %}Hide Hidden Scans{% else %}Show Hidden Scans{% endif %}
             </button>
             <button onclick="refreshData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm">
               <i class="fas fa-sync-alt mr-2"></i>Refresh
@@ -289,6 +294,67 @@
             </tbody>
           </table>
         </div>
+        
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 sm:px-6">
+          <div class="flex items-center justify-between">
+            <div class="flex-1 flex justify-between sm:hidden">
+              {% if has_previous %}
+                <a href="?page={{ current_page|add:'-1' }}{% if show_hidden %}&show_hidden=true{% endif %}" 
+                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                  Previous
+                </a>
+              {% endif %}
+              {% if has_next %}
+                <a href="?page={{ current_page|add:'1' }}{% if show_hidden %}&show_hidden=true{% endif %}" 
+                   class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                  Next
+                </a>
+              {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm text-gray-700">
+                  Showing page <span class="font-medium">{{ current_page }}</span> of <span class="font-medium">{{ total_pages }}</span>
+                  ({{ visible_count }} total results)
+                </p>
+              </div>
+              <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  {% if has_previous %}
+                    <a href="?page={{ current_page|add:'-1' }}{% if show_hidden %}&show_hidden=true{% endif %}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                      <i class="fas fa-chevron-left"></i>
+                    </a>
+                  {% endif %}
+                  
+                  {% for page_num in total_pages|make_list %}
+                    {% if page_num == current_page %}
+                      <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                        {{ page_num }}
+                      </span>
+                    {% elif page_num <= 3 or page_num > total_pages|add:'-3' or page_num == current_page|add:'-1' or page_num == current_page|add:'1' %}
+                      <a href="?page={{ page_num }}{% if show_hidden %}&show_hidden=true{% endif %}" 
+                         class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ page_num }}
+                      </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                  {% if has_next %}
+                    <a href="?page={{ current_page|add:'1' }}{% if show_hidden %}&show_hidden=true{% endif %}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                      <i class="fas fa-chevron-right"></i>
+                    </a>
+                  {% endif %}
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
       </div>
     </div>
 
@@ -310,34 +376,19 @@
     </div>
 
     <script>
-      let showingHidden = false;
-
-      // Toggle hidden scans visibility
+      // Toggle hidden scans visibility - reload page with show_hidden parameter
       function toggleHiddenScans() {
-        showingHidden = !showingHidden;
-        const hiddenRows = document.querySelectorAll('.hidden-scan');
-        const toggleBtn = document.getElementById('toggleHiddenBtn');
+        const currentUrl = new URL(window.location.href);
+        const showHidden = currentUrl.searchParams.get('show_hidden');
         
-        if (showingHidden) {
-          hiddenRows.forEach(row => row.style.display = 'table-row');
-          toggleBtn.innerHTML = '<i class="fas fa-eye mr-2"></i>Hide Hidden';
-          toggleBtn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
-          toggleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        if (showHidden === 'true') {
+          currentUrl.searchParams.delete('show_hidden');
         } else {
-          hiddenRows.forEach(row => row.style.display = 'none');
-          toggleBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Show Hidden';
-          toggleBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-          toggleBtn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+          currentUrl.searchParams.set('show_hidden', 'true');
         }
+        
+        window.location.href = currentUrl.toString();
       }
-
-      // Initialize hidden scans as hidden
-      document.addEventListener('DOMContentLoaded', function() {
-        if (!showingHidden) {
-          const hiddenRows = document.querySelectorAll('.hidden-scan');
-          hiddenRows.forEach(row => row.style.display = 'none');
-        }
-      });
 
       // Toggle individual scan visibility
       async function toggleScanVisibility(scanId, isCurrentlyHidden) {
