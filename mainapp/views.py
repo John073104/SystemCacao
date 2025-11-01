@@ -19,8 +19,10 @@ from django.contrib import messages
 from firebase_admin import auth, firestore
 import requests, jwt
 
-# Firestore instance
-db = firestore.client()
+# Firestore instance - will be initialized when needed
+# Import firebase_config to ensure Firebase is initialized
+from . import firebase_config
+db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
 
 from django.contrib.auth import login
 # from django.contrib.auth.models import User
