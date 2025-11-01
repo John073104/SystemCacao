@@ -3030,9 +3030,6 @@ import os
 
 # Initialize Firebase Admin SDK
 # Firebase already initialized in firebase_config
-    else:
-        # For development, you can use environment variables
-        firebase_admin.initialize_app()
 
 # Get Firestore client
 db = firestore.client()
