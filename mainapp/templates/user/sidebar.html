@@ -1,37 +1,37 @@
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CacaoGuard User Dashboard</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
-  <!-- Font Awesome -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-</head>
+<!-- Mobile Hamburger Button (Fixed Position) -->
+<button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r from-orange-500 to-pink-500 text-white p-3 rounded-xl shadow-2xl hover:scale-110 transition-transform duration-300">
+  <i class="fas fa-bars text-xl"></i>
+</button>
 
-<body class="bg-gray-100 p-8">
+<!-- Sidebar Overlay (Mobile) -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden transition-opacity duration-300"></div>
 
-  <!-- Sidebar -->
-  <div class="w-72 bg-white text-black shadow-2xl rounded-2xl overflow-hidden h-screen relative flex flex-col">
+<!-- Sidebar Container -->
+<div id="user-sidebar" class="fixed lg:relative w-72 bg-white text-black shadow-2xl rounded-none lg:rounded-2xl overflow-hidden h-screen z-40 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0">
 
     <!-- Top Section -->
     <div>
       <div class="p-6 border-b border-gray-300">
-        <div class="flex items-center space-x-4">
-          <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center">
-            <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h3 class="font-bold text-lg text-gradient bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">CacaoGuard</h3>
-            <div class="flex items-center space-x-2">
-              <span class="text-xs text-gray-600">Registered User</span>
-              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center">
+              <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h3 class="font-bold text-lg text-gradient bg-gradient-to-r from-orange-400 to-pink-400 bg-clip-text text-transparent">CacaoGuard</h3>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-gray-600">Registered User</span>
+                <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
             </div>
           </div>
+
+          <!-- Close Button (Mobile Only) -->
+          <button id="mobile-close-btn" class="lg:hidden text-gray-400 hover:text-gray-800 transition-colors">
+            <i class="fas fa-times text-xl"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -197,5 +197,57 @@
       </a>
     </div>
   </div>
-</body>
-</html>
+
+<!-- Sidebar Toggle Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('user-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileCloseBtn = document.getElementById('mobile-close-btn');
+
+    function openSidebar() {
+      sidebar.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Open sidebar
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', openSidebar);
+    }
+
+    // Close sidebar
+    if (mobileCloseBtn) {
+      mobileCloseBtn.addEventListener('click', closeSidebar);
+    }
+
+    // Close when clicking overlay
+    if (overlay) {
+      overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Close when clicking nav links on mobile
+    const navLinks = sidebar.querySelectorAll('a');
+    navLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 1024) {
+          closeSidebar();
+        }
+      });
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) {
+        closeSidebar();
+      }
+    });
+  });
+</script>

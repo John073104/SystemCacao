@@ -1,105 +1,42 @@
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Enhanced Sidebar</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-  <style>
-    body {
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    }
+<!-- Mobile Hamburger Button (Fixed Position) -->
+<button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r from-slate-700 to-slate-900 text-white p-3 rounded-xl shadow-2xl hover:scale-110 transition-transform duration-300">
+  <i class="fas fa-bars text-xl"></i>
+</button>
 
-    .sidebar-gradient {
-      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    }
+<!-- Sidebar Overlay (Mobile) -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden transition-opacity duration-300"></div>
 
-    .nav-item {
-      transition: background 0.3s ease;
-    }
-
-    .nav-item:hover:not(.active) {
-      background: rgba(59, 130, 246, 0.1); /* light blue hover */
-    }
-
-    .nav-item.active {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
-      border-left: 3px solid #3b82f6;
-    }
-
-    .icon-wrapper {
-      background: rgba(255, 255, 255, 0.05);
-      transition: all 0.3s ease;
-    }
-
-    .nav-item:hover .icon-wrapper {
-      background: rgba(255, 255, 255, 0.1);
-      transform: scale(1.05);
-    }
-
-    .scrollbar-thin {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    }
-
-    .scrollbar-thin::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .scrollbar-thin::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .scrollbar-thin::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 2px;
-    }
-
-    .profile-avatar {
-      background: linear-gradient(135deg, #f59e0b, #d946ef);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    .feature-badge {
-      background: linear-gradient(135deg, #10b981, #059669);
-    }
-  </style>
-</head>
-
-<body class="p-8">
-
-<div class="w-72 sidebar-gradient text-white shadow-2xl rounded-2xl overflow-hidden h-screen relative">
+<!-- Sidebar Container -->
+<div id="admin-sidebar" class="fixed lg:relative w-72 sidebar-gradient text-white shadow-2xl rounded-none lg:rounded-2xl overflow-hidden h-screen z-40 transition-transform duration-300 -translate-x-full lg:translate-x-0">
 
   <!-- Profile Header -->
 <div>
-  <div class="p-6 border-b border-gray-300">
-    <div class="flex items-center space-x-4">
+  <div class="p-6 border-b border-gray-700">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <!-- Logo with soft bounce -->
+        <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center">
+          <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
+        </div>
 
-      <!-- Logo with soft bounce -->
-      <div class="w-14 h-14 rounded-xl overflow-hidden shadow-lg bg-gray-100 flex items-center justify-center animate-softbounce">
-        <img src="{% static 'images/NOBGHERO.png' %}" alt="CacaoGuard Logo" class="w-full h-full object-contain" />
-      </div>
-
-      <!-- Text with blue gradient and soft bounce -->
-      <div class="animate-softbounce">
-        <h3 class="font-bold text-lg bg-gradient-to-r from-sky-400 to-blue-600 bg-clip-text text-transparent">
-          CacaoGuard
-        </h3>
-        <div class="flex items-center space-x-2">
-          <span class="text-xs text-gray-300">Administrator</span>
-          <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        <!-- Text with blue gradient -->
+        <div>
+          <h3 class="font-bold text-lg bg-gradient-to-r from-sky-400 to-blue-600 bg-clip-text text-transparent">
+            CacaoGuard
+          </h3>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-gray-300">Administrator</span>
+            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          </div>
         </div>
       </div>
 
+      <!-- Close Button (Mobile Only) -->
+      <button id="mobile-close-btn" class="lg:hidden text-gray-400 hover:text-white transition-colors">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
   </div>
 </div>
@@ -211,5 +148,104 @@
     </a>
   </div>
 </div>
-</body>
-</html>
+
+<!-- Sidebar Toggle Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('admin-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileCloseBtn = document.getElementById('mobile-close-btn');
+
+    function openSidebar() {
+      sidebar.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Open sidebar
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', openSidebar);
+    }
+
+    // Close sidebar
+    if (mobileCloseBtn) {
+      mobileCloseBtn.addEventListener('click', closeSidebar);
+    }
+
+    // Close when clicking overlay
+    if (overlay) {
+      overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Close when clicking nav links on mobile
+    const navLinks = sidebar.querySelectorAll('a');
+    navLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth < 1024) {
+          closeSidebar();
+        }
+      });
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) {
+        closeSidebar();
+      }
+    });
+  });
+</script>
+
+<style>
+  .sidebar-gradient {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  }
+
+  .nav-item {
+    transition: background 0.3s ease;
+  }
+
+  .nav-item:hover:not(.active) {
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .nav-item.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+    border-left: 3px solid #3b82f6;
+  }
+
+  .icon-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+  }
+
+  .nav-item:hover .icon-wrapper {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+  }
+</style>

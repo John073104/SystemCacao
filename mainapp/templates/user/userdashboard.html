@@ -53,9 +53,11 @@
     </script>
 </head>
 <body class="bg-gray-100 font-sans">
-    <div class="flex h-screen">
+    <div class="flex h-screen overflow-hidden">
         {% include 'user/sidebar.html' %}
-        <div class="flex-1 p-8 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto">
+            <!-- Add padding for mobile menu button -->
+            <div class="p-4 lg:p-8 pt-16 lg:pt-8">
             {% block content %}
             <div class="user-header-gradient p-6 rounded-2xl shadow-lg mb-8 animate-fade-in">
                 <div class="flex items-center justify-between">
@@ -319,5 +321,8 @@
             } catch (e) { console.error('Error initializing Order Status Chart:', e); }
         });
     </script>
+    </div>
+        </div>
+    </div>
 </body>
 </html>
