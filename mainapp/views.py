@@ -1739,6 +1739,13 @@ PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 def update_order_status(request, order_id):
     """Update order status with stock deduction and email notifications"""
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Database connection unavailable'
+            })
+        
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
         
@@ -1747,7 +1754,18 @@ def update_order_status(request, order_id):
         
         order_data = order_doc.to_dict()
         old_status = order_data.get('status')
-        new_status = request.POST.get('status')
+        
+        # Parse JSON body instead of using request.POST
+        import json
+        try:
+            body_data = json.loads(request.body)
+            new_status = body_data.get('status')
+        except json.JSONDecodeError:
+            # Fallback to POST data if not JSON
+            new_status = request.POST.get('status')
+        
+        if not new_status:
+            return JsonResponse({'success': False, 'message': 'Status parameter is required'})
         
         # Update order status in Firebase
         order_ref.update({
@@ -5351,8 +5369,8 @@ def admin_order_detail(request, order_id):
 
 @admin_required
 @csrf_exempt
-def update_order_status(request):
-    """API endpoint to update order status"""
+def update_order_status_legacy(request):
+    """API endpoint to update order status (legacy - gets order_id from body)"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -9069,8 +9087,8 @@ from datetime import datetime
 
 @admin_required
 @require_http_methods(["POST"])
-def update_order_status(request):
-    """Update order status with stock deduction and email notifications"""
+def update_order_status_v2(request):
+    """Update order status with stock deduction and email notifications (version 2 - gets order_id from body)"""
     try:
         # ✅ Parse JSON from request body
         data = json.loads(request.body.decode("utf-8"))
