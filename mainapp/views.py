@@ -437,14 +437,8 @@ from datetime import timezone as datetime_timezone
 cred_path = os.path.join(settings.BASE_DIR, 'systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
 if not firebase_admin._apps:
     if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-    else:
-        # For development, you can use environment variables or default initialization
-        firebase_admin.initialize_app()
-
-# Get Firestore client
-db = firestore.client()
+# Firebase and Firestore already initialized in firebase_config
+# Just use the db from there (already imported at top of file)
 
 # Global variables for models
 disease_model = None
@@ -1728,7 +1722,6 @@ import json
 from calendar import monthrange
 
 # Initialize Firestore
-db = firestore.client()
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 
 
@@ -2924,20 +2917,7 @@ from firebase_admin import credentials, firestore
 from django.conf import settings
 import os
 
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    # Path to your Firebase service account key
-    cred_path = os.path.join(settings.BASE_DIR, 'firebase-service-account.json')
-    
-    if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-    else:
-        # For development, you can use environment variables
-        firebase_admin.initialize_app()
-
-# Get Firestore client
-db = firestore.client()
+# Firebase and Firestore already initialized in firebase_config module
 
 @admin_required
 def farm_location(request):
@@ -3192,7 +3172,6 @@ FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
 SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 
 # Initialize Firestore
-db = firestore.client()
 
 # Sample farm data with images - this will be replaced by Firebase data
 SAMPLE_FARMS = [
@@ -3833,7 +3812,6 @@ FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
 SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 
 # Initialize Firestore client
-db = firestore.client()
 
 # --------------------------------------------
 # Disease Classes and Recommendations
@@ -5088,7 +5066,6 @@ from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Initialize Firestore
-db = firestore.client()
 
 # ===============================
 # USER ORDERS
@@ -5960,7 +5937,6 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 import pytz
 
 # Initialize Firestore
-db = firestore.client()
 
 @user_required
 def userdashboard(request):
@@ -6271,12 +6247,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 import pytz
 from .decorators import admin_required, user_required
 
-# Initialize Firestore
-if not firebase_admin._apps:
-    cred = credentials.Certificate('mainapp/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
+# Firebase and Firestore already initialized in firebase_config module
 
 # ===============================
 # MODEL DEFINITIONS
@@ -7188,7 +7159,6 @@ import pytz
 import random
 
 # Initialize Firestore
-db = firestore.client()
 
 # Sample farm data (fallback)
 SAMPLE_FARMS = [
@@ -8530,7 +8500,6 @@ from reportlab.lib.units import inch
 
 from google.cloud import firestore
 
-db = firestore.Client()
 
 def admin_required(view_func):
     """Decorator for admin required views"""
@@ -9057,7 +9026,6 @@ from calendar import monthrange
 from collections import defaultdict
 
 # Initialize Firestore
-db = firestore.client()
 
 
 def get_customer_name(user_email):
@@ -9609,7 +9577,6 @@ from PIL import Image
 import random
 
 # Initialize Firebase (assuming it's already configured)
-db = firestore.client()
 
 logger = logging.getLogger(__name__)
 
@@ -10533,7 +10500,6 @@ from django.views.decorators.http import require_http_methods
 from firebase_admin import firestore
 import json
 
-db = firestore.client()
 
 @admin_required
 def admin_user_management(request):
