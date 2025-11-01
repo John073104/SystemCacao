@@ -1864,12 +1864,9 @@ import pytz
 from collections import defaultdict
 import calendar
 
-# Initialize Firebase if not already done
-if not firebase_admin._apps:
-    cred = credentials.Certificate('mainapp\systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
+# Firebase is already initialized in firebase_config.py
+# No need to initialize again here
+from .firebase_config import db
 
 USD_TO_PHP_RATE = 56.0  # 1 USD = 56 PHP (adjust as needed)
 

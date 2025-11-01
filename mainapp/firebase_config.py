@@ -17,18 +17,29 @@ import os
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-cred_path = os.path.join(BASE_DIR, "systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json")
+# Check for Firebase credentials in multiple locations
+# 1. Render secret file location
+# 2. Local development location
+cred_path = '/etc/secrets/systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json'
+if not os.path.exists(cred_path):
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    cred_path = os.path.join(BASE_DIR, "systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json")
 
-cred = credentials.Certificate(cred_path)
+# Only initialize if file exists and Firebase not already initialized
+if os.path.exists(cred_path) and not firebase_admin._apps:
+    cred = credentials.Certificate(cred_path)
 
-if not firebase_admin._apps:
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': 'systemcacao.appspot.com'  # ✅ This line fixes the error
-    })
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': 'systemcacao.appspot.com'  # ✅ This line fixes the error
+        })
 
-# Initialize Firestore client
-db = firestore.client()
+    # Initialize Firestore client
+    db = firestore.client()
+else:
+    # For deployments without Firebase (testing/CI)
+    print(f"Warning: Firebase credentials not found at {cred_path}")
+    db = None
 
 print("Firebase initialized with Authentication, Storage, and Firestore!")
 
