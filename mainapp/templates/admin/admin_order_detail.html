@@ -65,18 +65,50 @@
                 ← Back to Orders
             </a>
             {% if order.status != 'cancelled' and order.status != 'delivered' %}
-         <form method="post" action="{% url 'update_order_status' %}" class="ajax-status-form">
+         <form method="post" id="statusUpdateForm" class="ajax-status-form">
     {% csrf_token %}
     <input type="hidden" name="order_id" value="{{ order.id }}">
-    <select name="status" class="px-3 py-2 border rounded-md">
+    <select name="status" id="statusSelect" class="px-3 py-2 border rounded-md">
         {% for value, label in status_choices %}
         <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
     </select>
-    <button type="submit" class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+    <button type="button" onclick="updateStatus()" class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
         Update
     </button>
 </form>
+
+<script>
+function updateStatus() {
+    const orderId = '{{ order.id }}';
+    const newStatus = document.getElementById('statusSelect').value;
+    const url = `/api/update-order-status/${orderId}/`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating status');
+    });
+}
+</script>
 
 <div id="status-message" class="hidden mt-4 p-3 rounded-lg"></div>
 

@@ -2227,9 +2227,15 @@ def admin_pending_orders(request):
         return redirect('admin_ecommerce')
 
 @admin_required
+@admin_required
 def admin_order_detail(request, order_id):
     """View detailed order information"""
     try:
+        # Check if Firebase is initialized
+        if db is None:
+            messages.error(request, "Database connection unavailable.")
+            return redirect('admin_orders')
+        
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
         
@@ -2253,8 +2259,21 @@ def admin_order_detail(request, order_id):
         for item in order_data.get('items', []):
             item['total_price'] = float(item.get('price', 0)) * int(item.get('quantity', 0))
         
-        context = {'order': order_data}
-        return render(request, 'admin/order_detail.html', context)
+        # Status choices for dropdown
+        status_choices = [
+            ('pending', 'Pending'),
+            ('confirmed', 'Confirmed'),
+            ('processing', 'Processing'),
+            ('shipped', 'Shipped'),
+            ('delivered', 'Delivered'),
+            ('cancelled', 'Cancelled'),
+        ]
+        
+        context = {
+            'order': order_data,
+            'status_choices': status_choices
+        }
+        return render(request, 'admin/admin_order_detail.html', context)
         
     except Exception as e:
         print(f"Error in admin_order_detail: {str(e)}")
@@ -2333,8 +2352,8 @@ def admin_orders(request):
     return render(request, 'admin/orders.html', context)
 
 @admin_required
-def admin_order_detail(request, order_id):
-    """Admin order detail"""
+def admin_order_detail_orm(request, order_id):
+    """Admin order detail (legacy ORM version - not used)"""
     order = get_object_or_404(Order, id=order_id)
     
     if request.method == 'POST':
@@ -5313,8 +5332,8 @@ def admin_orders(request):
         return render(request, 'admin/orders.html', {'orders': []})
 
 @admin_required
-def admin_order_detail(request, order_id):
-    """Admin order detail view"""
+def admin_order_detail_v2(request, order_id):
+    """Admin order detail view (version 2 - duplicate)"""
     try:
         # Get specific order from Firestore
         order_ref = db.collection('orders').document(order_id)
