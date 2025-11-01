@@ -41,7 +41,7 @@ from django.urls import reverse
 from django.utils.deprecation import MiddlewareMixin
 
 class SessionSecurityMiddleware(MiddlewareMixin):
-    """Middleware to enforce session security and prevent unauthorized access"""
+    """Middleware to enforce role-based access control (RBAC) and prevent unauthorized URL access"""
     
     # URLs that don't require authentication
     PUBLIC_URLS = [
@@ -54,11 +54,14 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         '/login/',
         '/signup/',
         '/forgot-password/',
+        '/reset-password/',
         '/unauthorized/',
+        '/static/',
+        '/media/',
     ]
     
-    # URLs that require admin access
-    ADMIN_URLS = [
+    # URLs that ONLY admins can access
+    ADMIN_ONLY_URLS = [
         '/admin/dashboard/',
         '/admin/users/',
         '/admin/ecommerce/',
@@ -67,11 +70,18 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         '/admin/reports/',
         '/admin/image-analysis/',
         '/admin/farm-location/',
+        '/admin/user-management/',
+        '/admin/print-preview/',
+        '/admin/export-pdf/',
+        '/admin/toggle-scan/',
+        '/admin/delete-scan/',
+        '/admin/export-scan-data/',
     ]
     
-    # URLs that require user access (User or Admin)
+    # URLs that users and admins can access
     USER_URLS = [
         '/user/userdashboard/',
+        '/user/dashboard/',
         '/dashboard/',
         '/marketplace/',
         '/scan/',
@@ -82,9 +92,12 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         '/checkout/',
         '/orders/',
         '/profile/',
+        '/scan-image/',
+        '/scan-history/',
+        '/delete-scan-user/',
     ]
     
-    # URLs that require guest access (any authenticated user)
+    # URLs for guest users
     GUEST_URLS = [
         '/guest/dashboard/',
         '/guest/marketplace/',
@@ -100,58 +113,88 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         if any(path.startswith(url) for url in self.PUBLIC_URLS):
             return None
         
-        # Skip middleware for API endpoints (handle separately if needed)
+        # Skip middleware for API endpoints
         if path.startswith('/api/'):
             return None
         
         # Get session data
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email')
+        user_email = request.session.get('user_email') or request.session.get('email')
         user_role = request.session.get('role')
         
         # Check if user is authenticated
         if not uid or not user_email:
-            messages.error(request, 'Please log in to access this page.')
+            messages.error(request, '🔒 Please log in to access this page.')
             return redirect('login')
         
-        # Check admin URLs
-        if any(path.startswith(url) for url in self.ADMIN_URLS):
+        # SECURITY CHECK 1: Admin-only URLs
+        if any(path.startswith(url) for url in self.ADMIN_ONLY_URLS):
             if user_role != 'Admin':
-                messages.error(request, 'Access denied. Administrator privileges required.')
-                return redirect('unauthorized')
+                messages.error(request, '❌ Access Denied: Administrator privileges required.')
+                # Redirect based on user role
+                if user_role == 'User':
+                    return redirect('userdashboard')
+                elif user_role == 'Guest':
+                    return redirect('guest_dashboard')
+                else:
+                    return redirect('unauthorized')
         
-        # Check user URLs
+        # SECURITY CHECK 2: User URLs (Users and Admins can access)
         elif any(path.startswith(url) for url in self.USER_URLS):
             if user_role not in ['User', 'Admin']:
-                messages.error(request, 'Access denied. User account required.')
-                return redirect('unauthorized')
+                messages.error(request, '❌ Access Denied: User account required.')
+                if user_role == 'Guest':
+                    return redirect('guest_dashboard')
+                elif user_role == 'Admin':
+                    return redirect('admin_dashboard')
+                else:
+                    return redirect('unauthorized')
         
-        # Check guest URLs
+        # SECURITY CHECK 3: Guest URLs
         elif any(path.startswith(url) for url in self.GUEST_URLS):
-            if user_role not in ['Guest', 'User', 'Admin']:
-                messages.error(request, 'Access denied. Please log in with a valid account.')
-                return redirect('unauthorized')
+            if user_role == 'Admin':
+                messages.info(request, 'ℹ️ Redirecting to admin dashboard.')
+                return redirect('admin_dashboard')
+            elif user_role == 'User':
+                messages.info(request, 'ℹ️ Redirecting to user dashboard.')
+                return redirect('userdashboard')
         
         return None
 
 class SessionValidationMiddleware(MiddlewareMixin):
-    """Middleware to validate session integrity"""
+    """Middleware to validate session integrity and prevent session tampering"""
     
     def process_request(self, request):
         # Skip validation for public URLs
-        public_paths = ['/', '/login/', '/signup/', '/about/', '/services/', '/team/', '/terms/', '/privacy/', '/unauthorized/']
+        public_paths = [
+            '/', '/login/', '/signup/', '/about/', '/services/', 
+            '/team/', '/terms/', '/privacy/', '/unauthorized/',
+            '/forgot-password/', '/reset-password/'
+        ]
+        
+        # Skip static and media files
+        if request.path_info.startswith('/static/') or request.path_info.startswith('/media/'):
+            return None
+            
         if request.path_info in public_paths:
             return None
         
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email')
+        user_email = request.session.get('user_email') or request.session.get('email')
         user_role = request.session.get('role')
         
         # If session claims to be authenticated but missing critical data
         if uid and (not user_email or not user_role):
             # Clear corrupted session
             request.session.flush()
-            messages.error(request, 'Session expired. Please log in again.')
+            messages.error(request, '⚠️ Session corrupted or expired. Please log in again.')
+            return redirect('login')
+        
+        # Validate role value
+        if user_role and user_role not in ['Admin', 'User', 'Guest']:
+            # Invalid role detected - possible session tampering
+            request.session.flush()
+            messages.error(request, '⚠️ Invalid session detected. Please log in again.')
             return redirect('login')
         
         return None
