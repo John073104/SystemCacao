@@ -317,7 +317,7 @@ def send_welcome_email(request):
         return JsonResponse({'status': 'Failed to send email', 'error': str(e)}, status=500)
 
 
-def image_analysis(request):
+def image_analysis_old_template_only(request):
     return render(request, 'admin/image_analysis.html')
 
 def ecommerce(request):
@@ -4127,7 +4127,7 @@ def delete_scan(request):
 # Admin Image Analysis View
 # ----------------------------
 @admin_required
-def image_analysis(request):
+def image_analysis_v2_deprecated(request):
     """Admin image analysis view"""
     try:
         scan_type = request.GET.get('type', 'all')
@@ -8162,7 +8162,7 @@ def delete_user_scan(request, scan_id):
 # ===============================
 
 @admin_required
-def image_analysis(request):
+def image_analysis_v3_legacy(request):
     """Admin image analysis view with proper scan fetching"""
     print("[DEBUG] Admin accessing image analysis")
     

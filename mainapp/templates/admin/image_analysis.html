@@ -162,6 +162,10 @@
             </p>
           </div>
           <div class="flex space-x-2">
+            <button onclick="toggleAllResults()" id="toggleAllBtn" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm transition-colors">
+              <i class="fas fa-list mr-2"></i>Show All Results
+            </button>
             <button onclick="toggleHiddenScans()" id="toggleHiddenBtn" 
                     class="{% if show_hidden %}bg-gray-700{% else %}bg-gray-600{% endif %} hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm transition-colors">
               <i class="fas {% if show_hidden %}fa-eye{% else %}fa-eye-slash{% endif %} mr-2"></i>
@@ -376,6 +380,29 @@
     </div>
 
     <script>
+      let allResultsVisible = true;
+
+      // Toggle all results visibility (collapse/expand table)
+      function toggleAllResults() {
+        const tbody = document.querySelector('#scansTable tbody');
+        const toggleBtn = document.getElementById('toggleAllBtn');
+        const rows = tbody.querySelectorAll('tr:not(.empty-row)');
+        
+        allResultsVisible = !allResultsVisible;
+        
+        if (allResultsVisible) {
+          rows.forEach(row => row.style.display = 'table-row');
+          toggleBtn.innerHTML = '<i class="fas fa-eye-slash mr-2"></i>Hide Results';
+          toggleBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+          toggleBtn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+        } else {
+          rows.forEach(row => row.style.display = 'none');
+          toggleBtn.innerHTML = '<i class="fas fa-list mr-2"></i>Show All Results';
+          toggleBtn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+          toggleBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        }
+      }
+      
       // Toggle hidden scans visibility - reload page with show_hidden parameter
       function toggleHiddenScans() {
         const currentUrl = new URL(window.location.href);
