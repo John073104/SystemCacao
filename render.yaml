@@ -1,0 +1,29 @@
+services:services:
+
+  - type: web  - type: web
+
+    name: cacaoguard    name: cacaoguard
+
+    runtime: python    env: python
+
+    plan: free    plan: free
+
+    branch: production-ready    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+
+    buildCommand: "./build.sh"    startCommand: "gunicorn cacaoguard.wsgi:application --bind 0.0.0.0:$PORT"
+
+    startCommand: "gunicorn cacaoguard.wsgi:application"    envVars:
+
+    envVars:      - key: DJANGO_SETTINGS_MODULE
+
+      - key: PYTHON_VERSION        value: cacaoguard.settings_production
+
+        value: 3.12.0      - key: PYTHON_VERSION
+
+      - key: DJANGO_SETTINGS_MODULE        value: "3.12.0"
+
+        value: cacaoguard.settings_production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
