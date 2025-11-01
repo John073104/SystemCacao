@@ -398,14 +398,16 @@
 <script>
 function updateOrderStatus(orderId, newStatus) {
     if (confirm(`Are you sure you want to change the order status to ${newStatus}?`)) {
-        fetch('{% url "update_order_status" %}', {
+        // Build the URL with the order_id
+        const url = `/api/update-order-status/${orderId}/`;
+        
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token }}'
             },
             body: JSON.stringify({
-                order_id: orderId,
                 status: newStatus
             })
         })
