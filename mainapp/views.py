@@ -8592,22 +8592,36 @@ def print_preview(request):
         scan_data['result'] = result
         scan_data['primary_class'] = result
         
-        username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
+        # Get username and email with proper fallbacks
+        username = scan_data.get('user_name', scan_data.get('user', scan_data.get('username', 'Unknown User')))
         user_email = scan_data.get('user_email', scan_data.get('email', ''))
         
-        # If no email in Firestore, try to get from Django user model
-        if not user_email and username != 'Unknown User':
-            try:
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                user_obj = User.objects.get(username=username)
-                user_email = user_obj.email
-            except:
-                user_email = username  # Fallback to username if email not found
+        # If email is empty or 'unknown@example.com', try to fetch from Firestore users collection
+        if not user_email or user_email == 'unknown@example.com':
+            user_id = scan_data.get('user_id')
+            if user_id and user_id != 'guest':
+                try:
+                    # Try to get user email from Firestore users collection
+                    user_doc = db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        user_email = user_data.get('email', '')
+                        if not username or username == 'Unknown User':
+                            username = user_data.get('name', 'Unknown User')
+                except Exception as e:
+                    print(f"[DEBUG] Could not fetch user data for {user_id}: {e}")
+        
+        # Final fallback: if still no email, use username
+        if not user_email:
+            user_email = username
         
         scan_data['username'] = username
         scan_data['user'] = username
-        scan_data['user_email'] = user_email or username
+        scan_data['user_email'] = user_email
+        
+        # Ensure image_name is set
+        if not scan_data.get('image_name'):
+            scan_data['image_name'] = 'Image_' + scan_data.get('scan_id', doc.id)[:8] + '.jpg'
         
         # Apply confidence filter
         if confidence_level:
@@ -8696,22 +8710,36 @@ def export_pdf(request):
         scan_data['result'] = result
         scan_data['primary_class'] = result
         
-        username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
+        # Get username and email with proper fallbacks
+        username = scan_data.get('user_name', scan_data.get('user', scan_data.get('username', 'Unknown User')))
         user_email = scan_data.get('user_email', scan_data.get('email', ''))
         
-        # If no email in Firestore, try to get from Django user model
-        if not user_email and username != 'Unknown User':
-            try:
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                user_obj = User.objects.get(username=username)
-                user_email = user_obj.email
-            except:
-                user_email = username  # Fallback to username if email not found
+        # If email is empty or 'unknown@example.com', try to fetch from Firestore users collection
+        if not user_email or user_email == 'unknown@example.com':
+            user_id = scan_data.get('user_id')
+            if user_id and user_id != 'guest':
+                try:
+                    # Try to get user email from Firestore users collection
+                    user_doc = db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        user_email = user_data.get('email', '')
+                        if not username or username == 'Unknown User':
+                            username = user_data.get('name', 'Unknown User')
+                except Exception as e:
+                    print(f"[DEBUG] Could not fetch user data for {user_id}: {e}")
+        
+        # Final fallback: if still no email, use username
+        if not user_email:
+            user_email = username
         
         scan_data['username'] = username
         scan_data['user'] = username
-        scan_data['user_email'] = user_email or username
+        scan_data['user_email'] = user_email
+        
+        # Ensure image_name is set
+        if not scan_data.get('image_name'):
+            scan_data['image_name'] = 'Image_' + scan_data.get('scan_id', doc.id)[:8] + '.jpg'
         
         # Apply same filters as print_preview
         if confidence_level:
