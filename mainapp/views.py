@@ -432,12 +432,7 @@ import random
 from django.utils import timezone as django_timezone
 from datetime import timezone as datetime_timezone
 
-# Initialize Firebase Admin SDK
-# Path to your Firebase service account key
-cred_path = os.path.join(settings.BASE_DIR, 'systemcacao-firebase-adminsdk-fbsvc-126c1bf0e1.json')
-if not firebase_admin._apps:
-    if os.path.exists(cred_path):
-# Firebase and Firestore already initialized in firebase_config
+# Firebase and Firestore already initialized in firebase_config module
 # Just use the db from there (already imported at top of file)
 
 # Global variables for models
