@@ -122,11 +122,15 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <div class="bg-white p-6 rounded-xl shadow-lg">
         <h3 class="text-lg font-semibold mb-4">Scan Activity (Last 7 Days)</h3>
-        <canvas id="scanChart" width="400" height="200"></canvas>
+        <div style="height: 300px;">
+          <canvas id="scanChart"></canvas>
+        </div>
       </div>
       <div class="bg-white p-6 rounded-xl shadow-lg">
         <h3 class="text-lg font-semibold mb-4">Scan Distribution</h3>
-        <canvas id="pieChart" width="400" height="200"></canvas>
+        <div style="height: 300px;">
+          <canvas id="pieChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -629,7 +633,6 @@
                   position: 'top'
                 }
               },
-              },
               scales: {
                 y: {
                   beginAtZero: true
@@ -664,7 +667,7 @@
             },
             options: {
               responsive: true,
-              aspectRatio: 1,
+              maintainAspectRatio: false,
               plugins: {
                 legend: {
                   position: 'bottom'

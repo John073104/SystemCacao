@@ -7503,7 +7503,6 @@ def admin_dashboard(request):
 @admin_required
 def image_analysis(request):
     """Image Analysis view with scan data and charts"""
-    print("[DEBUG] Accessing Image Analysis:", request.session.get('user_email'))
     
     # Initialize timezone
     tz = pytz.timezone('Asia/Manila')
@@ -7521,7 +7520,6 @@ def image_analysis(request):
     
     try:
         # ===== FETCH ALL USER SCANS DATA =====
-        print("[DEBUG] Fetching user scans data...")
         
         # Try different collection names that might be used for user scans
         possible_collections = ['user_scans', 'scans', 'scan_results', 'image_scans']
@@ -7532,22 +7530,18 @@ def image_analysis(request):
                 scans_ref = db.collection(collection_name)
                 collection_scans = list(scans_ref.stream())
                 if collection_scans:
-                    print(f"[DEBUG] Found {len(collection_scans)} scans in collection '{collection_name}'")
                     all_scans.extend(collection_scans)
                     break  # Use the first collection that has data
             except Exception as e:
-                print(f"[DEBUG] Collection '{collection_name}' not found or error: {e}")
                 continue
         
         if not all_scans:
-            print("[DEBUG] No scans found in any collection, trying to fetch from 'scans' with different structure")
             # Try fetching with different query structure
             try:
                 scans_ref = db.collection('scans')
                 all_scans = list(scans_ref.stream())
-                print(f"[DEBUG] Found {len(all_scans)} scans in 'scans' collection")
             except Exception as e:
-                print(f"[DEBUG] Error fetching from 'scans' collection: {e}")
+                pass
         
         # Process scans data
         scans_list = []
@@ -7565,12 +7559,9 @@ def image_analysis(request):
             date_str = date.strftime('%b %d')
             daily_counts[date.strftime('%Y-%m-%d')] = 0
         
-        print(f"[DEBUG] Processing {len(all_scans)} scans...")
-        
         for scan_doc in all_scans:
             try:
                 scan_data = scan_doc.to_dict()
-                print(f"[DEBUG] Processing scan {scan_doc.id}: {scan_data}")
                 
                 # Handle different timestamp field names
                 timestamp_field = None
@@ -7640,7 +7631,7 @@ def image_analysis(request):
                                 if not user_name or user_name == 'Unknown User':
                                     user_name = user_data.get('name', 'Unknown User')
                         except Exception as e:
-                            print(f"[DEBUG] Could not fetch user for {user_id}: {e}")
+                            pass
                 
                 # Handle image name
                 image_name = (scan_data.get('image_name') or 
@@ -7728,8 +7719,6 @@ def image_analysis(request):
             'visible_count': len(visible_scans),
             'hidden_count': len(scans_list) - len([s for s in scans_list if not s.get('hidden', False)]),
         })
-        
-        print(f"[DEBUG] Final counts - Total: {len(scans_list)}, Disease: {disease_count}, Pest: {pest_count}, Today: {today_count}")
         
     except Exception as e:
         print(f"[ERROR] Error fetching scans data: {e}")
