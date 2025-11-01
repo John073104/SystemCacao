@@ -2,15 +2,23 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from django.conf import settings
 import json
+from . import firebase_config
 
-# Initialize Firebase (add this to your settings if not already done)
+# Use Firebase already initialized in firebase_config
 def initialize_firebase():
-    if not firebase_admin._apps:
-        # Load your Firebase service account key
-        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-        firebase_admin.initialize_app(cred)
+    """Return Firestore client from firebase_config"""
+    # Firebase is already initialized in firebase_config
+    # Just return the db instance if it exists
+    if hasattr(firebase_config, 'db') and firebase_config.db:
+        return firebase_config.db
     
-    return firestore.client()
+    # If not initialized (e.g., missing credentials), try to get client
+    # This will fail gracefully if Firebase isn't set up
+    try:
+        return firestore.client()
+    except Exception as e:
+        print(f"Warning: Could not get Firestore client: {e}")
+        return None
 
 class FirestoreService:
     def __init__(self):
