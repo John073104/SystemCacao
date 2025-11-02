@@ -410,15 +410,7 @@ class CustomUser(AbstractUser):
             return f"{self.first_name} {self.last_name}"
         return self.username
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    bio = models.TextField(max_length=500, blank=True, null=True)
-    photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
-    role = models.CharField(max_length=10, default='user')
-    
-    def __str__(self):
-        return f"{self.user.username}'s Profile"
+# REMOVED DUPLICATE UserProfile - Already defined at line 14
 
 class UserLoginLog(models.Model):
     
@@ -429,45 +421,8 @@ class UserLoginLog(models.Model):
         ordering = ['-login_time']
 
 
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
-import uuid
-
-class Category(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    image = models.URLField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        verbose_name_plural = "Categories"
-    
-    def __str__(self):
-        return self.name
-
-class Product(models.Model):
-    id = models.CharField(max_length=50, primary_key=True)
-    name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    category = models.CharField(max_length=100, default='general')
-    stock_quantity = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.name
-    
-    @property
-    def main_image(self):
-        return self.images[0] if self.images else '/static/images/placeholder.jpg'
-
-class Cart(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+# NOTE: Category, Product, Cart models already defined earlier in file (lines 72-200)
+# Only Order, OrderItem, CartItem models defined below to avoid duplicates
 
 class Order(models.Model):
     STATUS_CHOICES = [

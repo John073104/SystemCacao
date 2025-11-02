@@ -453,11 +453,14 @@ SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 class CacaoResNet(nn.Module):
     def __init__(self, num_classes):
         super(CacaoResNet, self).__init__()
-        self.resnet = resnet18(pretrained=False)
-        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
+        # DISABLED FOR RENDER - Do not instantiate resnet18 to avoid downloading pretrained weights
+        # self.resnet = resnet18(pretrained=False)
+        # self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
+        pass
     
     def forward(self, x):
-        return self.resnet(x)
+        # return self.resnet(x)
+        raise NotImplementedError("Model loading disabled for Render deployment. Upgrade to paid plan for ML features.")
 
 import torch
 
