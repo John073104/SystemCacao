@@ -81,43 +81,43 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
-# class Product(models.Model):
-#     PRODUCT_TYPES = [
-#         ('fresh_cacao', 'Fresh Cacao Fruit'),
-#         ('dried_beans', 'Dried Cacao Beans'),
-#         ('cacao_powder', 'Cacao Powder'),
-#         ('chocolate', 'Chocolate Products'),
-#         ('cacao_butter', 'Cacao Butter'),
-#         ('cacao_nibs', 'Cacao Nibs'),
-#     ]
+class Product(models.Model):
+    PRODUCT_TYPES = [
+        ('fresh_cacao', 'Fresh Cacao Fruit'),
+        ('dried_beans', 'Dried Cacao Beans'),
+        ('cacao_powder', 'Cacao Powder'),
+        ('chocolate', 'Chocolate Products'),
+        ('cacao_butter', 'Cacao Butter'),
+        ('cacao_nibs', 'Cacao Nibs'),
+    ]
     
-#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-#     name = models.CharField(max_length=200)
-#     description = models.TextField()
-#     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-#     product_type = models.CharField(max_length=20, choices=PRODUCT_TYPES)
-#     price = models.DecimalField(max_digits=10, decimal_places=2)
-#     stock_quantity = models.IntegerField(default=0)
-#     unit = models.CharField(max_length=20, default='kg')  # kg, pieces, etc.
-#     images = models.JSONField(default=list)  # Store multiple image URLs
-#     is_active = models.BooleanField(default=True)
-#     featured = models.BooleanField(default=False)
-#     origin = models.CharField(max_length=100, blank=True)  # Farm/region origin
-#     harvest_date = models.DateField(null=True, blank=True)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    product_type = models.CharField(max_length=20, choices=PRODUCT_TYPES)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    stock_quantity = models.IntegerField(default=0)
+    unit = models.CharField(max_length=20, default='kg')  # kg, pieces, etc.
+    images = models.JSONField(default=list)  # Store multiple image URLs
+    is_active = models.BooleanField(default=True)
+    featured = models.BooleanField(default=False)
+    origin = models.CharField(max_length=100, blank=True)  # Farm/region origin
+    harvest_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
-#     def __str__(self):
-#         return self.name
+    def __str__(self):
+        return self.name
     
-#     @property
-#     def main_image(self):
-#         return self.images[0] if self.images else '/static/images/placeholder.jpg'
+    @property
+    def main_image(self):
+        return self.images[0] if self.images else '/static/images/placeholder.jpg'
 
-# class Cart(models.Model):
-#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     updated_at = models.DateTimeField(auto_now=True)
+class Cart(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 # class CartItem(models.Model):
 #     # Temporarily allow null values for the user field
