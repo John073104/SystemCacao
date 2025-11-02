@@ -4459,30 +4459,34 @@ now = django_timezone.now()
 # Set up logging
 logger = logging.getLogger(__name__)
 
-class CacaoResNet(nn.Module):
-    def __init__(self, num_classes):
-        super(CacaoResNet, self).__init__()
-        self.resnet = resnet18(pretrained=True)
-        num_ftrs = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(num_ftrs, num_classes)
+# DUPLICATE CacaoResNet CLASS - DISABLED FOR RENDER
+# This duplicate class was causing model downloads during build
+# class CacaoResNet(nn.Module):
+#     def __init__(self, num_classes):
+#         super(CacaoResNet, self).__init__()
+#         self.resnet = resnet18(pretrained=True)
+#         num_ftrs = self.resnet.fc.in_features
+#         self.resnet.fc = nn.Linear(num_ftrs, num_classes)
+#
+#     def forward(self, x):
+#         return self.resnet(x)
 
-    def forward(self, x):
-        return self.resnet(x)
-
-# Global variables for models
+# Global variables for models - DISABLED FOR RENDER
 # Disease model → 5 classes
-disease_model = load_pytorch_model(
-    "models/cacao_disease_resnet_state_dict.pth", 
-    CacaoResNet, 
-    num_classes=5
-)
+disease_model = None  # Disabled to prevent model loading
+# disease_model = load_pytorch_model(
+#     "models/cacao_disease_resnet_state_dict.pth", 
+#     CacaoResNet, 
+#     num_classes=5
+# )
 
 # Pest model → 5 classes
-pest_model = load_pytorch_model(
-    "models/cacao_pest_resnet_state_dict.pth", 
-    CacaoResNet, 
-    num_classes=5
-)
+pest_model = None  # Disabled to prevent model loading
+# pest_model = load_pytorch_model(
+#     "models/cacao_pest_resnet_state_dict.pth", 
+#     CacaoResNet, 
+#     num_classes=5
+# )
 
 
 def load_models():
@@ -6301,17 +6305,18 @@ from .decorators import admin_required, user_required
 # Firebase and Firestore already initialized in firebase_config module
 
 # ===============================
-# MODEL DEFINITIONS
+# MODEL DEFINITIONS - DISABLED FOR RENDER
 # ===============================
-class CacaoResNet(nn.Module):
-    def __init__(self, num_classes):
-        super(CacaoResNet, self).__init__()
-        self.resnet = resnet18(weights=None)
-        in_features = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(in_features, num_classes)
-
-    def forward(self, x):
-        return self.resnet(x)
+# THIRD DUPLICATE CacaoResNet CLASS - DISABLED
+# class CacaoResNet(nn.Module):
+#     def __init__(self, num_classes):
+#         super(CacaoResNet, self).__init__()
+#         self.resnet = resnet18(weights=None)
+#         in_features = self.resnet.fc.in_features
+#         self.resnet.fc = nn.Linear(in_features, num_classes)
+#
+#     def forward(self, x):
+#         return self.resnet(x)
 
 def load_pytorch_model(model_path, model_class, num_classes):
     try:
