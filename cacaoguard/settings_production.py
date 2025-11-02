@@ -36,6 +36,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mainapp.middleware.SessionSecurityMiddleware',  # RBAC security
+    'mainapp.middleware.SessionValidationMiddleware',  # Session validation
 ]
 
 ROOT_URLCONF = 'cacaoguard.urls'

@@ -483,14 +483,18 @@ def load_pytorch_model(model_path, model_class, num_classes):
         return None
 
 
-# Load your models (PyTorch only)
-# Both trained with 5 classes
-disease_model = load_pytorch_model(
-    "models/cacao_disease_resnet_state_dict.pth", CacaoResNet, num_classes=5
-)
-pest_model = load_pytorch_model(
-    "models/cacao_pest_resnet_state_dict.pth", CacaoResNet, num_classes=5
-)
+# Load your models (PyTorch only) - DISABLED FOR RENDER FREE TIER
+# Models are too large for 512MB RAM - load only when needed
+disease_model = None
+pest_model = None
+
+# Uncomment for local development:
+# disease_model = load_pytorch_model(
+#     "models/cacao_disease_resnet_state_dict.pth", CacaoResNet, num_classes=5
+# )
+# pest_model = load_pytorch_model(
+#     "models/cacao_pest_resnet_state_dict.pth", CacaoResNet, num_classes=5
+# )
 
 # Disease and Pest classes
 DISEASE_CLASSES = [
