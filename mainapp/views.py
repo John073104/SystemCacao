@@ -6476,19 +6476,33 @@ RECOMMENDATIONS = {**DISEASE_RECOMMENDATIONS, **PEST_RECOMMENDATIONS}
 # PREDICT IMAGE (Unified)
 # ===============================
 def predict_image(image_file, scan_type="disease"):
-    image_tensor = preprocess_image_pytorch(image_file)
-
+    """
+    Predict image using ML model if available, otherwise use simulation
+    Returns: (result, confidence)
+    """
+    # Try to use ML model if available
     if scan_type == 'disease' and disease_model:
+        image_tensor = preprocess_image_pytorch(image_file)
         result, confidence = predict_with_model(disease_model, image_tensor, DISEASE_CLASSES)
-        recommendations = DISEASE_RECOMMENDATIONS.get(result, ['No recommendation available'])
     elif scan_type == 'pest' and pest_model:
+        image_tensor = preprocess_image_pytorch(image_file)
         result, confidence = predict_with_model(pest_model, image_tensor, PEST_CLASSES)
-        recommendations = PEST_RECOMMENDATIONS.get(result, ['No recommendation available'])
     else:
-        result, confidence = "Unknown", 0.0
-        recommendations = ['No recommendation available']
-
-    return result, confidence, recommendations
+        # Fallback to simulation when models are disabled
+        logger.info(f"Using simulation for {scan_type} scan (models disabled)")
+        
+        # Open image file to generate hash for deterministic results
+        try:
+            with open(image_file, 'rb') as img_file:
+                analysis_result = simulate_analysis(scan_type, img_file)
+        except:
+            # If file path doesn't work, try direct file object
+            analysis_result = simulate_analysis(scan_type, image_file)
+        
+        result = analysis_result['class']
+        confidence = analysis_result['confidence'] * 100  # Convert to percentage
+    
+    return result, confidence
 
 # ===============================
 # SCAN VIEW
