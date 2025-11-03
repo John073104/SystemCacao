@@ -1,18 +1,15 @@
 {% extends "admin/admin_dashboard.html" %}
-{% block content %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CacaoGuard - Image Analysis</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-50">
 
+{% block title %}Image Analysis - CacaoGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Custom styles for image analysis page */
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white py-6 shadow-lg rounded-b-3xl mb-8">
     <div class="container mx-auto px-6">
         <div class="flex justify-between items-start">
@@ -681,6 +678,4 @@
       }
     </script>
   </main>
-</body>
-</html>
 {% endblock %}
