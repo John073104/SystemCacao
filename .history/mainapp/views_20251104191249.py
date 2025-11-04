@@ -1244,7 +1244,9 @@ def checkout_view(request):
             # Store order ID in session for confirmation page
             request.session['last_order_id'] = order_id
             
-            # Redirect to order confirmation (success message shown on that page)
+            messages.success(request, f'Order placed successfully! Order ID: {order_id}')
+            
+            # Redirect to order confirmation
             return redirect('order_confirmation', order_id=order_id)
             
         except Exception as e:
@@ -3841,57 +3843,6 @@ def api_approve_farm_request(request):
                 'success': False,
                 'error': str(e)
             })
-
-def api_reject_farm_request(request):
-    """API endpoint for admins to reject pending farm requests"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            request_id = data.get('request_id')
-            reason = data.get('reason', 'No reason provided')
-            
-            if not request_id:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Request ID is required'
-                })
-            
-            # Update the request status in Firebase
-            try:
-                farm_requests_ref = db.collection('farm_requests')
-                query = farm_requests_ref.where('id', '==', int(request_id))
-                docs = list(query.stream())
-                
-                if not docs:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Farm request not found'
-                    })
-                
-                for doc in docs:
-                    doc.reference.update({
-                        'status': 'rejected',
-                        'rejected_at': datetime.now(pytz.timezone('Asia/Manila')),
-                        'rejected_by': request.session.get('user_email', 'admin'),
-                        'rejection_reason': reason
-                    })
-                
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Farm request rejected successfully!'
-                })
-            except Exception as firebase_error:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Firebase error: {str(firebase_error)}'
-                })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 def terms_view(request):
     return render(request, 'accounts/terms.html')
