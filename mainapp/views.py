@@ -864,7 +864,7 @@ def scan_image(request):
             doc_ref = db.collection('scans').document(scan_id)
             doc_ref.set(scan_data)
         except Exception as firestore_error:
-            # Continue without Firestore if it fails
+            pass  # Continue without Firestore if it fails
 
         if user_type == 'guest':
             request.session[session_key][scan_type] += 1
@@ -1772,6 +1772,7 @@ def admin_delete_product(request, product_id):
                         default_storage.delete(file_path)
                 except Exception as e:
         
+                    pass
         firestore_service.delete_product(product_id)
         messages.success(request, 'Product deleted successfully!')
     
@@ -1879,8 +1880,10 @@ def deduct_stock_for_order(order_data):
                 })
                 
             else:
+                pass  # Product not found
                 
     except Exception as e:
+        pass  # Error deducting stock
 
 def send_status_change_email(order_data, new_status):
     """Send email notification when order status changes"""
@@ -1928,9 +1931,10 @@ def send_status_change_email(order_data, new_status):
             )
             
         else:
+            pass  # Customer email not available
             
     except Exception as e:
-
+        pass  # Error sending email
 from django.shortcuts import render
 from django.http import JsonResponse
 from firebase_admin import firestore
@@ -3630,6 +3634,7 @@ def api_farms_firebase(request):
                 db.collection('farms').document(str(farm_id)).delete()
             except Exception as firebase_error:
                 # If Firebase fails, delete from sample data
+                pass
             
             # Remove from sample data
             SAMPLE_FARMS[:] = [farm for farm in SAMPLE_FARMS if str(farm['id']) != str(farm_id)]
@@ -3748,6 +3753,7 @@ def api_user_farm_request_firebase(request):
                 db.collection('farm_requests').add(request_data)
             except Exception as firebase_error:
                 # Continue even if Firebase fails, we have local storage
+                pass
             
             return JsonResponse({
                 'success': True,
@@ -3826,11 +3832,13 @@ def api_approve_farm_request(request):
                     })
             except Exception as firebase_error:
             
+                pass
             try:
                 # Also save to Firebase
                 db.collection('farms').add(approved_farm)
             except Exception as firebase_error:
             
+                pass
             return JsonResponse({
                 'success': True,
                 'message': 'Farm request approved successfully!',
@@ -5713,6 +5721,7 @@ def get_product_by_id(product_id):
                 return product_data
     except Exception as e:
     
+        pass
     return None
 
 # Sample products data (you already have this)
@@ -6833,6 +6842,7 @@ def admin_dashboard(request):
         
     except Exception as e:
     
+        pass
     # Prepare context with all data
     context = {
         'current_date': current_date,
@@ -8076,6 +8086,7 @@ def scan_image(request):
                 doc_ref = db.collection('scans').document(scan_id)
                 doc_ref.set(scan_data)
             except Exception as firestore_error:
+                pass  # Fixed empty block
                 # Continue without Firestore for now
             
             # Return response
@@ -8399,6 +8410,7 @@ def admin_dashboard_scans(request):
         
         
     except Exception as e:
+        pass  # Fixed empty block
         # Use fallback data
     
     return scan_stats
@@ -8653,6 +8665,7 @@ def print_preview(request):
                             username = user_data.get('name', 'Unknown User')
                 except Exception as e:
         
+                    pass
         # Final fallback: if still no email, use username
         if not user_email:
             user_email = username
@@ -8770,6 +8783,7 @@ def export_pdf(request):
                             username = user_data.get('name', 'Unknown User')
                 except Exception as e:
         
+                    pass
         # Final fallback: if still no email, use username
         if not user_email:
             user_email = username
@@ -9241,9 +9255,11 @@ def deduct_stock_for_order(order_data):
                 })
                 
             else:
+                pass  # Auto-fixed empty block
                 
     except Exception as e:
 
+        pass
 def admin_reports(request):
     """Generate admin reports with proper error handling"""
     try:
