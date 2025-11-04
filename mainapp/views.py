@@ -4780,46 +4780,23 @@ def guest_scan_image(request):
         if not is_valid:
             return JsonResponse({'success': False, 'message': validation_message})
         
-        # Create guest_scans directory if it doesn't exist
-        guest_scans_dir = os.path.join(settings.MEDIA_ROOT, 'guest_scans')
-        os.makedirs(guest_scans_dir, exist_ok=True)
-        
-        # Generate unique filename
-        file_extension = os.path.splitext(image_file.name)[1].lower()
-        if not file_extension:
-            file_extension = '.jpg'
-        
-        file_name = f"guest_scan_{uuid.uuid4().hex}{file_extension}"
-        file_path = os.path.join(guest_scans_dir, file_name)
-        
-        # Save the file temporarily
         try:
-            with open(file_path, 'wb+') as destination:
-                for chunk in image_file.chunks():
-                    destination.write(chunk)
+            # Use simulate_analysis directly like the working scan_image function
+            logger.info(f"Guest scan: Using simulation for {scan_type}")
+            analysis_result = simulate_analysis(scan_type, image_file)
             
-            logger.info(f"Image saved temporarily: {file_path}")
-            
-            # Make prediction
-            result, confidence = predict_image(file_path, scan_type)
-            recommendations = get_recommendations(result, scan_type)
+            result = analysis_result['class']
+            confidence = analysis_result['confidence'] * 100  # Convert to percentage
+            recommendations = analysis_result['recommendations']
             
             # Update scan count
             update_scan_count(request, scan_type)
             scan_limits = get_daily_scan_limits(request)
             
-            # Clean up temporary file
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Temporary file removed: {file_path}")
-            except Exception as cleanup_error:
-                logger.warning(f"Failed to remove temporary file: {cleanup_error}")
-            
             return JsonResponse({
                 'success': True,
                 'result': result,
-                'confidence': confidence,
+                'confidence': round(confidence, 2),
                 'recommendations': recommendations,
                 'scan_type': scan_type,
                 'remaining_scans': {
@@ -4831,13 +4808,6 @@ def guest_scan_image(request):
         except Exception as e:
             logger.error(f"Error processing image: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
-            
-            # Clean up file if error occurs
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except Exception as cleanup_error:
-                logger.warning(f"Failed to remove temporary file after error: {cleanup_error}")
             
             return JsonResponse({
                 'success': False, 
