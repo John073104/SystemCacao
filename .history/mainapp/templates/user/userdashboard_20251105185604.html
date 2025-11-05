@@ -1,0 +1,370 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - CacaoGuard</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'images/NOBGHERO.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/NOBGHERO.png' %}">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/gradients.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #fef3e2 0%, #f3e8ff 50%, #e0f2fe 100%); }
+        .glass-card { background: rgba(255, 255, 255, 0.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .icon-gradient-1 { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
+        .icon-gradient-2 { background: linear-gradient(135deg, #d946ef 0%, #a855f7 100%); }
+        .icon-gradient-3 { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+        .icon-gradient-4 { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .icon-gradient-5 { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+        .history-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .history-card:hover { transform: translateX(5px); border-left-color: #06b6d4; background: rgba(6, 182, 212, 0.05); }
+        .scan-history-section { max-height: 500px; overflow-y: auto; }
+        .scan-history-section::-webkit-scrollbar { width: 6px; }
+        .scan-history-section::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+        .scan-history-section::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.3); border-radius: 3px; }
+        .scan-history-section::-webkit-scrollbar-thumb:hover { background: rgba(6, 182, 212, 0.5); }
+        .order-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .order-card:hover { transform: translateX(5px); border-left-color: #8b5cf6; background: rgba(139, 92, 246, 0.05); }
+        .farm-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .farm-card:hover { transform: translateX(5px); border-left-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        @media print { .no-print { display: none !important; } .print-only { display: block !important; } body { background: white !important; } .glass-card { background: white !important; border: 1px solid #ccc !important; } }
+        .print-only { display: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'inter': ['Inter', 'sans-serif'] },
+                    animation: { 'fade-in': 'fadeIn 0.6s ease-out', 'slide-up': 'slideUp 0.5s ease-out', 'float': 'float 3s ease-in-out infinite' },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(30px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen overflow-hidden">
+        {% include 'user/sidebar.html' %}
+        <div class="flex-1 overflow-y-auto">
+            <!-- Add padding for mobile menu button -->
+            <div class="p-4 lg:p-8 pt-16 lg:pt-8">
+            {% block content %}
+            <div class="user-header-gradient p-6 rounded-2xl shadow-lg mb-8 animate-fade-in">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 icon-gradient-3 rounded-2xl flex items-center justify-center animate-float">
+                            <i class="fas fa-seedling text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold text-white">CacaoGuard User</h1>
+                            <p class="text-green-100">User Dashboard</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Notification Bell -->
+                        <div x-data="notificationDropdown()" class="relative">
+                            <button @click="toggleDropdown()" class="relative p-2 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/30 transition">
+                                <i class="fas fa-bell text-xl"></i>
+                                <span x-show="unreadCount > 0" x-text="unreadCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
+                            </button>
+                            
+                            <!-- Dropdown -->
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl overflow-hidden z-50">
+                                <div class="bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-3 flex items-center justify-between">
+                                    <h3 class="text-white font-semibold">Notifications</h3>
+                                    <button @click="markAllRead()" class="text-white text-xs hover:underline">Mark all read</button>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    <template x-if="notifications.length === 0">
+                                        <div class="p-4 text-center text-gray-500">
+                                            <i class="fas fa-bell-slash text-3xl mb-2"></i>
+                                            <p>No notifications</p>
+                                        </div>
+                                    </template>
+                                    <template x-for="notif in notifications" :key="notif.id">
+                                        <div @click="markRead(notif.id)" :class="notif.read ? 'bg-white' : 'bg-blue-50'" class="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer">
+                                            <div class="flex items-start">
+                                                <i :class="getNotificationIcon(notif.type)" class="mt-1 mr-3"></i>
+                                                <div class="flex-1">
+                                                    <h4 class="font-semibold text-sm text-gray-800" x-text="notif.title"></h4>
+                                                    <p class="text-xs text-gray-600 mt-1" x-text="notif.message"></p>
+                                                    <p class="text-xs text-gray-400 mt-1" x-text="formatTime(notif.created_at)"></p>
+                                                </div>
+                                                <span x-show="!notif.read" class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <span class="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-full text-sm font-medium border border-white/30">
+                            <i class="fas fa-circle text-green-300 mr-1"></i>System Online
+                        </span>
+                        <div class="text-right bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20">
+                            <p class="text-sm text-white font-medium" id="current-time">Loading...</p>
+                            <p class="text-xs text-green-100">Philippines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-only mb-8">
+                <div class="text-center border-b pb-4 mb-4">
+                    <h1 class="text-2xl font-bold">CacaoGuard User Dashboard Report</h1>
+                    <p class="text-gray-600">Generated on: {{ current_date }} {{ current_time }}</p>
+                    <p class="text-gray-600">User: {{ name }} ({{ email }})</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-2xl shadow-md stat-card hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Orders</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="total-orders-count">{{ total_orders }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Your marketplace purchases</p>
+                            <div class="mt-2">
+                                <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Pending: {{ pending_orders }}</span>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded ml-1">Delivered: {{ delivered_orders }}</span>
+                            </div>
+                        </div>
+                        <div class="w-14 h-14 icon-gradient-5 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-shopping-bag text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-md stat-card hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Scans</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="total-scans-count">{{ total_scans }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Disease detections</p>
+                            <div class="mt-2">
+                                <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Disease: {{ disease_scans }}</span>
+                                <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded ml-1">Pest: {{ pest_scans }}</span>
+                            </div>
+                        </div>
+                        <div class="w-14 h-14 icon-gradient-2 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-microscope text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-md stat-card hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Total Maps</p>
+                            <p class="text-3xl font-bold text-gray-900 mt-2" id="total-maps-count">{{ total_maps }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Farm locations</p>
+                            <div class="mt-2">
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Area: <span id="user-total-area">{{ total_farm_area }}</span> ha</span>
+                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded ml-1">Trees: <span id="user-total-trees">{{ total_trees }}</span></span>
+                            </div>
+                        </div>
+                        <div class="w-14 h-14 icon-gradient-4 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-map-marked-alt text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 no-print">
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-line text-blue-600 mr-2"></i>Orders Trend (Last 7 Days)</h3>
+                    <canvas id="ordersChart" width="400" height="200"></canvas>
+                </div>
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-pie text-purple-600 mr-2"></i>Scan Types Distribution</h3>
+                    <div class="flex justify-center"><canvas id="scansChart" width="280" height="200" style="max-width: 280px; max-height: 280px;"></canvas></div>
+                </div>
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar text-green-600 mr-2"></i>Monthly Activity (Last 6 Months)</h3>
+                    <canvas id="monthlyChart" width="400" height="200"></canvas>
+                </div>
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-doughnut text-orange-600 mr-2"></i>Order Status Distribution</h3>
+                    <div class="flex justify-center"><canvas id="orderStatusChart" width="280" height="200" style="max-width: 280px; max-height: 280px;"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-shopping-cart text-blue-600 mr-2"></i>Recent Orders</h3>
+                    <div class="space-y-3 scan-history-section">
+                        {% for order in recent_orders %}
+                        <div class="order-card p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium text-sm">Order #{{ order.order_id }}</p>
+                                    <p class="text-xs text-gray-500">{{ order.created_at|date:"M d, Y H:i" }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-sm">₱{{ order.total_amount }}</p>
+                                    <span class="text-xs px-2 py-1 rounded-full {% if order.status == 'pending' %}bg-yellow-100 text-yellow-800{% elif order.status == 'delivered' %}bg-green-100 text-green-800{% elif order.status == 'cancelled' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">{{ order.status|title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}<p class="text-gray-500 text-center py-4">No recent orders</p>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-microscope text-purple-600 mr-2"></i>Recent Scans</h3>
+                    <div class="space-y-3 scan-history-section">
+                        {% for scan in recent_scans %}
+                        <div class="history-card p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium text-sm">{{ scan.result }}</p>
+                                    <p class="text-xs text-gray-500">{{ scan.timestamp|date:"M d, Y H:i" }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-sm">{{ scan.confidence }}%</p>
+                                    <span class="text-xs px-2 py-1 rounded-full {% if scan.type == 'disease' %}bg-red-100 text-red-800{% else %}bg-orange-100 text-orange-800{% endif %}">{{ scan.type|title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}<p class="text-gray-500 text-center py-4">No recent scans</p>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-map text-green-600 mr-2"></i>Farm Overview</h3>
+                    <div class="space-y-3 scan-history-section">
+                        {% for farm in recent_farms %}
+                        <div class="farm-card p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium text-sm">{{ farm.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ farm.municipality }}, {{ farm.barangay }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-sm">{{ farm.area }} ha</p>
+                                    <p class="text-xs text-gray-500">{{ farm.trees }} trees</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}<p class="text-gray-500 text-center py-4">No farm data available</p>{% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endblock %}
+        </div>
+    </div>
+
+    <script>
+        function safeParseJSON(jsonString, defaultValue = {}) {
+            try { return JSON.parse(jsonString); } catch (e) { console.warn('Failed to parse JSON:', e); return defaultValue; }
+        }
+        function initializeTime() {
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) { const now = new Date(); timeElement.textContent = now.toLocaleString(); }
+        }
+        function updateTime() {
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) { const now = new Date(); timeElement.textContent = now.toLocaleString(); }
+        }
+        function updateDashboard() {
+            fetch('/dashboard-api/').then(response => response.json()).then(data => {
+                if (data.success && data.data) {
+                    const ordersCount = document.getElementById('total-orders-count');
+                    const scansCount = document.getElementById('total-scans-count');
+                    const mapsCount = document.getElementById('total-maps-count');
+                    if (ordersCount) ordersCount.textContent = data.data.total_orders || 0;
+                    if (scansCount) scansCount.textContent = data.data.total_scans || 0;
+                    if (mapsCount) mapsCount.textContent = data.data.total_maps || 0;
+                    console.log('Dashboard updated at:', data.data.timestamp);
+                    showUpdateIndicator();
+                }
+            }).catch(error => console.error('Error updating dashboard:', error));
+        }
+        function printDashboard() { window.print(); }
+        function showUpdateIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            indicator.textContent = 'Dashboard Updated';
+            document.body.appendChild(indicator);
+            setTimeout(() => { indicator.remove(); }, 2000);
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTime();
+            setInterval(updateTime, 1000);
+            setInterval(updateDashboard, 30000);
+
+            try {
+                const ordersChartElement = document.getElementById('ordersChart');
+                if (ordersChartElement) {
+                    const ordersCtx = ordersChartElement.getContext('2d');
+                    const ordersData = safeParseJSON('{{ orders_chart_data|safe }}', []);
+                    if (Array.isArray(ordersData) && ordersData.length > 0) {
+                        new Chart(ordersCtx, {
+                            type: 'line',
+                            data: { labels: ordersData.map(d => d.label || ''), datasets: [{ label: 'Orders', data: ordersData.map(d => d.count || 0), borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, fill: true, pointBackgroundColor: 'rgb(59, 130, 246)', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5 }] },
+                            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                        });
+                    }
+                }
+            } catch (e) { console.error('Error initializing Orders Chart:', e); }
+
+            try {
+                const scansChartElement = document.getElementById('scansChart');
+                if (scansChartElement) {
+                    const scansCtx = scansChartElement.getContext('2d');
+                    const scansData = safeParseJSON('{{ scan_distribution|safe }}', { disease: 0, pest: 0 });
+                    new Chart(scansCtx, {
+                        type: 'doughnut',
+                        data: { labels: ['Disease Scans', 'Pest Scans'], datasets: [{ data: [scansData.disease || 0, scansData.pest || 0], backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(245, 158, 11, 0.8)'], borderColor: ['rgb(239, 68, 68)', 'rgb(245, 158, 11)'], borderWidth: 2 }] },
+                        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true, font: { size: 11 } } } } }
+                    });
+                }
+            } catch (e) { console.error('Error initializing Scans Chart:', e); }
+
+            try {
+                const monthlyChartElement = document.getElementById('monthlyChart');
+                if (monthlyChartElement) {
+                    const monthlyCtx = monthlyChartElement.getContext('2d');
+                    const monthlyData = safeParseJSON('{{ monthly_chart_data|safe }}', { labels: [], orders: [], scans: [] });
+                    new Chart(monthlyCtx, {
+                        type: 'bar',
+                        data: { labels: monthlyData.labels || [], datasets: [{ label: 'Orders', data: monthlyData.orders || [], backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgb(59, 130, 246)', borderWidth: 1 }, { label: 'Scans', data: monthlyData.scans || [], backgroundColor: 'rgba(168, 85, 247, 0.7)', borderColor: 'rgb(168, 85, 247)', borderWidth: 1 }] },
+                        options: { responsive: true, plugins: { legend: { position: 'top', labels: { padding: 15, usePointStyle: true } } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                    });
+                }
+            } catch (e) { console.error('Error initializing Monthly Chart:', e); }
+
+            try {
+                const orderStatusChartElement = document.getElementById('orderStatusChart');
+                if (orderStatusChartElement) {
+                    const orderStatusCtx = orderStatusChartElement.getContext('2d');
+                    const orderStatusData = safeParseJSON('{{ order_status_distribution|safe }}', { pending: 0, processing: 0, delivered: 0, cancelled: 0 });
+                    new Chart(orderStatusCtx, {
+                        type: 'doughnut',
+                        data: { labels: ['Pending', 'Processing', 'Delivered', 'Cancelled'], datasets: [{ data: [orderStatusData.pending || 0, orderStatusData.processing || 0, orderStatusData.delivered || 0, orderStatusData.cancelled || 0], backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(239, 68, 68, 0.8)'], borderColor: ['rgb(245, 158, 11)', 'rgb(59, 130, 246)', 'rgb(16, 185, 129)', 'rgb(239, 68, 68)'], borderWidth: 2 }] },
+                        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true, font: { size: 11 } } } } }
+                    });
+                }
+            } catch (e) { console.error('Error initializing Order Status Chart:', e); }
+        });
+    </script>
+    </div>
+        </div>
+    </div>
+</body>
+</html>

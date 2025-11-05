@@ -5467,27 +5467,14 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
     
 @user_required
 def order_detail(request, order_id):
     """Order detail view for users"""
     try:
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email') or request.session.get('email')
-        
         if not uid:
             messages.error(request, 'Please log in to view order details.')
             return redirect('login')
@@ -5502,54 +5489,29 @@ def order_detail(request, order_id):
 
         order_data = order_doc.to_dict()
         
-        # Check if order belongs to current user (more flexible ownership check)
-        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
-        owner_email = order_data.get('customer_email') or order_data.get('user_email')
-        
-        # Allow access if either UID or email matches - silently redirect if no match
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+        # Check if order belongs to current user
+        if order_data.get('firebase_uid') != uid:
+            messages.error(request, 'Access denied.')
             return redirect('user_orders')
 
         order_data['id'] = order_doc.id
         
         # Convert timestamp if needed
-        if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+        # NEW (shows correct Philippines time)
+        if hasattr(order_data['created_at'], 'seconds'):
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
-        
-        # Ensure items and total_amount exist
-        if 'items' not in order_data:
-            order_data['items'] = []
-        if 'total_amount' not in order_data and order_data.get('items'):
-            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_data['items'])
 
         context = {
             'order': order_data,
-            'user_name': request.session.get('name'),
-            'user_email': user_email,
         }
 
         return render(request, 'user/order_detail.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Order detail error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'order': {
-                'id': order_id,
-                'order_id': order_id,
-                'items': [],
-                'total_amount': 0,
-                'status': 'unknown'
-            },
-            'user_name': request.session.get('name'),
-            'user_email': request.session.get('user_email'),
-            'error': True
-        }
-        return render(request, 'user/order_detail.html', context)
+        messages.error(request, 'Error loading order details.')
+        return redirect('user_orders')
 
 # ===============================
 # ADMIN ORDER MANAGEMENT
@@ -10545,19 +10507,8 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
 
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""

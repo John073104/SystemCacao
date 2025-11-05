@@ -19,108 +19,8 @@ from django.contrib import messages
 from firebase_admin import auth, firestore
 import requests, jwt
 
-# Firestore instance - will be initialized when needed
-# Import firebase_config to ensure Firebase is initialized
-from . import firebase_config
-db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
-
-# ===============================
-# NOTIFICATION SYSTEM
-# ===============================
-def create_notification(user_id, title, message, notification_type='info', order_id=None, metadata=None):
-    """
-    Create a notification for a user
-    Args:
-        user_id: Firebase UID of the user
-        title: Notification title
-        message: Notification message
-        notification_type: Type of notification (info, success, warning, error, order_status)
-        order_id: Related order ID (optional)
-        metadata: Additional metadata (optional)
-    """
-    try:
-        if not db:
-            return False
-        
-        from datetime import datetime
-        import pytz
-        
-        philippines_tz = pytz.timezone('Asia/Manila')
-        notification_data = {
-            'user_id': user_id,
-            'title': title,
-            'message': message,
-            'type': notification_type,
-            'order_id': order_id,
-            'metadata': metadata or {},
-            'read': False,
-            'created_at': datetime.now(philippines_tz),
-            'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        
-        db.collection('notifications').add(notification_data)
-        return True
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error creating notification: {e}")
-        return False
-
-def get_user_notifications(user_id, limit=10, unread_only=False):
-    """Get notifications for a user"""
-    try:
-        if not db:
-            return []
-        
-        # Note: This query requires a Firestore composite index
-        # Create index at: Firebase Console > Firestore > Indexes
-        # Fields: user_id (Ascending), created_at (Descending)
-        query = db.collection('notifications').where('user_id', '==', user_id)
-        
-        if unread_only:
-            query = query.where('read', '==', False)
-        
-        # Try ordering by created_at, fallback to unordered if index missing
-        try:
-            query = query.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
-            notifications = []
-            for doc in query.stream():
-                notif_data = doc.to_dict()
-                notif_data['id'] = doc.id
-                notifications.append(notif_data)
-            return notifications
-        except Exception as index_error:
-            # Index not created yet, fetch without ordering
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Firestore index missing for notifications query. Fetching unordered.")
-            
-            notifications = []
-            for doc in query.limit(limit).stream():
-                notif_data = doc.to_dict()
-                notif_data['id'] = doc.id
-                notifications.append(notif_data)
-            
-            # Sort in Python instead
-            notifications.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-            return notifications[:limit]
-        
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error fetching notifications: {e}")
-        return []
-
-def mark_notification_read(notification_id):
-    """Mark a notification as read"""
-    try:
-        if not db:
-            return False
-        
-        db.collection('notifications').document(notification_id).update({'read': True})
-        return True
-    except Exception as e:
-        return False
+# Firestore instance
+db = firestore.client()
 
 from django.contrib.auth import login
 # from django.contrib.auth.models import User
@@ -174,13 +74,14 @@ def login_view(request):
             request.session['uid'] = uid
             request.session['name'] = user_data.get('name', '')
             request.session['user_email'] = user_data.get('email', '')
-            role_value = str(user_data.get('role', 'user')).strip().lower()
-            request.session['role'] = role_value  # normalized to 'admin' | 'user' | 'guest'
+            request.session['role'] = user_data.get('role', 'User')  # Admin/User/Guest
             
             # Save session explicitly
             request.session.save()
             
             # Debug output
+            print(f"Login successful - UID: {uid}")
+            print(f"Session after login: {dict(request.session)}")
 
             # 🪪 Issue JWT and redirect based on role/checkout intent
             token = jwt.encode({'uid': uid, 'role': request.session['role']}, SECRET_KEY, algorithm='HS256')
@@ -196,16 +97,18 @@ def login_view(request):
                 messages.success(request, f'Welcome back, {user_data.get("name", "User")}! You can now proceed with checkout.')
                 return response
             
-            # Regular login redirect based on role (normalized lowercase)
-            response = redirect('admin_dashboard' if request.session['role'] == 'admin' else 'userdashboard')
+            # Regular login redirect based on role
+            response = redirect('admin_dashboard' if request.session['role'] == 'Admin' else 'userdashboard')
             response.set_cookie('session', token)
             messages.success(request, f'Welcome back, {user_data.get("name", "User")}!')
 
             return response
 
         except requests.exceptions.HTTPError as e:
+            print(f"HTTP Error during login: {e}")
             messages.error(request, 'Invalid credentials.')
         except Exception as e:
+            print(f"Login error: {e}")
             messages.error(request, f'Login failed: {e}')
 
     return render(request, 'accounts/login.html')
@@ -237,8 +140,8 @@ def user_dashboard(request):
 @admin_required
 def admin_dashboard(request):
     """Admin dashboard view"""
-    # Check if user is actually admin (normalized lowercase)
-    if request.session.get('role') != 'admin':
+    # Check if user is actually admin
+    if request.session.get('role') != 'Admin':
         messages.error(request, 'Access denied. Admin privileges required.')
         return redirect('userdashboard')
     
@@ -287,10 +190,14 @@ def signup_view(request):
 #  Admin Dashboard
 # ===============================
 from .decorators import admin_required, user_required
-from .firebase_config import db
+from firebase_admin import db
+from firebase_admin import firestore
+
+db = firestore.client()
 
 @admin_required
 def admin_dashboard(request):
+    print("[DEBUG] Accessing Admin Dashboard:", request.session.get('email'), request.session.get('role'))
     user_list = []
     try:
         users_ref = db.collection('users')
@@ -304,6 +211,7 @@ def admin_dashboard(request):
                 'role': data.get('role', 'N/A')
             })
     except Exception as e:
+        print("[ERROR] Failed to fetch users:", str(e))
         messages.error(request, "Failed to load users.")
 
     context = {
@@ -320,6 +228,7 @@ def admin_dashboard(request):
 # ===============================
 @user_required
 def userdashboard(request):
+    print("[DEBUG] Accessing User Dashboard:", request.session.get('email'), request.session.get('role'))
 
     if request.session.get('role') == 'guest':
         messages.error(request, "Guest users cannot access user dashboard.")
@@ -407,8 +316,12 @@ def send_welcome_email(request):
     except Exception as e:
         return JsonResponse({'status': 'Failed to send email', 'error': str(e)}, status=500)
 
+from django.shortcuts import render, redirect
 
-def image_analysis_old_template_only(request):
+def user_management(request):
+    return render(request, 'admin/user_management.html')
+
+def image_analysis(request):
     return render(request, 'admin/image_analysis.html')
 
 def ecommerce(request):
@@ -428,86 +341,11 @@ def scan_diagnose(request):
 
 # Marketplace view
 def marketplace(request):
-    """User marketplace view - display all active products from Firestore"""
-    try:
-        # Check if Firebase is initialized
-        if db is None:
-            context = {
-                'page_title': 'Marketplace',
-                'description': 'Buy and sell agricultural products',
-                'products': [],
-                'error': 'Database connection unavailable'
-            }
-            return render(request, 'user/marketplace.html', context)
-        
-        # Fetch all active products from Firestore (same as admin)
-        products_ref = db.collection('products')
-        products_data = []
-        
-        for doc in products_ref.stream():
-            product = doc.to_dict()
-            product['id'] = doc.id
-            
-            # Ensure images is a list with fallback
-            if 'images' in product:
-                if isinstance(product['images'], str):
-                    try:
-                        product['images'] = json.loads(product['images'])
-                    except:
-                        product['images'] = [product['images']] if product['images'] else []
-                elif not isinstance(product['images'], list):
-                    product['images'] = []
-            else:
-                product['images'] = []
-            
-            # Add fallback placeholder if no images
-            if not product['images'] or len(product['images']) == 0:
-                product['images'] = ['/static/images/placeholder-product.jpg']
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            # Ensure image paths start with / or http, but block /media/ paths
-            cleaned_images = []
-            for img in product['images']:
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    # Relative path, prefix with /static/
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
-            
-            # Only show active products
-            if product.get('is_active', True):
-                products_data.append(product)
-        
-        # Sort by featured first, then by created date
-        products_data.sort(key=lambda x: (not x.get('featured', False), x.get('created_at', '')), reverse=True)
-        
-        context = {
-            'page_title': 'Marketplace',
-            'description': 'Buy and sell agricultural products',
-            'products': products_data
-        }
-        return render(request, 'user/marketplace.html', context)
-        
-    except Exception as e:
-        logger.error(f"Error loading marketplace: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        context = {
-            'page_title': 'Marketplace',
-            'description': 'Buy and sell agricultural products',
-            'products': []
-        }
-        return render(request, 'user/marketplace.html', context)
+    context = {
+        'page_title': 'Marketplace',
+        'description': 'Buy and sell agricultural products'
+    }
+    return render(request, 'user/marketplace.html', context)
 
 # Farm Mapping view
 @user_required
@@ -547,72 +385,11 @@ from django.contrib.auth import logout
 
 
 # Guest pages
-@guest_required
 def guest_dashboard(request):
     return render(request, 'guest/guest_dashboard.html') 
 
 def guest_marketplace(request):
-    """Guest marketplace view - display all active products from Firestore"""
-    try:
-        # Check if Firebase is initialized
-        if db is None:
-            context = {'products': [], 'error': 'Database connection unavailable'}
-            return render(request, 'guest/guest_marketplace.html', context)
-        
-        # Fetch all active products from Firestore (same as admin and user)
-        products_ref = db.collection('products')
-        products_data = []
-        
-        for doc in products_ref.stream():
-            product = doc.to_dict()
-            product['id'] = doc.id
-            
-            # Ensure images is a list with fallback
-            if 'images' in product:
-                if isinstance(product['images'], str):
-                    try:
-                        product['images'] = json.loads(product['images'])
-                    except:
-                        product['images'] = [product['images']] if product['images'] else []
-                elif not isinstance(product['images'], list):
-                    product['images'] = []
-            else:
-                product['images'] = []
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            cleaned_images = []
-            for img in product.get('images', []):
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
-            
-            # Only show active products
-            if product.get('is_active', True):
-                products_data.append(product)
-        
-        # Sort by featured first, then by created date
-        products_data.sort(key=lambda x: (not x.get('featured', False), x.get('created_at', '')), reverse=True)
-        
-        context = {'products': products_data}
-        return render(request, 'guest/guest_marketplace.html', context)
-        
-    except Exception as e:
-        logger.error(f"Error loading guest marketplace: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        context = {'products': []}
-        return render(request, 'guest/guest_marketplace.html', context)
+    return render(request, 'guest/guest_marketplace.html')
 
 def guest_farm_mapping(request):
     return render(request, 'guest/guest_farmMapping.html')
@@ -622,482 +399,425 @@ def guest_farm_mapping(request):
 # Image Procesing
 # ===============================
 
+import os
+import json
+import uuid
+from datetime import datetime
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
-from django.contrib import messages
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from .firebase_config import auth
-import requests
-import time
-import jwt
-from functools import wraps
-from django.core.mail import EmailMultiAlternatives
+from django.contrib import messages
 from django.conf import settings
-from .decorators import admin_required, user_required, guest_required, anonymous_required
-
-import json
-from datetime import datetime, timedelta
-import uuid
-import os
+import tensorflow as tf
 import numpy as np
 from PIL import Image
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-from django.utils import timezone
-from django.core.paginator import Paginator
-import pytz
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from torchvision.models import resnet18
-import logging
-import traceback
-import random
-from django.utils import timezone as django_timezone
-from datetime import timezone as datetime_timezone
 
-# Firebase and Firestore already initialized in firebase_config module
-# Just use the db from there (already imported at top of file)
+# Initialize Firestore
+# Firebase already initialized in firebase_config
 
-# Global variables for models
-disease_model = None
-pest_model = None
+db = firestore.client()
 
-# Set up logging
-logger = logging.getLogger(__name__)
-
-FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
-SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
-
-
-# ===============================
-# PYTORCH MODEL LOADING AND PREPROCESSING
-# ===============================
-
-class CacaoResNet(nn.Module):
-    def __init__(self, num_classes):
-        super(CacaoResNet, self).__init__()
-        # DISABLED FOR RENDER - Do not instantiate resnet18 to avoid downloading pretrained weights
-        # self.resnet = resnet18(pretrained=False)
-        # self.resnet.fc = nn.Linear(self.resnet.fc.in_features, num_classes)
-        pass
-    
-    def forward(self, x):
-        # return self.resnet(x)
-        raise NotImplementedError("Model loading disabled for Render deployment. Upgrade to paid plan for ML features.")
-
-import torch
-
-def load_pytorch_model(model_path, model_class, num_classes):
-    try:
-        model = model_class(num_classes=num_classes)
-        state_dict = torch.load(model_path, map_location="cpu")
-
-        # Fix key mismatch by adding "resnet." prefix if missing
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if not k.startswith("resnet."):
-                new_state_dict["resnet." + k] = v
-            else:
-                new_state_dict[k] = v
-
-        model.load_state_dict(new_state_dict, strict=False)
-        model.eval()
-        return model
-    except Exception as e:
-        return None
-
-
-# Load your models (PyTorch only) - DISABLED FOR RENDER FREE TIER
-# Models are too large for 512MB RAM - load only when needed
-disease_model = None
-pest_model = None
-
-# Uncomment for local development:
-# disease_model = load_pytorch_model(
-#     "models/cacao_disease_resnet_state_dict.pth", CacaoResNet, num_classes=5
-# )
-# pest_model = load_pytorch_model(
-#     "models/cacao_pest_resnet_state_dict.pth", CacaoResNet, num_classes=5
-# )
+# Load ML models
+disease_model = tf.keras.models.load_model('models/cacao_disease_model.h5')
+pest_model = tf.keras.models.load_model('models/pest_model.h5')
 
 # Disease and Pest classes
 DISEASE_CLASSES = [
-    'Black Pod Rot',
-    'Fito Disease',
-    'Monilia Disease',
-    'Healthy',
+    'Black Pod Disease',
     'Frosty Pod Rot',
     'Witches Broom',
-    'Unknown'
+    'Swollen Shoot Virus',
+    'Healthy'
 ]
 
 PEST_CLASSES = [
-    'Ant Weaver',
+    'Cocoa Pod Borer',
+    'Thrips',
+    'Mealybugs',
     'Aphids',
-    'Mealybug',
-    'Pod Borer',
-    'Healthy',
-    'Unknown'
+    'Healthy'
 ]
-
 
 # Recommendations
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Disease': [
         'Remove and destroy infected pods immediately',
         'Improve drainage and air circulation',
         'Apply copper-based fungicides',
         'Harvest ripe pods promptly'
     ],
-    'Fito Disease': [
-        'Improve soil drainage and reduce waterlogging',
-        'Remove and destroy infected plant parts',
-        'Apply recommended fungicides as preventive measure',
-        'Monitor plants regularly for new symptoms'
-    ],
-    'Monilia Disease': [
+    'Frosty Pod Rot': [
         'Remove infected pods and plant debris',
         'Prune to improve air circulation',
         'Apply protective fungicides during wet season',
-        'Plant resistant varieties when available'
-    ],
-    'Frosty Pod Rot': [
-        'Remove and destroy infected pods promptly',
-        'Sanitize tools after pruning',
-        'Apply copper fungicides during wet seasons',
-        'Maintain proper field sanitation'
+        'Plant resistant varieties'
     ],
     'Witches Broom': [
         'Prune infected branches 30cm below symptoms',
         'Remove all brooms and infected tissue',
-        'Apply copper fungicides as preventive treatment',
-        'Maintain good farm hygiene and weed control'
+        'Apply copper fungicides',
+        'Maintain good farm hygiene'
+    ],
+    'Swollen Shoot Virus': [
+        'Remove and destroy infected trees',
+        'Control mealybug vectors',
+        'Plant virus-free seedlings',
+        'Maintain isolation between plantings'
     ],
     'Healthy': [
         'Continue current management practices',
         'Regular monitoring for early detection',
         'Maintain proper nutrition and irrigation',
         'Keep farm clean and well-maintained'
-    ],
-    'Unknown': [
-        'Monitor affected plants closely for symptom progression',
-        'Consult local agricultural expert for accurate diagnosis',
-        'Avoid unnecessary chemical applications',
-        'Document and report unusual symptoms for research'
     ]
 }
 
 PEST_RECOMMENDATIONS = {
-    'Ant Weaver': [
-        'Locate and destroy ant nests around plantation',
-        'Trim branches touching each other to prevent ant movement',
-        'Use baiting techniques with approved insecticides',
-        'Encourage natural predators of ants'
+    'Cocoa Pod Borer': [
+        'Regular pod harvesting every 7-10 days',
+        'Remove and destroy infected pods',
+        'Use pheromone traps',
+        'Apply biological control agents'
+    ],
+    'Thrips': [
+        'Use blue sticky traps',
+        'Apply neem oil or insecticidal soap',
+        'Maintain proper humidity levels',
+        'Remove weeds around plantation'
+    ],
+    'Mealybugs': [
+        'Use biological control with natural enemies',
+        'Apply systemic insecticides if severe',
+        'Maintain ant control',
+        'Regular monitoring and early intervention'
     ],
     'Aphids': [
-        'Encourage natural predators like lady beetles',
-        'Use reflective mulches to repel aphids',
-        'Apply insecticidal soap or neem oil',
+        'Encourage natural predators',
+        'Use reflective mulches',
+        'Apply insecticidal soap',
         'Remove heavily infested shoots'
-    ],
-    'Mealybug': [
-        'Introduce natural enemies such as parasitoids',
-        'Apply systemic insecticides only if severe',
-        'Maintain ant control to reduce mealybug spread',
-        'Regularly monitor and intervene early'
-    ],
-    'Pod Borer': [
-        'Harvest pods every 7-10 days to break pest cycle',
-        'Remove and destroy infested pods immediately',
-        'Install pheromone traps to monitor population',
-        'Apply biological control agents such as Trichogramma'
     ],
     'Healthy': [
         'Continue integrated pest management',
         'Regular monitoring for early detection',
         'Maintain beneficial insect populations',
         'Keep plantation clean and well-managed'
-    ],
-    'Unknown': [
-        'Collect samples for proper identification',
-        'Avoid immediate pesticide application until confirmed',
-        'Monitor population levels over several days',
-        'Seek expert assistance if pest persists'
     ]
 }
 
+def preprocess_image(image_file):
+    """Preprocess image for model prediction"""
+    image = Image.open(image_file)
+    image = image.convert('RGB')
+    image = image.resize((224, 224))
+    image_array = np.array(image) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
+    return image_array
 
-def preprocess_image_pytorch(image_file):
-    """Preprocess image for PyTorch model"""
-    try:
-        # Open image
-        if hasattr(image_file, 'read'):
-            image = Image.open(image_file).convert('RGB')
-        else:
-            image = Image.open(image_file).convert('RGB')
-        
-        # Define transforms
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        
-        # Apply transforms and add batch dimension
-        image_tensor = transform(image).unsqueeze(0)
-        return image_tensor
-    except Exception as e:
-        raise
 
-# ===============================
-# SCAN AND DIAGNOSE VIEWS
-# ===============================
+from datetime import datetime
+import pytz
+
+def admin_dashboard(request):
+    """Admin dashboard view"""
+    # Get recent scans
+    recent_scans = db.collection('scans').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(10).stream()
+    scans_data = []
+
+    for scan in recent_scans:
+        scan_data = scan.to_dict()
+        scan_data['id'] = scan.id
+        scans_data.append(scan_data)
+
+    # Get all scans
+    all_scans = list(db.collection('scans').stream())
+
+    # Count stats
+    total_scans = len(all_scans)
+    disease_scans = len([
+        s for s in all_scans if s.to_dict().get('type') == 'disease'
+    ])
+    pest_scans = len([
+        s for s in all_scans if s.to_dict().get('type') == 'pest'
+    ])
+
+    # Filter today's scans (timezone-aware)
+    tz = pytz.timezone('Asia/Manila')  # Set your timezone
+    today = datetime.now(tz).date()
+    today_scans = len([
+        s for s in all_scans
+        if 'timestamp' in s.to_dict() and
+        s.to_dict()['timestamp'].astimezone(tz).date() == today
+    ])
+
+    # Chart Data (for scanChart)
+    scan_counts = {}
+    for s in all_scans:
+        ts = s.to_dict().get('timestamp')
+        if ts:
+            d = ts.astimezone(tz).date().isoformat()
+            scan_counts[d] = scan_counts.get(d, 0) + 1
+
+    chart_data = [{'date': k, 'count': v} for k, v in sorted(scan_counts.items())][-7:]
+
+    context = {
+        'recent_scans': scans_data,
+        'total_scans': total_scans,
+        'disease_scans': disease_scans,
+        'pest_scans': pest_scans,
+        'today_scans': today_scans,
+        'chart_data': chart_data,
+    }
+
+    return render(request, 'admin/admin_dashboard.html', context)
+
+
+
+def image_analysis(request):
+    """Admin image analysis view"""
+    scans = db.collection('scans').order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+    scans_data = []
+    
+    for scan in scans:
+        scan_data = scan.to_dict()
+        scan_data['id'] = scan.id
+        scans_data.append(scan_data)
+    
+    return render(request, 'admin/image_analysis.html', {'scans': scans_data})
+
+
+def admin_reports(request):
+    """Admin reports view"""
+    scans = db.collection('scans').order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+    scans_data = []
+    
+    for scan in scans:
+        scan_data = scan.to_dict()
+        scan_data['id'] = scan.id
+        scans_data.append(scan_data)
+    
+    return render(request, 'admin/reports.html', {'scans': scans_data})
+
+
+def delete_scan(request, scan_id):
+    """Delete scan (admin)"""
+    if request.method == 'POST':
+        try:
+            db.collection('scans').document(scan_id).delete()
+            messages.success(request, 'Scan deleted successfully.')
+        except Exception as e:
+            messages.error(request, f'Error deleting scan: {str(e)}')
+    
+    return redirect('mainapp:image_analysis')
+
+
+def user_dashboard(request):
+    """User dashboard view"""
+    user_id = str(request.user.id)
+    
+    # Get user's recent scans
+    user_scans = db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(5).stream()
+    scans_data = []
+    
+    for scan in user_scans:
+        scan_data = scan.to_dict()
+        scan_data['id'] = scan.id
+        scans_data.append(scan_data)
+    
+    # Get user statistics
+    total_user_scans = len(list(db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).stream()))
+    disease_count = len(list(db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).where(filter=FieldFilter('type', '==', 'disease')).stream()))
+    pest_count = len(list(db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).where(filter=FieldFilter('type', '==', 'pest')).stream()))
+    
+    context = {
+        'recent_scans': scans_data,
+        'total_scans': total_user_scans,
+        'disease_scans': disease_count,
+        'pest_scans': pest_count,
+    }
+    
+    return render(request, 'user/userdashboard.html', context)
+
 
 def scan_diagnose(request):
-    """User scan diagnose view"""
-    context = {
-        'uid': request.session.get('uid'),
-        'user_email': request.session.get('user_email'),
-        'role': request.session.get('role', 'user')
-    }
-    return render(request, 'user/scan_diagnose.html', context)
-
-def guest_scan_diagnose(request):
-    """Guest scan diagnose view"""
-    today = datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d')
-    session_key = f'guest_limits_{today}'
-
-    if session_key not in request.session:
-        request.session[session_key] = {'disease': 0, 'pest': 0}
-
-    context = {
-        'daily_limits': request.session[session_key],
-        'max_daily_scans': 5,
-        'today': today
-    }
-    return render(request, 'guest/guest_scan_diagnose.html', context)
-
-import hashlib
-
-def _get_image_hash(image_file):
-    """Generate a hash for the image to detect duplicates"""
-    import hashlib
-    image_file.seek(0)  # Reset file pointer
-    content = image_file.read()
-    return hashlib.md5(content).hexdigest()
-
-def _is_duplicate_scan(user_id, image_hash):
-    """Check if the same image has been scanned before"""
-    try:
-        # Check in Firebase for existing scans with same hash
-        scans_ref = db.collection('scans')
-        query = scans_ref.where('user_id', '==', user_id).where('image_hash', '==', image_hash)
-        docs = list(query.stream())
-        return len(docs) > 0
-    except Exception:
-        return False
-
-def simulate_analysis(scan_type, image_file=None):
-    """Simulate ML analysis with deterministic results based on image hash"""
-    classes, recommendations = (
-        (DISEASE_CLASSES, DISEASE_RECOMMENDATIONS) if scan_type == 'disease' 
-        else (PEST_CLASSES, PEST_RECOMMENDATIONS)
-    )
-    
-    # Generate deterministic result based on image content
-    if image_file:
-        try:
-            # Reset file pointer to beginning
-            image_file.seek(0)
-            # Create hash of image content
-            image_hash = hashlib.md5(image_file.read()).hexdigest()
-            # Reset file pointer again for later use
-            image_file.seek(0)
-            
-            # Use hash to deterministically select class and confidence
-            hash_int = int(image_hash[:8], 16)
-            class_index = hash_int % len(classes)
-            result_class = classes[class_index]
-            
-            # Generate deterministic confidence (75-98%)
-            confidence = 0.75 + ((hash_int % 23) / 100.0)
-        except Exception as e:
-            # Fallback to random
-            result_class = random.choice(classes)
-            confidence = random.uniform(0.75, 0.98)
-    else:
-        # Fallback to random if no image provided
-        result_class = random.choice(classes)
-        confidence = random.uniform(0.75, 0.98)
-    
-    return {
-        'class': result_class,
-        'confidence': confidence,
-        'recommendations': recommendations.get(result_class, [])
-    }
+    """Scan diagnose view"""
+    return render(request, 'user/scan_diagnose.html')
 
 @csrf_exempt
-def scan_image(request):
-    """Handle image scanning for both users and guests"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Invalid request method'})
 
-    try:
-        scan_type = request.POST.get('scan_type', 'disease')
-        image_file = request.FILES.get('image')
-        if not image_file:
-            return JsonResponse({'success': False, 'message': 'No image provided'})
-
-        # Default guest
-        user_type, user_id, user_email, user_name = 'guest', 'guest', 'guest@example.com', 'Guest User'
-
-        if request.session.get('uid'):
-            user_type = 'user'
-            user_id = request.session.get('uid')
-            user_email = request.session.get('user_email') or request.session.get('email', 'unknown@example.com')
-            user_name = request.session.get('name', 'User')
-        else:
-            # Guest scan limits
-            today = datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d')
-            session_key = f'guest_limits_{today}'
-            if session_key not in request.session:
-                request.session[session_key] = {'disease': 0, 'pest': 0}
-            daily_limits = request.session[session_key]
-            if daily_limits.get(scan_type, 0) >= 5:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Daily {scan_type} scan limit reached (5/5). Please sign up for unlimited scans.'
-                })
-
-        # Check for duplicate image (prevent scanning same image multiple times)
-        image_hash = _get_image_hash(image_file)
-        if _is_duplicate_scan(user_id, image_hash):
+def predict_image(request):
+    """Predict image for disease/pest detection"""
+    if request.method == 'POST' and request.FILES.get('image'):
+        try:
+            image_file = request.FILES['image']
+            
+            # Preprocess image
+            processed_image = preprocess_image(image_file)
+            
+            # Predict with both models
+            disease_prediction = disease_model.predict(processed_image)
+            pest_prediction = pest_model.predict(processed_image)
+            
+            # Get predictions
+            disease_class_idx = np.argmax(disease_prediction[0])
+            disease_confidence = float(disease_prediction[0][disease_class_idx])
+            disease_class = DISEASE_CLASSES[disease_class_idx]
+            
+            pest_class_idx = np.argmax(pest_prediction[0])
+            pest_confidence = float(pest_prediction[0][pest_class_idx])
+            pest_class = PEST_CLASSES[pest_class_idx]
+            
+            # Determine primary issue (higher confidence)
+            if disease_confidence > pest_confidence:
+                primary_type = 'disease'
+                primary_class = disease_class
+                primary_confidence = disease_confidence
+                recommendations = DISEASE_RECOMMENDATIONS.get(disease_class, [])
+            else:
+                primary_type = 'pest'
+                primary_class = pest_class
+                primary_confidence = pest_confidence
+                recommendations = PEST_RECOMMENDATIONS.get(pest_class, [])
+            
+            # Save to Firestore
+            scan_data = {
+                'user_id': str(request.user.id),
+                'username': request.user.username,
+                'type': primary_type,
+                'disease_class': disease_class,
+                'disease_confidence': disease_confidence,
+                'pest_class': pest_class,
+                'pest_confidence': pest_confidence,
+                'primary_class': primary_class,
+                'primary_confidence': primary_confidence,
+                'recommendations': recommendations,
+                'timestamp': datetime.now(pytz.timezone('Asia/Manila')),
+                'image_name': image_file.name
+            }
+            
+            doc_ref = db.collection('scans').add(scan_data)
+            
+            response_data = {
+                'success': True,
+                'scan_id': doc_ref[1].id,
+                'type': primary_type,
+                'disease_result': {
+                    'class': disease_class,
+                    'confidence': round(disease_confidence * 100, 2)
+                },
+                'pest_result': {
+                    'class': pest_class,
+                    'confidence': round(pest_confidence * 100, 2)
+                },
+                'primary_result': {
+                    'type': primary_type,
+                    'class': primary_class,
+                    'confidence': round(primary_confidence * 100, 2)
+                },
+                'recommendations': recommendations
+            }
+            
+            return JsonResponse(response_data)
+            
+        except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': 'This image has already been scanned. Please upload a different image.',
-                'duplicate': True
+                'error': str(e)
             })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
 
-        # Simulate scan
-        analysis_result = simulate_analysis(scan_type, image_file)
-        scan_id = str(uuid.uuid4())
 
-        scan_data = {
-            'scan_id': scan_id,
-            'user_id': user_id,
-            'user_email': user_email,
-            'user_name': user_name,
-            'user_type': user_type,
-            'type': scan_type,
-            'result': analysis_result['class'],
-            'confidence': analysis_result['confidence'],
-            'recommendations': analysis_result['recommendations'],
-            'image_name': image_file.name,
-            'image_hash': image_hash,
-            'timestamp': firestore.SERVER_TIMESTAMP,
-            'hidden': False
-        }
+def scan_history(request):
+    """User scan history view"""
+    user_id = str(request.user.id)
+    
+    # Get user's scans
+    user_scans = db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+    scans_data = []
+    
+    for scan in user_scans:
+        scan_data = scan.to_dict()
+        scan_data['id'] = scan.id
+        scans_data.append(scan_data)
+    
+    return render(request, 'user/scan_history.html', {'scans': scans_data})
 
-        # Save to Firestore
-        try:
-            doc_ref = db.collection('scans').document(scan_id)
-            doc_ref.set(scan_data)
-        except Exception as firestore_error:
-            pass  # Continue without Firestore if it fails
 
-        if user_type == 'guest':
-            request.session[session_key][scan_type] += 1
-            request.session.modified = True
-            remaining_scans = {
-                'disease': max(0, 5 - request.session[session_key].get('disease', 0)),
-                'pest': max(0, 5 - request.session[session_key].get('pest', 0))
-            }
-        else:
-            remaining_scans = {'disease': 'unlimited', 'pest': 'unlimited'}
-
+def toggle_history(request):
+    """Toggle history visibility"""
+    if request.method == 'POST':
+        # This would typically update user preferences in the database
+        # For now, we'll use session storage
+        show_history = request.session.get('show_history', True)
+        request.session['show_history'] = not show_history
+        
         return JsonResponse({
             'success': True,
-            'scan_id': scan_id,
-            'type': scan_type,
-            'result': analysis_result['class'],
-            'confidence': round(analysis_result['confidence'] * 100, 2),
-            'recommendations': analysis_result['recommendations'],
-            'remaining_scans': remaining_scans
+            'show_history': not show_history
         })
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Error processing scan: {str(e)}'})
-
-def get_scan_history(request):
-    """Get scan history for current user/guest"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            return JsonResponse({'success': True, 'scans': []})
+    
+    return JsonResponse({'success': False})
 
 
-        # Get user's scans from Firestore
-        scans_ref = db.collection('scans').where('user_id', '==', uid).order_by('timestamp', direction=firestore.Query.DESCENDING)
-        scans = []
-
-        for doc in scans_ref.stream():
-            scan_data = doc.to_dict()
-            scan_data['id'] = doc.id
-
-            # Preserve original timestamp format
-            if 'timestamp' in scan_data and scan_data['timestamp']:
-                if hasattr(scan_data['timestamp'], 'seconds'):
-                    scan_data['timestamp'] = {
-                        'seconds': scan_data['timestamp'].seconds,
-                        'nanoseconds': getattr(scan_data['timestamp'], 'nanoseconds', 0)
-                    }
-                elif isinstance(scan_data['timestamp'], str):
-                    pass  # Keep original ISO string
-                else:
-                    scan_data['timestamp'] = scan_data['timestamp'].isoformat()
-            else:
-                scan_data['timestamp'] = scan_data.get('created_at', None)
-
-            scans.append(scan_data)
-
-        return JsonResponse({'success': True, 'scans': scans})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-@csrf_exempt
 def delete_user_scan(request, scan_id):
     """Delete user's scan"""
     if request.method == 'POST':
         try:
-            uid = request.session.get('uid')
-            if not uid:
-                return JsonResponse({'success': False, 'error': 'Authentication required'})
+            user_id = str(request.user.id)
             
+            # Verify the scan belongs to the user
             scan_ref = db.collection('scans').document(scan_id)
-            scan_doc = scan_ref.get()
+            scan = scan_ref.get()
             
-            if not scan_doc.exists:
-                return JsonResponse({'success': False, 'error': 'Scan not found'})
-            
-            scan_data = scan_doc.to_dict()
-            
-            if scan_data.get('user_id') != uid:
+            if scan.exists and scan.to_dict().get('user_id') == user_id:
+                scan_ref.delete()
+                return JsonResponse({'success': True})
+            else:
                 return JsonResponse({'success': False, 'error': 'Unauthorized'})
-            
-            scan_ref.delete()
-            
-            return JsonResponse({'success': True, 'message': 'Scan deleted successfully'})
-            
+                
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+def scan_history_api(request):
+    """API endpoint to fetch user's scan history"""
+    if request.method == 'GET':
+        try:
+            user_id = str(request.user.id)
+            
+            # Get user's scans from Firestore
+            user_scans = db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+            scans_data = []
+            
+            for scan in user_scans:
+                scan_data = scan.to_dict()
+                scan_data['id'] = scan.id
+                scans_data.append(scan_data)
+            
+            return JsonResponse({
+                'success': True,
+                'scans': scans_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 # ===============================
 # Scan End
 # ===============================
+
 
 # ===============================
 # Marketplace
@@ -1264,6 +984,11 @@ def checkout_view(request):
     user_role = request.session.get('role')
     
     # Debug output
+    print(f"UID: {uid}")
+    print(f"Email: {user_email}")
+    print(f"Name: {user_name}")
+    print(f"Role: {user_role}")
+    print(f"Session data: {dict(request.session)}")
     
     # Check if user is authenticated (has Firebase session data)
     if not uid or not user_email:
@@ -1294,6 +1019,7 @@ def checkout_view(request):
                 })
                 total_amount += item_total
         except Exception as e:
+            print(f"Error getting product {item_data['product_id']}: {str(e)}")
             continue
     
     if not cart_items:
@@ -1386,10 +1112,13 @@ def checkout_view(request):
             # Store order ID in session for confirmation page
             request.session['last_order_id'] = order_id
             
-            # Redirect to order confirmation (success message shown on that page)
+            messages.success(request, f'Order placed successfully! Order ID: {order_id}')
+            
+            # Redirect to order confirmation
             return redirect('order_confirmation', order_id=order_id)
             
         except Exception as e:
+            print(f"Order creation error: {str(e)}")
             messages.error(request, f'Error processing order: {str(e)}')
             context = {
                 'cart_items': cart_items,
@@ -1430,71 +1159,59 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+@user_required
 def order_confirmation(request, order_id):
-    """Order confirmation page - accessible to all authenticated users"""
+    """Order confirmation page"""
     try:
+        # Get current user info
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email') or request.session.get('email')
-        if not uid or not user_email:
+        if not uid:
             messages.error(request, 'Please log in to view your order.')
             return redirect('login')
-
+        
+        # Get order from Firestore
         orders_ref = db.collection('orders')
         query = orders_ref.where('order_id', '==', order_id).limit(1)
         docs = list(query.stream())
+        
         if not docs:
             messages.error(request, 'Order not found.')
-            return redirect('user_orders')
-
-        doc = docs[0]
-        order_data = doc.to_dict()
-        order_data['id'] = doc.id
-
-        # Check ownership using firebase_uid or customer_email fallback
-        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
-        owner_email = order_data.get('customer_email') or order_data.get('user_email')
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+            return redirect('userdashboard')
+        
+        order_data = docs[0].to_dict()
+        order_data['id'] = docs[0].id
+        
+        # Check ownership
+        if order_data.get('user_id') != uid:
             messages.error(request, 'Access denied.')
             return redirect('userdashboard')
-
-        # Convert timestamp to Asia/Manila if Firestore timestamp
-        if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+        
+        # Convert timestamp
+        # NEW (shows correct Philippines time)
+        if hasattr(order_data['created_at'], 'seconds'):
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
-
-        # Ensure items are accessible in template as both order.items and order_items
-        order_items = order_data.get('items', [])
-        order_data['items'] = order_items  # Make sure items is in order_data
         
-        # Ensure total_amount exists
-        if 'total_amount' not in order_data:
-            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_items)
-
+        # Get order items
+        items_ref = orders_ref.document(docs[0].id).collection('items')
+        order_items = [item.to_dict() for item in items_ref.stream()]
+        
         context = {
             'order': order_data,
             'order_items': order_items,
             'order_id': order_id,
             'user_name': request.session.get('name'),
-            'user_email': user_email,
+            'user_email': request.session.get('email'),
             'payment_status': order_data.get('payment_status', 'pending')
         }
+        
         return render(request, 'user/order_confirmation.html', context)
-
+        
     except Exception as e:
-        logger.exception("Order confirmation error")
-        # Don't show error message - let template handle gracefully
-        # Only redirect if it's a critical error
-        context = {
-            'order': {'order_id': order_id, 'items': [], 'total_amount': 0},
-            'order_items': [],
-            'order_id': order_id,
-            'user_name': request.session.get('name'),
-            'user_email': user_email or '',
-            'payment_status': 'pending',
-            'error': True
-        }
-        return render(request, 'user/order_confirmation.html', context)
+        print(f"Order confirmation error: {str(e)}")
+        messages.error(request, 'Error loading order details.')
+        return redirect('userdashboard')
 
 def logout_view(request):
     """Logout view"""
@@ -1528,6 +1245,7 @@ class FirestoreService:
             
             return None
         except Exception as e:
+            print(f"Error getting order: {str(e)}")
             return None
     
     def add_order(self, order_data):
@@ -1536,6 +1254,7 @@ class FirestoreService:
             doc_ref = db.collection('orders').add(order_data)
             return doc_ref[1].id  # Return document ID
         except Exception as e:
+            print(f"Error adding order: {str(e)}")
             raise e
 
 
@@ -1582,54 +1301,33 @@ from django.http import JsonResponse
 from .models import Order, OrderItem, CartItem, Product
 from decimal import Decimal
 
-# Removed duplicate user_orders function - keeping the most complete version at line 10221
+def user_orders(request):
+    """
+    Display user's orders.
+    Works for both authenticated and guest users.
+    """
+    if request.user.is_authenticated:
+        orders = Order.objects.filter(user=request.user).prefetch_related('items__product').order_by('-created_at')
+    else:
+        # For guests, show empty list or redirect to login
+        orders = Order.objects.none()
+
+    return render(request, 'user/orders.html', {
+        'orders': orders,
+        'user_email': request.user.email if request.user.is_authenticated else 'Guest',
+    })
 
 
 @user_required
 def order_detail(request, order_id):
-    """Order detail view (Firestore)"""
-    try:
-        uid = request.session.get('uid')
-        user_email = request.session.get('user_email') or request.session.get('email')
-        if not uid:
-            messages.error(request, 'Please log in to view your order.')
-            return redirect('login')
-
-        # Try by document ID first
-        order_ref = db.collection('orders').document(order_id)
-        doc = order_ref.get()
-
-        if not doc.exists:
-            # Fallback by human-friendly order_id field
-            q = db.collection('orders').where('order_id', '==', order_id).limit(1)
-            docs = list(q.stream())
-            if not docs:
-                messages.error(request, 'Order not found.')
-                return redirect('user_orders')
-            doc = docs[0]
-
-        order = doc.to_dict()
-        order['id'] = doc.id
-
-        # Ownership check
-        owner_uid = order.get('firebase_uid') or order.get('user_id')
-        owner_email = order.get('customer_email') or order.get('user_email')
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
-            messages.error(request, 'Access denied.')
-            return redirect('user_orders')
-
-        # Convert timestamp
-        if order.get('created_at') and hasattr(order['created_at'], 'seconds'):
-            order['created_at'] = datetime.fromtimestamp(order['created_at'].seconds, tz=pytz.UTC).astimezone(pytz.timezone('Asia/Manila'))
-
-        # Ensure items list exists
-        order.setdefault('items', [])
-
-        return render(request, 'user/order_detail.html', {'order': order})
-    except Exception:
-        logger.exception('Error loading order detail')
-        messages.error(request, 'Error loading order details.')
-        return redirect('user_orders')
+    """Order detail view"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    context = {
+        'order': order,
+    }
+    
+    return render(request, 'user/order_detail.html', context)
 
 @user_required
 @csrf_exempt
@@ -1683,18 +1381,6 @@ def is_admin(user):
 def admin_ecommerce(request):
     """Admin ecommerce dashboard with Firestore data"""
     try:
-        # Check if Firebase is initialized
-        if db is None:
-            return render(request, 'admin/ecommerce.html', {
-                'error': 'Database connection unavailable. Please add Firebase credentials.',
-                'total_products': 0,
-                'total_orders': 0,
-                'pending_orders': 0,
-                'total_revenue': 0,
-                'recent_orders': [],
-                'low_stock_products': [],
-            })
-        
         # ===== ORDERS SECTION =====
         orders_ref = db.collection('orders')
         all_orders_docs = list(orders_ref.stream())
@@ -1771,6 +1457,7 @@ def admin_ecommerce(request):
         return render(request, 'admin/ecommerce.html', context)
 
     except Exception as e:
+        print(f"ERROR in admin_ecommerce: {str(e)}")
         # Fallback empty data
         return render(request, 'admin/ecommerce.html', {
             'total_products': 0,
@@ -1928,8 +1615,8 @@ def admin_delete_product(request, product_id):
                     if default_storage.exists(file_path):
                         default_storage.delete(file_path)
                 except Exception as e:
+                    print(f"Error deleting image: {e}")
         
-                    pass
         firestore_service.delete_product(product_id)
         messages.success(request, 'Product deleted successfully!')
     
@@ -1952,6 +1639,7 @@ import json
 from calendar import monthrange
 
 # Initialize Firestore
+db = firestore.client()
 PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 
 
@@ -1960,15 +1648,8 @@ PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 @admin_required
 @require_http_methods(["POST"])
 def update_order_status(request, order_id):
-    """Update order status with stock deduction and email notifications"""
+    """Update order status with stock deduction, email and in-app notifications"""
     try:
-        # Check if Firebase is initialized
-        if db is None:
-            return JsonResponse({
-                'success': False, 
-                'message': 'Database connection unavailable'
-            })
-        
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
         
@@ -1977,18 +1658,7 @@ def update_order_status(request, order_id):
         
         order_data = order_doc.to_dict()
         old_status = order_data.get('status')
-        
-        # Parse JSON body instead of using request.POST
-        import json
-        try:
-            body_data = json.loads(request.body)
-            new_status = body_data.get('status')
-        except json.JSONDecodeError:
-            # Fallback to POST data if not JSON
-            new_status = request.POST.get('status')
-        
-        if not new_status:
-            return JsonResponse({'success': False, 'message': 'Status parameter is required'})
+        new_status = request.POST.get('status')
         
         # Update order status in Firebase
         order_ref.update({
@@ -2004,9 +1674,36 @@ def update_order_status(request, order_id):
         # Send email notification
         send_status_change_email(order_data, new_status)
         
+        # Create in-app notification for user
+        user_id = order_data.get('firebase_uid') or order_data.get('user_id')
+        order_number = order_data.get('order_id', 'N/A')
+        
+        if user_id:
+            from .views import create_notification
+            
+            status_messages = {
+                'confirmed': f'Your order #{order_number} has been confirmed and is being prepared.',
+                'processing': f'Your order #{order_number} is now being processed.',
+                'shipped': f'Great news! Your order #{order_number} has been shipped.',
+                'delivered': f'Your order #{order_number} has been delivered. Thank you!',
+                'cancelled': f'Your order #{order_number} has been cancelled.'
+            }
+            
+            notification_message = status_messages.get(new_status, f'Order #{order_number} status updated to {new_status}')
+            
+            create_notification(
+                user_id=user_id,
+                title=f'Order {new_status.title()}',
+                message=notification_message,
+                notification_type='order_status',
+                order_id=order_number,
+                metadata={'status': new_status, 'old_status': old_status}
+            )
+        
         return JsonResponse({'success': True, 'message': f'Order status updated to {new_status}'})
         
     except Exception as e:
+        print(f"Error updating order status: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)})
 
 def deduct_stock_for_order(order_data):
@@ -2036,11 +1733,12 @@ def deduct_stock_for_order(order_data):
                     'last_updated': datetime.now(pytz.timezone('Asia/Manila'))
                 })
                 
+                print(f"Stock updated for {product_data.get('name', 'Unknown Product')}: {current_stock} -> {new_stock}")
             else:
-                pass  # Product not found
+                print(f"Product {product_id} not found for stock deduction")
                 
     except Exception as e:
-        pass  # Error deducting stock
+        print(f"Error deducting stock: {str(e)}")
 
 def send_status_change_email(order_data, new_status):
     """Send email notification when order status changes"""
@@ -2054,6 +1752,7 @@ def send_status_change_email(order_data, new_status):
         customer_name = order_data.get('customer_first_name', 'Customer')
         
         if not customer_email:
+            print("No customer email found for notification")
             return
             
         # Email content based on status
@@ -2087,11 +1786,13 @@ def send_status_change_email(order_data, new_status):
                 fail_silently=True,
             )
             
+            print(f"Email sent to {customer_email} for order {order_id} status: {new_status}")
         else:
-            pass  # Customer email not available
+            print(f"No email template for status: {new_status}")
             
     except Exception as e:
-        pass  # Error sending email
+        print(f"Error sending email notification: {str(e)}")
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from firebase_admin import firestore
@@ -2102,9 +1803,10 @@ import pytz
 from collections import defaultdict
 import calendar
 
-# Firebase is already initialized in firebase_config.py
-# No need to initialize again here
-from .firebase_config import db
+# Initialize Firebase if not already done
+# Firebase already initialized in firebase_config
+
+db = firestore.client()
 
 USD_TO_PHP_RATE = 56.0  # 1 USD = 56 PHP (adjust as needed)
 
@@ -2125,6 +1827,7 @@ def get_customer_name(user_email):
             return name
         return user_email.split('@')[0]  # Fallback to email username
     except Exception as e:
+        print(f"[DEBUG] Error fetching customer name for {user_email}: {str(e)}")
         return user_email.split('@')[0]
 
 def admin_reports(request):
@@ -2136,11 +1839,13 @@ def admin_reports(request):
         current_year = now.year
         current_month = now.month
         
+        print(f"[DEBUG] Fetching reports for {current_year}-{current_month}")
         
         # Fetch all orders from Firestore
         orders_ref = db.collection('orders')
         all_orders = list(orders_ref.stream())  # Convert to list to ensure all data is fetched
         
+        print(f"[DEBUG] Total orders in database: {len(all_orders)}")
         
         # Process orders
         monthly_orders = []
@@ -2190,9 +1895,11 @@ def admin_reports(request):
                             if order_timestamp:
                                 break
                         except Exception as e:
+                            print(f"[DEBUG] Error parsing timestamp field {field}: {str(e)}")
                             continue
                 
                 if not order_timestamp:
+                    print(f"[DEBUG] No valid timestamp found for order {order_doc.id}, using current time")
                     order_timestamp = now
                 
                 if (order_timestamp.year == current_year and 
@@ -2237,8 +1944,11 @@ def admin_reports(request):
                             product_sales[product_name] += quantity
                             
             except Exception as e:
+                print(f"[DEBUG] Error processing order {order_doc.id}: {str(e)}")
                 continue
         
+        print(f"[DEBUG] Monthly orders found: {len(monthly_orders)}")
+        print(f"[DEBUG] Metrics - Total: {len(monthly_orders)}, Delivered: {delivered_orders}, Pending: {pending_orders}, Revenue: ₱{total_revenue:,.2f}")
         
         # Prepare chart data
         chart_dates = []
@@ -2268,9 +1978,11 @@ def admin_reports(request):
             'current_year': current_year,
         }
         
+        print("[DEBUG] Context prepared successfully")
         return render(request, 'admin/reports.html', context)
         
     except Exception as e:
+        print(f"[ERROR] Failed to generate reports: {str(e)}")
         import traceback
         traceback.print_exc()
         # Return empty context to prevent template errors
@@ -2292,6 +2004,7 @@ def admin_reports(request):
 def print_monthly_report(request, year, month):
     """Generate printable monthly report"""
     try:
+        print(f"[DEBUG] Generating print report for {year}-{month}")
         
         # Philippines timezone
         philippines_tz = pytz.timezone('Asia/Manila')
@@ -2368,6 +2081,7 @@ def print_monthly_report(request, year, month):
                         total_revenue += amount_php
                         
             except Exception as e:
+                print(f"[DEBUG] Error processing order for print: {str(e)}")
                 continue
         
         monthly_orders.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -2385,6 +2099,7 @@ def print_monthly_report(request, year, month):
         return render(request, 'admin/print_monthly_report.html', context)
         
     except Exception as e:
+        print(f"[ERROR] Failed to generate print report: {str(e)}")
         context = {
             'monthly_orders': [],
             'total_revenue': 0,
@@ -2428,18 +2143,13 @@ def admin_pending_orders(request):
         return render(request, 'admin/orders.html', context)
         
     except Exception as e:
+        print(f"Error in admin_pending_orders: {str(e)}")
         return redirect('admin_ecommerce')
 
-@admin_required
 @admin_required
 def admin_order_detail(request, order_id):
     """View detailed order information"""
     try:
-        # Check if Firebase is initialized
-        if db is None:
-            messages.error(request, "Database connection unavailable.")
-            return redirect('admin_orders')
-        
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
         
@@ -2463,23 +2173,11 @@ def admin_order_detail(request, order_id):
         for item in order_data.get('items', []):
             item['total_price'] = float(item.get('price', 0)) * int(item.get('quantity', 0))
         
-        # Status choices for dropdown
-        status_choices = [
-            ('pending', 'Pending'),
-            ('confirmed', 'Confirmed'),
-            ('processing', 'Processing'),
-            ('shipped', 'Shipped'),
-            ('delivered', 'Delivered'),
-            ('cancelled', 'Cancelled'),
-        ]
-        
-        context = {
-            'order': order_data,
-            'status_choices': status_choices
-        }
-        return render(request, 'admin/admin_order_detail.html', context)
+        context = {'order': order_data}
+        return render(request, 'admin/order_detail.html', context)
         
     except Exception as e:
+        print(f"Error in admin_order_detail: {str(e)}")
         messages.error(request, "Error loading order details.")
         return redirect('admin_orders')
 
@@ -2523,6 +2221,7 @@ def admin_orders(request):
         return render(request, 'admin/orders.html', context)
         
     except Exception as e:
+        print(f"Error in admin_orders: {str(e)}")
         return redirect('admin_ecommerce')
 
 # views.py
@@ -2554,8 +2253,8 @@ def admin_orders(request):
     return render(request, 'admin/orders.html', context)
 
 @admin_required
-def admin_order_detail_orm(request, order_id):
-    """Admin order detail (legacy ORM version - not used)"""
+def admin_order_detail(request, order_id):
+    """Admin order detail"""
     order = get_object_or_404(Order, id=order_id)
     
     if request.method == 'POST':
@@ -2643,6 +2342,198 @@ def logout_view(request):
     messages.success(request, 'You have been successfully logged out.')
     return redirect('login')
 
+
+# ===============================
+# Admin User Management
+# ===============================
+
+# views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+
+import json
+
+
+def admin_user_management(request):
+    """Main user management page"""
+    users = User.objects.all().order_by('-date_joined')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        users = users.filter(
+            Q(first_name__icontains=search) | 
+            Q(last_name__icontains=search) | 
+            Q(email__icontains=search)
+        )
+    
+    # Filter by role
+    role_filter = request.GET.get('role', '')
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        if status_filter == 'Active':
+            users = users.filter(is_active=True)
+        elif status_filter == 'Inactive':
+            users = users.filter(is_active=False)
+    
+    # Pagination
+    paginator = Paginator(users, 10)
+    page_number = request.GET.get('page')
+    users_page = paginator.get_page(page_number)
+    
+    context = {
+        'users': users_page,
+        'search': search,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'total_users': User.objects.count(),
+    }
+    
+    return render(request, 'admin/user_management.html', context)
+
+
+def admin_get_users_api(request):
+    """API endpoint to fetch users as JSON"""
+    users = User.objects.all().order_by('-date_joined')
+    
+    # Apply filters
+    search = request.GET.get('search', '')
+    if search:
+        users = users.filter(
+            Q(first_name__icontains=search) | 
+            Q(last_name__icontains=search) | 
+            Q(email__icontains=search)
+        )
+    
+    role_filter = request.GET.get('role', '')
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        if status_filter == 'Active':
+            users = users.filter(is_active=True)
+        elif status_filter == 'Inactive':
+            users = users.filter(is_active=False)
+    
+    # Convert to JSON
+    users_data = []
+    for user in users:
+        users_data.append({
+            'id': user.id,
+            'name': f"{user.first_name} {user.last_name}",
+            'email': user.email,
+            'role': getattr(user, 'role', 'User'),
+            'status': 'Active' if user.is_active else 'Inactive',
+            'joinDate': user.date_joined.isoformat(),
+            'avatar': user.profile.avatar.url if hasattr(user, 'profile') and user.profile.avatar else '/static/images/default-avatar.jpg',
+            'phone': getattr(user.profile, 'phone', '') if hasattr(user, 'profile') else '',
+            'location': getattr(user.profile, 'location', '') if hasattr(user, 'profile') else '',
+        })
+    
+    return JsonResponse({'users': users_data})
+
+def admin_add_user(request):
+    """Add new user"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Create user
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                first_name=data.get('name', '').split(' ')[0],
+                last_name=' '.join(data.get('name', '').split(' ')[1:]),
+                is_active=data.get('status') == 'Active'
+            )
+            
+            # Set role if your User model has role field
+            if hasattr(user, 'role'):
+                user.role = data.get('role', 'User')
+                user.save()
+            
+            # Create or update profile if exists
+            if hasattr(user, 'profile'):
+                user.profile.phone = data.get('phone', '')
+                user.profile.location = data.get('location', '')
+                user.profile.save()
+            
+            return JsonResponse({'success': True, 'message': 'User added successfully'})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+
+def admin_edit_user(request, user_id):
+    """Edit existing user"""
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Update user fields
+            name_parts = data.get('name', '').split(' ')
+            user.first_name = name_parts[0]
+            user.last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            user.email = data.get('email', user.email)
+            user.is_active = data.get('status') == 'Active'
+            
+            if hasattr(user, 'role'):
+                user.role = data.get('role', user.role)
+            
+            user.save()
+            
+            # Update profile if exists
+            if hasattr(user, 'profile'):
+                user.profile.phone = data.get('phone', '')
+                user.profile.location = data.get('location', '')
+                user.profile.save()
+            
+            return JsonResponse({'success': True, 'message': 'User updated successfully'})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    # Return user data for editing
+    user_data = {
+        'id': user.id,
+        'name': f"{user.first_name} {user.last_name}",
+        'email': user.email,
+        'role': getattr(user, 'role', 'User'),
+        'status': 'Active' if user.is_active else 'Inactive',
+        'phone': getattr(user.profile, 'phone', '') if hasattr(user, 'profile') else '',
+        'location': getattr(user.profile, 'location', '') if hasattr(user, 'profile') else '',
+    }
+    
+    return JsonResponse(user_data)
+
+
+def admin_delete_user(request, user_id):
+    """Delete user"""
+    if request.method == 'POST':
+        try:
+            user = get_object_or_404(User, id=user_id)
+            user.delete()
+            return JsonResponse({'success': True, 'message': 'User deleted successfully'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
 
 #June
 # Updated views for the farm mapping system
@@ -3163,7 +3054,11 @@ from firebase_admin import credentials, firestore
 from django.conf import settings
 import os
 
-# Firebase and Firestore already initialized in firebase_config module
+# Initialize Firebase Admin SDK
+# Firebase already initialized in firebase_config
+
+# Get Firestore client
+db = firestore.client()
 
 @admin_required
 def farm_location(request):
@@ -3389,6 +3284,129 @@ def api_user_farm_request_firebase(request):
                 'error': str(e)
             })
 
+# User Management
+@admin_required
+def admin_user_management(request):
+    users = User.objects.all().order_by('-date_joined')
+    
+    # Handle search
+    search = request.GET.get('search', '')
+    if search:
+        users = users.filter(
+            Q(first_name__icontains=search) | 
+            Q(last_name__icontains=search) | 
+            Q(email__icontains=search) |
+            Q(username__icontains=search)
+        )
+    
+    # Handle role filter
+    role_filter = request.GET.get('role', '')
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    # Handle status filter
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        is_active = status_filter.lower() == 'active'
+        users = users.filter(is_active=is_active)
+    
+    paginator = Paginator(users, 10)
+    page_number = request.GET.get('page')
+    users_page = paginator.get_page(page_number)
+    
+    context = {
+        'users': users_page,
+        'search': search,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'total_users': User.objects.count(),
+        'active_users': User.objects.filter(is_active=True).count(),
+        'inactive_users': User.objects.filter(is_active=False).count(),
+    }
+    return render(request, 'admin/user_management.html', context)
+
+@admin_required
+def admin_add_user(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        role = request.POST.get('role')
+        password = request.POST.get('password', 'defaultpass123')
+        is_active = request.POST.get('is_active') == 'on'
+        phone = request.POST.get('phone', '')
+        address = request.POST.get('address', '')
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return redirect('admin_user_management')
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists.')
+            return redirect('admin_user_management')
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            is_active=is_active,
+            phone=phone,
+            address=address
+        )
+        
+        messages.success(request, f'User {username} created successfully!')
+        return redirect('admin_user_management')
+    
+    return redirect('admin_user_management')
+
+@admin_required
+def admin_edit_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        user.username = request.POST.get('username')
+        user.email = request.POST.get('email')
+        user.first_name = request.POST.get('first_name')
+        user.last_name = request.POST.get('last_name')
+        user.role = request.POST.get('role')
+        user.is_active = request.POST.get('is_active') == 'on'
+        user.phone = request.POST.get('phone', '')
+        user.address = request.POST.get('address', '')
+        
+        # Update password if provided
+        new_password = request.POST.get('password')
+        if new_password:
+            user.set_password(new_password)
+        
+        user.save()
+        messages.success(request, f'User {user.username} updated successfully!')
+        return redirect('admin_user_management')
+    
+    return redirect('admin_user_management')
+
+@admin_required
+def admin_delete_user(request, user_id):
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        username = user.username
+        user.delete()
+        messages.success(request, f'User {username} deleted successfully!')
+    return redirect('admin_user_management')
+
+@admin_required
+def admin_toggle_user_status(request, user_id):
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        status = 'activated' if user.is_active else 'deactivated'
+        messages.success(request, f'User {user.username} {status} successfully!')
+    return redirect('admin_user_management')
+
 
 
 from django.shortcuts import render, redirect
@@ -3418,6 +3436,7 @@ FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
 SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 
 # Initialize Firestore
+db = firestore.client()
 
 # Sample farm data with images - this will be replaced by Firebase data
 SAMPLE_FARMS = [
@@ -3486,6 +3505,7 @@ PENDING_FARM_REQUESTS = []
 
 @admin_required
 def admin_dashboard(request):
+    print("[DEBUG] Accessing Admin Dashboard:", request.session.get('user_email'), request.session.get('role'))
     
     # Get farm statistics
     try:
@@ -3530,6 +3550,7 @@ def admin_dashboard(request):
         pending_farms = len([f for f in farms_data if f.get('status') == 'Pending Approval'])
         
     except Exception as e:
+        print(f"Error fetching farm data: {e}")
         farms_data = SAMPLE_FARMS.copy()
         total_farms = len(farms_data)
         total_area = sum(farm.get('area', 0) for farm in farms_data)
@@ -3551,6 +3572,7 @@ def admin_dashboard(request):
 
 @user_required
 def userdashboard(request):
+    print("[DEBUG] Accessing User Dashboard:", request.session.get('user_email'), request.session.get('role'))
 
     if request.session.get('role') == 'guest':
         messages.error(request, "Guest users cannot access user dashboard.")
@@ -3707,6 +3729,7 @@ def api_farms_firebase(request):
                 farm_data['id'] = doc_ref[1].id
             except Exception as firebase_error:
                 # If Firebase fails, add to sample data
+                print(f"Firebase error: {firebase_error}")
                 farm_data['id'] = max([f['id'] for f in SAMPLE_FARMS]) + 1 if SAMPLE_FARMS else 1
                 SAMPLE_FARMS.append(farm_data)
             
@@ -3751,6 +3774,7 @@ def api_farms_firebase(request):
                 db.collection('farms').document(str(farm_id)).update(update_data)
             except Exception as firebase_error:
                 # If Firebase fails, update sample data
+                print(f"Firebase error: {firebase_error}")
                 for i, farm in enumerate(SAMPLE_FARMS):
                     if str(farm['id']) == str(farm_id):
                         SAMPLE_FARMS[i].update(update_data)
@@ -3791,7 +3815,7 @@ def api_farms_firebase(request):
                 db.collection('farms').document(str(farm_id)).delete()
             except Exception as firebase_error:
                 # If Firebase fails, delete from sample data
-                pass
+                print(f"Firebase error: {firebase_error}")
             
             # Remove from sample data
             SAMPLE_FARMS[:] = [farm for farm in SAMPLE_FARMS if str(farm['id']) != str(farm_id)]
@@ -3909,8 +3933,8 @@ def api_user_farm_request_firebase(request):
                 # Also save to Firebase
                 db.collection('farm_requests').add(request_data)
             except Exception as firebase_error:
+                print(f"Firebase error: {firebase_error}")
                 # Continue even if Firebase fails, we have local storage
-                pass
             
             return JsonResponse({
                 'success': True,
@@ -3974,28 +3998,12 @@ def api_approve_farm_request(request):
             # Remove from pending requests
             PENDING_FARM_REQUESTS[:] = [req for req in PENDING_FARM_REQUESTS if req['id'] != int(request_id)]
             
-            # Update the request status in Firebase
-            try:
-                # Find and update the farm request in Firebase
-                farm_requests_ref = db.collection('farm_requests')
-                query = farm_requests_ref.where('id', '==', int(request_id))
-                docs = list(query.stream())
-                
-                for doc in docs:
-                    doc.reference.update({
-                        'status': 'approved',
-                        'approved_at': datetime.now(pytz.timezone('Asia/Manila')),
-                        'approved_by': request.session.get('user_email', 'admin')
-                    })
-            except Exception as firebase_error:
-            
-                pass
             try:
                 # Also save to Firebase
                 db.collection('farms').add(approved_farm)
             except Exception as firebase_error:
+                print(f"Firebase error: {firebase_error}")
             
-                pass
             return JsonResponse({
                 'success': True,
                 'message': 'Farm request approved successfully!',
@@ -4006,144 +4014,6 @@ def api_approve_farm_request(request):
                 'success': False,
                 'error': str(e)
             })
-
-def api_reject_farm_request(request):
-    """API endpoint for admins to reject pending farm requests"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            request_id = data.get('request_id')
-            reason = data.get('reason', 'No reason provided')
-            
-            if not request_id:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Request ID is required'
-                })
-            
-            # Update the request status in Firebase
-            try:
-                farm_requests_ref = db.collection('farm_requests')
-                query = farm_requests_ref.where('id', '==', int(request_id))
-                docs = list(query.stream())
-                
-                if not docs:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Farm request not found'
-                    })
-                
-                for doc in docs:
-                    doc.reference.update({
-                        'status': 'rejected',
-                        'rejected_at': datetime.now(pytz.timezone('Asia/Manila')),
-                        'rejected_by': request.session.get('user_email', 'admin'),
-                        'rejection_reason': reason
-                    })
-                
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Farm request rejected successfully!'
-                })
-            except Exception as firebase_error:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Firebase error: {str(firebase_error)}'
-                })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-# ===============================
-# NOTIFICATION API ENDPOINTS
-# ===============================
-
-@csrf_exempt
-def api_get_notifications(request):
-    """API endpoint to fetch user notifications"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'})
-        
-        limit = int(request.GET.get('limit', 10))
-        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
-        
-        notifications = get_user_notifications(uid, limit=limit, unread_only=unread_only)
-        
-        # Convert datetime objects to strings for JSON serialization
-        for notif in notifications:
-            if 'created_at' in notif and hasattr(notif['created_at'], 'strftime'):
-                notif['created_at'] = notif['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        unread_count = len([n for n in notifications if not n.get('read', False)])
-        
-        return JsonResponse({
-            'success': True,
-            'notifications': notifications,
-            'unread_count': unread_count
-        })
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error fetching notifications: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@csrf_exempt
-def api_mark_notification_read(request):
-    """API endpoint to mark notification as read"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            notification_id = data.get('notification_id')
-            
-            if not notification_id:
-                return JsonResponse({'success': False, 'error': 'notification_id required'})
-            
-            success = mark_notification_read(notification_id)
-            
-            return JsonResponse({
-                'success': success,
-                'message': 'Notification marked as read' if success else 'Failed to mark as read'
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-@csrf_exempt
-def api_mark_all_notifications_read(request):
-    """API endpoint to mark all user notifications as read"""
-    if request.method == 'POST':
-        try:
-            uid = request.session.get('uid')
-            if not uid:
-                return JsonResponse({'success': False, 'error': 'Not authenticated'})
-            
-            if not db:
-                return JsonResponse({'success': False, 'error': 'Database unavailable'})
-            
-            # Get all unread notifications for this user
-            query = db.collection('notifications').where('user_id', '==', uid).where('read', '==', False)
-            docs = query.stream()
-            
-            count = 0
-            for doc in docs:
-                doc.reference.update({'read': True})
-                count += 1
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Marked {count} notifications as read'
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 def terms_view(request):
     return render(request, 'accounts/terms.html')
@@ -4191,79 +4061,85 @@ FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
 SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 
 # Initialize Firestore client
+db = firestore.client()
 
 # --------------------------------------------
 # Disease Classes and Recommendations
 # --------------------------------------------
 DISEASE_CLASSES = [
-    'Black Pod Rot',
-    'Fito Disease',
-    'Healthy',
-    'Monilia Disease',
-    'Unknown',
-    'Mirids'
+    'Black Pod Disease',
+    'Frosty Pod Rot',
+    'Witches Broom',
+    'Swollen Shoot Virus',
+    'Healthy'
 ]
 
 PEST_CLASSES = [
-    'Ant Weaver',
+    'Cocoa Pod Borer',
+    'Thrips',
+    'Mealybugs',
     'Aphids',
-    'Healthy',
-    'Mealy Bug',
-    'Unknown Data',
-    'Cocoa Pod Borer'
+    'Healthy'
 ]
 
 # Disease Recommendations
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Disease': [
         'Remove and destroy infected pods immediately',
         'Improve drainage and air circulation',
         'Apply copper-based fungicides',
         'Harvest ripe pods promptly'
     ],
-    'Fito Disease': [
-        'Improve soil drainage and reduce waterlogging',
-        'Remove and destroy infected plant parts',
-        'Apply recommended fungicides as preventive measure',
-        'Monitor plants regularly for new symptoms'
+    'Frosty Pod Rot': [
+        'Remove infected pods and plant debris',
+        'Prune to improve air circulation',
+        'Apply protective fungicides during wet season',
+        'Plant resistant varieties'
+    ],
+    'Witches Broom': [
+        'Prune infected branches 30cm below symptoms',
+        'Remove all brooms and infected tissue',
+        'Apply copper fungicides',
+        'Maintain good farm hygiene'
+    ],
+    'Swollen Shoot Virus': [
+        'Remove and destroy infected trees',
+        'Control mealybug vectors',
+        'Plant virus-free seedlings',
+        'Maintain isolation between plantings'
     ],
     'Healthy': [
         'Continue current management practices',
         'Regular monitoring for early detection',
         'Maintain proper nutrition and irrigation',
         'Keep farm clean and well-maintained'
-    ],
-    'Monilia Disease': [
-        'Remove infected pods and plant debris',
-        'Prune to improve air circulation',
-        'Apply protective fungicides during wet season',
-        'Plant resistant varieties when available'
-    ],
-    'Unknown': [
-        'Monitor affected plants closely for symptom progression',
-        'Consult local agricultural expert for accurate diagnosis',
-        'Avoid unnecessary chemical applications',
-        'Document and report unusual symptoms for research'
-    ],
-    'Mirids': [
-        'Prune and destroy infested shoots',
-        'Apply recommended insecticide if population is high',
-        'Encourage natural predators like wasps and ants',
-        'Regular monitoring and early intervention'
     ]
 }
 
+# Pest Recommendations
 PEST_RECOMMENDATIONS = {
-    'Ant Weaver': [
-        'Locate and destroy ant nests around plantation',
-        'Trim branches touching each other to prevent ant movement',
-        'Use baiting techniques with approved insecticides',
-        'Encourage natural predators of ants'
+    'Cocoa Pod Borer': [
+        'Regular pod harvesting every 7-10 days',
+        'Remove and destroy infected pods',
+        'Use pheromone traps',
+        'Apply biological control agents'
+    ],
+    'Thrips': [
+        'Use blue sticky traps',
+        'Apply neem oil or insecticidal soap',
+        'Maintain proper humidity levels',
+        'Remove weeds around plantation'
+    ],
+    'Mealybugs': [
+        'Use biological control with natural enemies',
+        'Apply systemic insecticides if severe',
+        'Maintain ant control',
+        'Regular monitoring and early intervention'
     ],
     'Aphids': [
-        'Encourage natural predators like lady beetles',
-        'Use reflective mulches to repel aphids',
-        'Apply insecticidal soap or neem oil',
+        'Encourage natural predators',
+        'Use reflective mulches',
+        'Apply insecticidal soap',
         'Remove heavily infested shoots'
     ],
     'Healthy': [
@@ -4271,27 +4147,8 @@ PEST_RECOMMENDATIONS = {
         'Regular monitoring for early detection',
         'Maintain beneficial insect populations',
         'Keep plantation clean and well-managed'
-    ],
-    'Mealy Bug': [
-        'Introduce natural enemies such as parasitoids',
-        'Apply systemic insecticides only if severe',
-        'Maintain ant control to reduce mealybug spread',
-        'Regularly monitor and intervene early'
-    ],
-    'Unknown Data': [
-        'Collect samples for proper identification',
-        'Avoid immediate pesticide application until confirmed',
-        'Monitor population levels over several days',
-        'Seek expert assistance if pest persists'
-    ],
-    'Cocoa Pod Borer': [
-        'Harvest pods every 7-10 days to break pest cycle',
-        'Remove and destroy infested pods immediately',
-        'Install pheromone traps to monitor population',
-        'Apply biological control agents such as Trichogramma'
     ]
 }
-
 
 # ----------------------------
 # User Scan Diagnose View
@@ -4327,7 +4184,20 @@ def guest_scan_diagnose(request):
 # Simulated ML Analysis
 # ----------------------------
 from random import choice, uniform
+def simulate_analysis(scan_type):
+    """Simulate ML model analysis"""
+    classes, recommendations = (
+        (DISEASE_CLASSES, DISEASE_RECOMMENDATIONS) if scan_type == 'disease' 
+        else (PEST_CLASSES, PEST_RECOMMENDATIONS)
+    )
 
+    result_class = choice(classes)
+    confidence = uniform(0.75, 0.98)
+    return {
+        'class': result_class,
+        'confidence': confidence,
+        'recommendations': recommendations.get(result_class, [])
+    }
 
 # ----------------------------
 # Scan Image Handler
@@ -4364,7 +4234,7 @@ def scan_image(request):
                 })
 
         # Simulate scan
-        analysis_result = simulate_analysis(scan_type, image_file)
+        analysis_result = simulate_analysis(scan_type)
         scan_id = str(uuid.uuid4())
 
         scan_data = {
@@ -4399,6 +4269,7 @@ def scan_image(request):
             }
         })
     except Exception as e:
+        print(f"Error in scan_image: {str(e)}")
         return JsonResponse({'success': False, 'message': f'Error processing scan: {str(e)}'})
 
 # ----------------------------
@@ -4423,6 +4294,7 @@ def get_scan_history(request):
 
         return JsonResponse({'success': True, 'scans': scans})
     except Exception as e:
+        print(f"Error getting scan history: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)})
 
 # ----------------------------
@@ -4453,13 +4325,14 @@ def delete_scan(request):
         scan_ref.delete()
         return JsonResponse({'success': True, 'message': 'Scan deleted successfully'})
     except Exception as e:
+        print(f"Error deleting scan: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)})
 
 # ----------------------------
 # Admin Image Analysis View
 # ----------------------------
 @admin_required
-def image_analysis_v2_deprecated(request):
+def image_analysis(request):
     """Admin image analysis view"""
     try:
         scan_type = request.GET.get('type', 'all')
@@ -4516,6 +4389,7 @@ def image_analysis_v2_deprecated(request):
         return render(request, 'admin/image_analysis.html', context)
 
     except Exception as e:
+        print(f"Error in image_analysis view: {str(e)}")
         messages.error(request, f"Error loading scan data: {str(e)}")
         return render(request, 'admin/image_analysis.html', {'scans': [], 'total_scans': 0})
 
@@ -4536,6 +4410,7 @@ def admin_delete_scan(request, scan_id):
                 ref.delete()
                 messages.success(request, 'Scan deleted successfully.')
         except Exception as e:
+            print(f"Error deleting scan: {str(e)}")
             messages.error(request, f"Error deleting scan: {str(e)}")
     return redirect('image_analysis')
 
@@ -4637,9 +4512,128 @@ def admin_dashboard(request):
     return render(request, 'admin/admin_dashboard.html')
 
 
+def admin_user_management(request):
+    users = CustomUser.objects.all().order_by('-date_joined')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        users = users.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)
+        )
+    
+    # Filter by role
+    role_filter = request.GET.get('role', '')
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    
+    # Pagination
+    paginator = Paginator(users, 10)
+    page_number = request.GET.get('page')
+    users = paginator.get_page(page_number)
+    
+    context = {
+        'users': users,
+        'search': search,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'total_users': CustomUser.objects.count(),
+        'active_users': CustomUser.objects.filter(is_active=True).count(),
+        'inactive_users': CustomUser.objects.filter(is_active=False).count(),
+    }
+    return render(request, 'admin/user_management.html', context)
 
 
+def admin_add_user(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
+        role = request.POST.get('role')
+        phone = request.POST.get('phone', '')
+        address = request.POST.get('address', '')
+        password = request.POST.get('password')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if CustomUser.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists!')
+        elif CustomUser.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists!')
+        else:
+            user = CustomUser.objects.create_user(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                role=role,
+                phone=phone,
+                address=address,
+                password=password,
+                is_active=is_active
+            )
+            messages.success(request, f'User {username} created successfully!')
+    
+    return redirect('admin_user_management')
 
+def admin_edit_user(request, user_id):
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == 'POST':
+        user.username = request.POST.get('username')
+        user.email = request.POST.get('email')
+        user.first_name = request.POST.get('first_name', '')
+        user.last_name = request.POST.get('last_name', '')
+        user.role = request.POST.get('role')
+        user.phone = request.POST.get('phone', '')
+        user.address = request.POST.get('address', '')
+        user.is_active = request.POST.get('is_active') == 'on'
+        
+        password = request.POST.get('password')
+        if password:
+            user.set_password(password)
+        
+        user.save()
+        messages.success(request, f'User {user.username} updated successfully!')
+    
+    return redirect('admin_user_management')
+
+def admin_delete_user(request, user_id):
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == 'POST':
+        if user != request.user:
+            username = user.username
+            user.delete()
+            messages.success(request, f'User {username} deleted successfully!')
+        else:
+            messages.error(request, 'You cannot delete your own account!')
+    
+    return redirect('admin_user_management')
+
+def admin_toggle_user_status(request, user_id):
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    if request.method == 'POST':
+        if user != request.user:
+            user.is_active = not user.is_active
+            user.save()
+            status = 'activated' if user.is_active else 'deactivated'
+            messages.success(request, f'User {user.username} {status} successfully!')
+        else:
+            messages.error(request, 'You cannot deactivate your own account!')
+    
+    return redirect('admin_user_management')
 
 
 from django.shortcuts import render, redirect
@@ -4667,6 +4661,7 @@ import requests
 try:
     db = firestore.client()
 except Exception as e:
+    print(f"Firebase initialization error: {e}")
     db = None
 
 # Sample products data for fallback
@@ -4756,7 +4751,6 @@ SAMPLE_PRODUCTS = [
         'unit': 'bar'
     }
 ]
-
 #Guest_Dashboard
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
@@ -4781,35 +4775,10 @@ now = django_timezone.now()
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# DUPLICATE CacaoResNet CLASS - DISABLED FOR RENDER
-# This duplicate class was causing model downloads during build
-# class CacaoResNet(nn.Module):
-#     def __init__(self, num_classes):
-#         super(CacaoResNet, self).__init__()
-#         self.resnet = resnet18(pretrained=True)
-#         num_ftrs = self.resnet.fc.in_features
-#         self.resnet.fc = nn.Linear(num_ftrs, num_classes)
-#
-#     def forward(self, x):
-#         return self.resnet(x)
 
-# Global variables for models - DISABLED FOR RENDER
-# Disease model → 5 classes
-disease_model = None  # Disabled to prevent model loading
-# disease_model = load_pytorch_model(
-#     "models/cacao_disease_resnet_state_dict.pth", 
-#     CacaoResNet, 
-#     num_classes=5
-# )
-
-# Pest model → 5 classes
-pest_model = None  # Disabled to prevent model loading
-# pest_model = load_pytorch_model(
-#     "models/cacao_pest_resnet_state_dict.pth", 
-#     CacaoResNet, 
-#     num_classes=5
-# )
-
+# Global variables for models
+disease_model = None
+pest_model = None
 
 def load_models():
     """Load models once when needed"""
@@ -4817,12 +4786,11 @@ def load_models():
     
     try:
         if disease_model is None:
-            disease_model_path = os.path.join(settings.BASE_DIR, 'models', 'cacao_disease_resnet_state_dict.pth')
+            disease_model_path = os.path.join(settings.BASE_DIR, 'models', 'cacao_disease_model.h5')
             if os.path.exists(disease_model_path):
                 try:
-                    disease_model = CacaoResNet(num_classes=7)  # Adjust based on your classes
-                    disease_model.load_state_dict(torch.load(disease_model_path, map_location='cpu'))
-                    disease_model.eval()
+                    from tensorflow.keras.models import load_model
+                    disease_model = load_model(disease_model_path)
                     logger.info("Disease model loaded successfully")
                 except Exception as e:
                     logger.error(f"Error loading disease model: {e}")
@@ -4832,12 +4800,11 @@ def load_models():
         
         if pest_model is None:
             # Fix: Using correct pest model path
-            pest_model_path = os.path.join(settings.BASE_DIR, 'models', 'cacao_pest_resnet_state_dict.pth')
+            pest_model_path = os.path.join(settings.BASE_DIR, 'models', 'pest_model.h5')
             if os.path.exists(pest_model_path):
                 try:
-                    pest_model = CacaoResNet(num_classes=6)  # Adjust based on your classes
-                    pest_model.load_state_dict(torch.load(pest_model_path, map_location='cpu'))
-                    pest_model.eval()
+                    from tensorflow.keras.models import load_model
+                    pest_model = load_model(pest_model_path)
                     logger.info("Pest model loaded successfully")
                 except Exception as e:
                     logger.error(f"Error loading pest model: {e}")
@@ -4848,23 +4815,35 @@ def load_models():
     except Exception as e:
         logger.error(f"Error in load_models: {e}")
 
-# ===============================
-# RECOMMENDATIONS
-# ===============================
+# Recommendations dictionary
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Disease': [
         'Remove infected pods immediately',
         'Improve drainage to reduce humidity',
         'Apply copper-based fungicides',
         'Prune trees to improve air circulation',
         'Harvest ripe pods quickly'
     ],
-    'Fito Disease': [
-        'Improve soil drainage and reduce excess moisture',
-        'Apply recommended fungicides',
-        'Use resistant cacao varieties if available',
-        'Remove and destroy infected debris regularly',
-        'Maintain proper farm sanitation'
+    'Frosty Pod Rot': [
+        'Remove infected pods and debris',
+        'Apply fungicide sprays during wet season',
+        'Improve farm sanitation',
+        'Plant resistant varieties',
+        'Regular monitoring and early detection'
+    ],
+    'Witches Broom': [
+        'Prune infected branches 30cm below symptoms',
+        'Burn or bury pruned material',
+        'Apply fungicide treatments',
+        'Plant resistant varieties',
+        'Regular inspection and maintenance'
+    ],
+    'Swollen Shoot Virus': [
+        'Remove infected trees completely',
+        'Control mealybug vectors',
+        'Plant virus-free seedlings',
+        'Maintain proper spacing between trees',
+        'Regular monitoring for early detection'
     ],
     'Healthy': [
         'Continue current management practices',
@@ -4872,35 +4851,30 @@ DISEASE_RECOMMENDATIONS = {
         'Maintain proper nutrition and watering',
         'Keep good farm hygiene',
         'Preventive fungicide applications during rainy season'
-    ],
-    'Monilia Disease': [
-        'Remove infected pods and debris',
-        'Apply fungicide sprays during wet season',
-        'Improve farm sanitation',
-        'Harvest pods regularly to minimize spread',
-        'Monitor farm frequently for new infections'
-    ],
-    'Unknown': [
-        'Unable to classify — not cacao-related or unclear',
-        'Verify if the image is of cacao tree or pod',
-        'Consult expert for confirmation',
-        'Try uploading a clearer image'
-    ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Regular monitoring and scouting'
     ]
 }
 
 PEST_RECOMMENDATIONS = {
-    'Ant Weaver': [
-        'Identify and remove ant nests if infestation is severe',
-        'Prune branches to limit ant movement',
-        'Encourage natural predators',
-        'Monitor regularly and apply safe bait if needed',
-        'Maintain clean plantation to discourage nesting'
+    'Cocoa Pod Borer': [
+        'Regular harvesting of ripe pods',
+        'Remove infested pods immediately',
+        'Apply insecticide treatments',
+        'Maintain farm cleanliness',
+        'Use pheromone traps for monitoring'
+    ],
+    'Thrips': [
+        'Use blue sticky traps',
+        'Apply insecticidal soap sprays',
+        'Maintain proper humidity levels',
+        'Remove weeds that harbor thrips',
+        'Use beneficial insects like predatory mites'
+    ],
+    'Mealybugs': [
+        'Apply systemic insecticides',
+        'Use biological control agents',
+        'Remove heavily infested plant parts',
+        'Maintain ant control (they protect mealybugs)',
+        'Regular monitoring and early intervention'
     ],
     'Aphids': [
         'Use insecticidal soap or neem oil',
@@ -4915,35 +4889,8 @@ PEST_RECOMMENDATIONS = {
         'Maintain beneficial insect populations',
         'Keep farm clean and weed-free',
         'Preventive treatments during pest season'
-    ],
-    'Mealy Bug': [
-        'Apply systemic insecticides if severe',
-        'Use biological control agents',
-        'Remove heavily infested plant parts',
-        'Maintain ant control (ants protect mealybugs)',
-        'Regular monitoring and early intervention'
-    ],
-    'Unknown Data': [
-        'Unable to classify — not cacao-related or unclear',
-        'Verify if the image is of a cacao pest',
-        'Consult pest expert for confirmation',
-        'Try uploading a clearer image'
-    ],
-    'Cocoa Pod Borer': [
-        'Regular harvesting of ripe pods every 7-10 days',
-        'Remove infested pods immediately',
-        'Apply biological or chemical control as recommended',
-        'Maintain farm cleanliness',
-        'Use pheromone traps for monitoring'
     ]
 }
-
-
-# Import PyTorch
-import torch
-import torch.nn as nn
-from torchvision.models import resnet18
-
 
 def get_daily_scan_limits(request):
     """Get or initialize daily scan limits for guest users"""
@@ -4984,7 +4931,66 @@ def guest_dashboard(request):
     }
     return render(request, 'guest/guest_dashboard.html', context)
 
-
+def predict_image(img_path, model_type):
+    """Make prediction on an image"""
+    try:
+        # Load models if not already loaded
+        load_models()
+        
+        # Check if image file exists
+        if not os.path.exists(img_path):
+            logger.error(f"Image file not found: {img_path}")
+            raise FileNotFoundError(f"Image file not found: {img_path}")
+        
+        # Load and preprocess image
+        try:
+            from tensorflow.keras.preprocessing import image
+            img = image.load_img(img_path, target_size=(224, 224))
+            img_array = image.img_to_array(img)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array = img_array / 255.0  # Normalize pixel values
+        except Exception as e:
+            logger.error(f"Error preprocessing image: {e}")
+            raise
+        
+        if model_type == 'disease':
+            model = disease_model
+            classes = ['Black Pod Disease', 'Frosty Pod Rot', 'Witches Broom', 'Swollen Shoot Virus', 'Healthy']
+        else:
+            model = pest_model
+            classes = ['Cocoa Pod Borer', 'Thrips', 'Mealybugs', 'Aphids', 'Healthy']
+        
+        if model is None:
+            logger.warning(f"Model not loaded for {model_type}, using random prediction")
+            predicted_class = random.choice(classes)
+            confidence = float(round(random.uniform(70, 95), 2))  # Convert to Python float
+        else:
+            try:
+                prediction = model.predict(img_array, verbose=0)
+                predicted_class = classes[np.argmax(prediction)]
+                confidence = float(round(np.max(prediction) * 100, 2))  # Convert to Python float
+                logger.info(f"Prediction successful: {predicted_class} ({confidence}%)")
+            except Exception as e:
+                logger.error(f"Error during model prediction: {e}")
+                # Fallback to random prediction
+                predicted_class = random.choice(classes)
+                confidence = float(round(random.uniform(70, 95), 2))  # Convert to Python float
+        
+        return predicted_class, confidence
+        
+    except Exception as e:
+        logger.error(f"Error in predict_image: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Return random prediction as fallback
+        if model_type == 'disease':
+            classes = ['Black Pod Disease', 'Frosty Pod Rot', 'Witches Broom', 'Swollen Shoot Virus', 'Healthy']
+        else:
+            classes = ['Cocoa Pod Borer', 'Thrips', 'Mealybugs', 'Aphids', 'Healthy']
+        
+        predicted_class = random.choice(classes)
+        confidence = float(round(random.uniform(70, 95), 2))  # Convert to Python float
+        return predicted_class, confidence
 
 def get_recommendations(result, model_type):
     """Get recommendations based on detection result"""
@@ -4994,49 +5000,6 @@ def get_recommendations(result, model_type):
         recommendations = PEST_RECOMMENDATIONS.get(result, [])
     
     return recommendations
-
-def toggle_history(request):
-    """Toggle history visibility"""
-    if request.method == 'POST':
-        # This would typically update user preferences in the database
-        # For now, we'll use session storage
-        show_history = request.session.get('show_history', True)
-        request.session['show_history'] = not show_history
-        
-        return JsonResponse({
-            'success': True,
-            'show_history': not show_history
-        })
-    
-    return JsonResponse({'success': False})
-
-def scan_history_api(request):
-    """API endpoint to fetch user's scan history"""
-    if request.method == 'GET':
-        try:
-            user_id = str(request.user.id)
-            
-            # Get user's scans from Firestore
-            user_scans = db.collection('scans').where(filter=FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
-            scans_data = []
-            
-            for scan in user_scans:
-                scan_data = scan.to_dict()
-                scan_data['id'] = scan.id
-                scans_data.append(scan_data)
-            
-            return JsonResponse({
-                'success': True,
-                'scans': scans_data
-            })
-            
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 def validate_image_file(image_file):
     """Validate uploaded image file"""
@@ -5102,23 +5065,46 @@ def guest_scan_image(request):
         if not is_valid:
             return JsonResponse({'success': False, 'message': validation_message})
         
+        # Create guest_scans directory if it doesn't exist
+        guest_scans_dir = os.path.join(settings.MEDIA_ROOT, 'guest_scans')
+        os.makedirs(guest_scans_dir, exist_ok=True)
+        
+        # Generate unique filename
+        file_extension = os.path.splitext(image_file.name)[1].lower()
+        if not file_extension:
+            file_extension = '.jpg'
+        
+        file_name = f"guest_scan_{uuid.uuid4().hex}{file_extension}"
+        file_path = os.path.join(guest_scans_dir, file_name)
+        
+        # Save the file temporarily
         try:
-            # Use simulate_analysis directly like the working scan_image function
-            logger.info(f"Guest scan: Using simulation for {scan_type}")
-            analysis_result = simulate_analysis(scan_type, image_file)
+            with open(file_path, 'wb+') as destination:
+                for chunk in image_file.chunks():
+                    destination.write(chunk)
             
-            result = analysis_result['class']
-            confidence = analysis_result['confidence'] * 100  # Convert to percentage
-            recommendations = analysis_result['recommendations']
+            logger.info(f"Image saved temporarily: {file_path}")
+            
+            # Make prediction
+            result, confidence = predict_image(file_path, scan_type)
+            recommendations = get_recommendations(result, scan_type)
             
             # Update scan count
             update_scan_count(request, scan_type)
             scan_limits = get_daily_scan_limits(request)
             
+            # Clean up temporary file
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Temporary file removed: {file_path}")
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to remove temporary file: {cleanup_error}")
+            
             return JsonResponse({
                 'success': True,
                 'result': result,
-                'confidence': round(confidence, 2),
+                'confidence': confidence,
                 'recommendations': recommendations,
                 'scan_type': scan_type,
                 'remaining_scans': {
@@ -5130,6 +5116,13 @@ def guest_scan_image(request):
         except Exception as e:
             logger.error(f"Error processing image: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Clean up file if error occurs
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to remove temporary file after error: {cleanup_error}")
             
             return JsonResponse({
                 'success': False, 
@@ -5246,6 +5239,7 @@ def guest_marketplace(request):
         }
         
     except Exception as e:
+        print(f"Error in guest_marketplace: {e}")
         # Fallback context
         context = {
             'products': SAMPLE_PRODUCTS,
@@ -5412,6 +5406,7 @@ from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Initialize Firestore
+db = firestore.client()
 
 # ===============================
 # USER ORDERS
@@ -5467,27 +5462,15 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        print(f"Error fetching user orders: {str(e)}")
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
     
 @user_required
 def order_detail(request, order_id):
     """Order detail view for users"""
     try:
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email') or request.session.get('email')
-        
         if not uid:
             messages.error(request, 'Please log in to view order details.')
             return redirect('login')
@@ -5502,54 +5485,30 @@ def order_detail(request, order_id):
 
         order_data = order_doc.to_dict()
         
-        # Check if order belongs to current user (more flexible ownership check)
-        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
-        owner_email = order_data.get('customer_email') or order_data.get('user_email')
-        
-        # Allow access if either UID or email matches - silently redirect if no match
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+        # Check if order belongs to current user
+        if order_data.get('firebase_uid') != uid:
+            messages.error(request, 'Access denied.')
             return redirect('user_orders')
 
         order_data['id'] = order_doc.id
         
         # Convert timestamp if needed
-        if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+        # NEW (shows correct Philippines time)
+        if hasattr(order_data['created_at'], 'seconds'):
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
-        
-        # Ensure items and total_amount exist
-        if 'items' not in order_data:
-            order_data['items'] = []
-        if 'total_amount' not in order_data and order_data.get('items'):
-            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_data['items'])
 
         context = {
             'order': order_data,
-            'user_name': request.session.get('name'),
-            'user_email': user_email,
         }
 
         return render(request, 'user/order_detail.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Order detail error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'order': {
-                'id': order_id,
-                'order_id': order_id,
-                'items': [],
-                'total_amount': 0,
-                'status': 'unknown'
-            },
-            'user_name': request.session.get('name'),
-            'user_email': request.session.get('user_email'),
-            'error': True
-        }
-        return render(request, 'user/order_detail.html', context)
+        print(f"Error fetching order detail: {str(e)}")
+        messages.error(request, 'Error loading order details.')
+        return redirect('user_orders')
 
 # ===============================
 # ADMIN ORDER MANAGEMENT
@@ -5665,12 +5624,13 @@ def admin_orders(request):
         return render(request, 'admin/orders.html', context)
 
     except Exception as e:
+        print(f"Error in admin_orders: {str(e)}")
         messages.error(request, f'Error loading orders: {str(e)}')
         return render(request, 'admin/orders.html', {'orders': []})
 
 @admin_required
-def admin_order_detail_v2(request, order_id):
-    """Admin order detail view (version 2 - duplicate)"""
+def admin_order_detail(request, order_id):
+    """Admin order detail view"""
     try:
         # Get specific order from Firestore
         order_ref = db.collection('orders').document(order_id)
@@ -5719,13 +5679,14 @@ def admin_order_detail_v2(request, order_id):
         return render(request, 'admin/admin_order_detail.html', context)
 
     except Exception as e:
+        print(f"Error in admin_order_detail: {str(e)}")
         messages.error(request, 'Error loading order details.')
         return redirect('admin_orders')
 
 @admin_required
 @csrf_exempt
-def update_order_status_legacy(request):
-    """API endpoint to update order status (legacy - gets order_id from body)"""
+def update_order_status(request):
+    """API endpoint to update order status with notifications"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -5738,12 +5699,47 @@ def update_order_status_legacy(request):
                     'message': 'Order ID and status are required'
                 })
 
-            # Update in Firestore
+            # Get order data first for notification
             order_ref = db.collection('orders').document(order_id)
+            order_doc = order_ref.get()
+            
+            if not order_doc.exists:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Order not found'
+                })
+            
+            order_data = order_doc.to_dict()
+            user_id = order_data.get('firebase_uid') or order_data.get('user_id')
+            
+            # Update in Firestore
             order_ref.update({
                 'status': new_status,
                 'updated_at': firestore.SERVER_TIMESTAMP
             })
+
+            # Create notification for user
+            if user_id:
+                from .notifications import create_notification
+                
+                status_messages = {
+                    'pending': ('Order Received', f'📦 Your order #{order_id} has been received and is awaiting confirmation.'),
+                    'confirmed': ('Order Confirmed', f'✅ Great news! Your order #{order_id} has been confirmed and is being prepared.'),
+                    'processing': ('Order Processing', f'⚙️ Your order #{order_id} is now being processed and will be shipped soon.'),
+                    'shipped': ('Order Shipped', f'🚚 Your order #{order_id} has been shipped! It\'s on its way to you.'),
+                    'delivered': ('Order Delivered', f'🎉 Your order #{order_id} has been successfully delivered! Enjoy your products.'),
+                    'cancelled': ('Order Cancelled', f'❌ Your order #{order_id} has been cancelled. Contact support if you have questions.'),
+                }
+                
+                if new_status in status_messages:
+                    title, message = status_messages[new_status]
+                    create_notification(
+                        user_id=user_id,
+                        title=title,
+                        message=message,
+                        notification_type='order_status',
+                        related_id=order_id
+                    )
 
             return JsonResponse({
                 'success': True,
@@ -5817,6 +5813,7 @@ def checkout_view(request):
                 })
                 total_amount += item_total
         except Exception as e:
+            print(f"Error getting product {item_data['product_id']}: {str(e)}")
             continue
     
     if not cart_items:
@@ -5898,6 +5895,7 @@ def checkout_view(request):
                         current_stock = product.get('stock_quantity', 0)
                         new_stock = max(0, current_stock - quantity_ordered)  # Don't go below 0
                         SAMPLE_PRODUCTS[i]['stock_quantity'] = new_stock
+                        print(f"Updated stock for {product['name']}: {current_stock} -> {new_stock}")
                         break
 
             # Clear cart
@@ -5913,6 +5911,7 @@ def checkout_view(request):
             return redirect('order_confirmation', order_id=order_id)
             
         except Exception as e:
+            print(f"Order creation error: {str(e)}")
             messages.error(request, f'Error processing order: {str(e)}')
     
     # Pre-fill form with user data
@@ -5981,6 +5980,7 @@ def order_confirmation(request, order_id):
         return render(request, 'user/order_confirmation.html', context)
         
     except Exception as e:
+        print(f"Error loading order confirmation: {str(e)}")
         messages.error(request, 'Error loading order details.')
         return redirect('user_orders')
 
@@ -6002,8 +6002,8 @@ def get_product_by_id(product_id):
                 product_data['id'] = product_doc.id
                 return product_data
     except Exception as e:
+        print(f"Error getting product from Firestore: {e}")
     
-        pass
     return None
 
 # Sample products data (you already have this)
@@ -6122,6 +6122,7 @@ def hide_order(request, order_id):
             })
 
         except Exception as e:
+            print(f"Error hiding order: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Error hiding order: {str(e)}'
@@ -6180,6 +6181,7 @@ def delete_user_order(request, order_id):
             })
 
         except Exception as e:
+            print(f"Error deleting order: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Error deleting order: {str(e)}'
@@ -6226,6 +6228,7 @@ def hidden_orders(request):
         total_hidden_orders = len(orders_data)
         total_spent_hidden = sum(float(o.get('total_amount', 0)) for o in orders_data)
 
+        print(f"Found {total_hidden_orders} hidden orders for user {uid}")  # Debug line
 
         context = {
             'orders': orders_data,
@@ -6237,6 +6240,7 @@ def hidden_orders(request):
         return render(request, 'user/hidden_orders.html', context)
 
     except Exception as e:
+        print(f"Error fetching hidden orders: {str(e)}")
         messages.error(request, 'Error loading hidden orders. Please try again.')
         return render(request, 'user/hidden_orders.html', {'orders': []})
 
@@ -6284,6 +6288,7 @@ def unhide_order(request, order_id):
             })
 
         except Exception as e:
+            print(f"Error unhiding order: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': f'Error restoring order: {str(e)}'
@@ -6308,10 +6313,12 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 import pytz
 
 # Initialize Firestore
+db = firestore.client()
 
 @user_required
 def userdashboard(request):
     """Enhanced User Dashboard with comprehensive analytics"""
+    print("[DEBUG] Accessing User Dashboard:", request.session.get('user_email'), request.session.get('role'))
         
     if request.session.get('role') == 'guest':
         messages.error(request, "Guest users cannot access user dashboard.")
@@ -6378,8 +6385,11 @@ def userdashboard(request):
             
             total_maps += len(firebase_farms)
             
+            print(f"[DEBUG] Farm totals - Maps: {total_maps}, Area: {total_farm_area}, Trees: {total_trees}")
+            print(f"[DEBUG] Sample farms: {len(SAMPLE_FARMS)}, Firebase farms: {len(firebase_farms)}")
             
         except Exception as farm_error:
+            print(f"[ERROR] Error fetching Firebase farms: {farm_error}")
             # Continue with just sample farms data
             pass
                 
@@ -6464,6 +6474,7 @@ def userdashboard(request):
         }
             
     except Exception as e:
+        print(f"Error in userdashboard: {str(e)}")
         
         # Fallback data if Firebase fails - but still try to get Firebase farms
         fallback_area = sum(farm.get('area', 0) for farm in SAMPLE_FARMS)
@@ -6593,293 +6604,164 @@ def generate_dashboard_report(request):
 
 import os
 import json
-import uuid
 from datetime import datetime, timedelta
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.conf import settings
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from torchvision.models import resnet18
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
 import numpy as np
-from PIL import Image
-import firebase_admin
-from firebase_admin import credentials, firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
-import pytz
-from .decorators import admin_required, user_required
 
-# Firebase and Firestore already initialized in firebase_config module
+# Load your models
+try:
+    DISEASE_MODEL = tf.keras.models.load_model(os.path.join(settings.BASE_DIR, 'models/cacao_disease_model.h5'))
+except Exception as e:
+    print(f"Error loading disease model: {e}")
+    DISEASE_MODEL = None
 
-# ===============================
-# MODEL DEFINITIONS - DISABLED FOR RENDER
-# ===============================
-# THIRD DUPLICATE CacaoResNet CLASS - DISABLED
-# class CacaoResNet(nn.Module):
-#     def __init__(self, num_classes):
-#         super(CacaoResNet, self).__init__()
-#         self.resnet = resnet18(weights=None)
-#         in_features = self.resnet.fc.in_features
-#         self.resnet.fc = nn.Linear(in_features, num_classes)
-#
-#     def forward(self, x):
-#         return self.resnet(x)
+try:
+    PEST_MODEL = tf.keras.models.load_model(os.path.join(settings.BASE_DIR, 'models/pest_model.h5'))
+except Exception as e:
+    print(f"Error loading pest model: {e}")
+    PEST_MODEL = None
 
-def load_pytorch_model(model_path, model_class, num_classes):
-    try:
-        model = model_class(num_classes=num_classes)
-        state_dict = torch.load(model_path, map_location="cpu")
-
-        # Fix key mismatch by adding "resnet." prefix if missing
-        new_state_dict = {}
-        for k, v in state_dict.items():
-            if not k.startswith("resnet."):
-                new_state_dict["resnet." + k] = v
-            else:
-                new_state_dict[k] = v
-
-        model.load_state_dict(new_state_dict, strict=False)
-        model.eval()
-        return model
-    except Exception as e:
-        return None
-
-# Load your models (PyTorch only)
-# Both checkpoints were trained with 5 classes
-disease_model = load_pytorch_model(
-    "models/cacao_disease_resnet_state_dict.pth",
-    CacaoResNet,
-    num_classes=5
-)
-
-pest_model = load_pytorch_model(
-    "models/cacao_pest_resnet_state_dict.pth",
-    CacaoResNet,
-    num_classes=5
-)
-
-# ===============================
-# IMAGE PREPROCESSING
-# ===============================
-def preprocess_image_pytorch(image_file):
-    try:
-        image = Image.open(image_file).convert('RGB')
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        return transform(image).unsqueeze(0)
-    except Exception as e:
-        raise
-
-# ===============================
-# PREDICTION
-# ===============================
-def predict_with_model(model, image_tensor, classes):
-    try:
-        with torch.no_grad():
-            outputs = model(image_tensor)
-            probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-            class_idx = int(np.argmax(probs))
-            confidence = float(probs[class_idx]) * 100
-            predicted_class = classes[class_idx]
-            return predicted_class, confidence
-    except Exception as e:
-        return "Unknown", 0.0
-
-# ===============================
-# CLASSES
-# ===============================
+# Disease classes (5 classes)
 DISEASE_CLASSES = [
-    'Black Pod Rot',
-    'Fito Disease',
-    'Healthy',
-    'Monilia Disease',
-    'Unknown',
-    'Mirids'
+    'Black Pod Rot', 
+    'Phytophthora', 
+    'Moniliasis (Frosty Pod Rot)',
+    'Cherelle Wilt',
+    'Healthy'
 ]
 
+# Pest classes (5 classes)
 PEST_CLASSES = [
-    'Ant Weaver',
-    'Aphids',
-    'Healthy',
-    'Mealy Bug',
-    'Unknown Data',
-    'Cocoa Pod Borer'
+    'Cocoa Pod Borer',
+    'Mirid Bugs',
+    'Mealybugs',
+    'Cocoa Thrips',
+    'Healthy'
 ]
 
-# ===============================
-# RECOMMENDATIONS
-# ===============================
-DISEASE_RECOMMENDATIONS = {
+# Recommendation mappings for all classes
+RECOMMENDATIONS = {
+    # Diseases
     'Black Pod Rot': [
-        'Remove and destroy infected pods immediately',
-        'Improve drainage and air circulation',
-        'Apply copper-based fungicides',
-        'Harvest ripe pods promptly'
+        "Remove and destroy infected pods immediately",
+        "Apply copper-based fungicides every 2-3 weeks",
+        "Improve drainage and air circulation",
+        "Prune trees to allow sunlight penetration"
     ],
-    'Fito Disease': [
-        'Remove affected pods and leaves',
-        'Use resistant varieties when possible',
-        'Apply appropriate fungicides during wet season'
+    'Phytophthora': [
+        "Apply phosphorous acid fungicides",
+        "Remove all infected plant material",
+        "Avoid wounding trees during maintenance",
+        "Improve soil drainage"
     ],
-    'Healthy': [
-        'Plant is healthy. Maintain good farm practices.'
+    'Moniliasis (Frosty Pod Rot)': [
+        "Remove and bury infected pods at least 50cm deep",
+        "Apply recommended fungicides during rainy season",
+        "Increase harvest frequency to every 7-10 days",
+        "Prune to improve air circulation"
     ],
-    'Monilia Disease': [
-        'Prune and destroy infected plant parts',
-        'Improve ventilation between trees',
-        'Apply fungicides preventively'
+    'Cherelle Wilt': [
+        "Maintain proper shade levels (30-40%)",
+        "Ensure balanced nutrition with potassium",
+        "Avoid water stress during dry periods",
+        "Remove excessive cherelles manually"
     ],
-    'Unknown': [
-        'Unable to identify disease. Try scanning a clearer image.'
-    ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Monitor regularly'
-    ]
-}
-
-PEST_RECOMMENDATIONS = {
-    'Ant Weaver': [
-        'Destroy ant nests manually',
-        'Apply safe insecticides around the base',
-        'Encourage natural predators'
-    ],
-    'Aphids': [
-        'Spray neem oil or insecticidal soap',
-        'Introduce ladybugs as natural predators',
-        'Avoid excessive nitrogen fertilization'
-    ],
-    'Healthy': [
-        'Plant is healthy. Maintain good farm practices.'
-    ],
-    'Mealy Bug': [
-        'Remove manually with alcohol swabs',
-        'Apply systemic insecticides if infestation is severe'
-    ],
-    'Unknown Data': [
-        'Unable to identify pest. Try scanning a clearer image.'
-    ],
-    'Cocoa Pod Borer': [
-        'Harvest and destroy infested pods',
-        'Use pheromone traps for monitoring',
-        'Apply biological control agents'
-    ]
-}
-
-# Combined recommendations dictionary for scan_history
-RECOMMENDATIONS = {**DISEASE_RECOMMENDATIONS, **PEST_RECOMMENDATIONS}
-
-
-# ===============================
-# PREDICT IMAGE (Unified)
-# ===============================
-def predict_image(image_file, scan_type="disease"):
-    """
-    Predict image using ML model if available, otherwise use simulation
-    Returns: (result, confidence)
-    """
-    try:
-        # Try to use ML model if available
-        if scan_type == 'disease' and disease_model:
-            image_tensor = preprocess_image_pytorch(image_file)
-            result, confidence = predict_with_model(disease_model, image_tensor, DISEASE_CLASSES)
-            logger.info(f"Used ML model for {scan_type} scan: {result} ({confidence}%)")
-        elif scan_type == 'pest' and pest_model:
-            image_tensor = preprocess_image_pytorch(image_file)
-            result, confidence = predict_with_model(pest_model, image_tensor, PEST_CLASSES)
-            logger.info(f"Used ML model for {scan_type} scan: {result} ({confidence}%)")
-        else:
-            # Fallback to simulation when models are disabled
-            logger.info(f"ML models disabled - using simulation for {scan_type} scan")
-            
-            # Open image file to generate hash for deterministic results
-            try:
-                # image_file is a file path string
-                with open(image_file, 'rb') as img_file:
-                    analysis_result = simulate_analysis(scan_type, img_file)
-                logger.info(f"Simulation result: {analysis_result['class']} ({analysis_result['confidence']*100:.1f}%)")
-            except Exception as file_error:
-                logger.error(f"Error reading image file: {file_error}")
-                # Try without file object (will use random)
-                analysis_result = simulate_analysis(scan_type, None)
-                logger.info(f"Simulation result (random): {analysis_result['class']} ({analysis_result['confidence']*100:.1f}%)")
-            
-            result = analysis_result['class']
-            confidence = analysis_result['confidence'] * 100  # Convert to percentage
-        
-        return result, confidence
     
-    except Exception as e:
-        logger.error(f"Error in predict_image: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        # Return default values on error
-        return "Unknown", 0.0
-
-# ===============================
-# SCAN VIEW
-# ===============================
-@csrf_exempt
-def scan_image(request):
-    if request.method == 'POST' and request.FILES.get('image'):
-        image_file = request.FILES['image']
-        scan_type = request.POST.get('scan_type', 'disease')
-
-        result, confidence, recommendations = predict_image(image_file, scan_type)
-
-        return JsonResponse({
-            'success': True,
-            'result': result,
-            'confidence': round(confidence, 2),
-            'recommendations': recommendations
-        })
-
-    return JsonResponse({'success': False, 'message': 'Invalid request'})
-
+    # Pests
+    'Cocoa Pod Borer': [
+        "Harvest pods frequently (every 2-3 weeks)",
+        "Apply recommended insecticides during peak infestation",
+        "Remove and destroy infested pods",
+        "Use pheromone traps for monitoring"
+    ],
+    'Mirid Bugs': [
+        "Maintain proper shade levels",
+        "Apply neem-based insecticides",
+        "Conserve natural enemies like ants",
+        "Remove alternative host plants"
+    ],
+    'Mealybugs': [
+        "Introduce natural predators like ladybugs",
+        "Apply insecticidal soap solutions",
+        "Prune heavily infested branches",
+        "Control ants that protect mealybugs"
+    ],
+    'Cocoa Thrips': [
+        "Apply recommended insecticides if damage exceeds 20%",
+        "Maintain proper shade management",
+        "Use yellow sticky traps for monitoring",
+        "Ensure adequate soil moisture"
+    ],
+    
+    # Healthy
+    'Healthy': [
+        "Continue regular monitoring (weekly checks)",
+        "Maintain good agricultural practices",
+        "Ensure proper shade management (30-40%)",
+        "Implement regular pruning schedule"
+    ]
+}
 
 def scan_diagnose_view(request):
     return render(request, 'user/scan_diagnose.html')
-def admin_user_management(request):
-    return render(request, 'admin/user_management.html')
-
-from torchvision import transforms
-from PIL import Image
 
 @csrf_exempt
 def scan_image(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'})
-
+    
     if 'image' not in request.FILES:
         return JsonResponse({'success': False, 'message': 'No image uploaded'})
-
+    
     scan_type = request.POST.get('scan_type', 'disease')
     uploaded_file = request.FILES['image']
-
-    # Save temporarily
+    
+    # Save the file temporarily
     temp_path = os.path.join('temp_uploads', uploaded_file.name)
     path = default_storage.save(temp_path, ContentFile(uploaded_file.read()))
     full_path = os.path.join(settings.MEDIA_ROOT, path)
-
+    
     try:
-        if scan_type == 'disease' and disease_model:
-            result, confidence = predict_image(full_path, disease_model, DISEASE_CLASSES)
-            recommendations = DISEASE_RECOMMENDATIONS.get(result, ["No specific advice available."])
-        elif scan_type == 'pest' and pest_model:
-            result, confidence = predict_image(full_path, pest_model, PEST_CLASSES)
-            recommendations = PEST_RECOMMENDATIONS.get(result, ["No specific advice available."])
+        if scan_type == 'disease' and DISEASE_MODEL:
+            # Process disease detection
+            img = image.load_img(full_path, target_size=(224, 224))
+            img_array = image.img_to_array(img)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array /= 255.0
+            
+            predictions = DISEASE_MODEL.predict(img_array)
+            predicted_index = np.argmax(predictions[0])
+            confidence = round(float(predictions[0][predicted_index]) * 100, 2)
+            result = DISEASE_CLASSES[predicted_index]
+            
+        elif scan_type == 'pest' and PEST_MODEL:
+            # Process pest detection
+            img = image.load_img(full_path, target_size=(224, 224))
+            img_array = image.img_to_array(img)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array /= 255.0
+            
+            predictions = PEST_MODEL.predict(img_array)
+            predicted_index = np.argmax(predictions[0])
+            confidence = round(float(predictions[0][predicted_index]) * 100, 2)
+            result = PEST_CLASSES[predicted_index]
         else:
-            return JsonResponse({'success': False, 'message': 'Model not available for this scan type'})
-
-        # Build scan data
+            return JsonResponse({
+                'success': False,
+                'message': 'Model not available for this scan type'
+            })
+        
+        # Get recommendations
+        recommendations = RECOMMENDATIONS.get(result, RECOMMENDATIONS['Healthy'])
+        
+        # Create scan data
         scan_data = {
             'scan_id': str(datetime.now(pytz.timezone('Asia/Manila')).timestamp()),
             'type': scan_type,
@@ -6889,17 +6771,26 @@ def scan_image(request):
             'timestamp': datetime.now(pytz.timezone('Asia/Manila')).isoformat(),
             'image_path': f"scans/{uploaded_file.name}"
         }
-
-        # Clean up
+        
+        # Clean up temporary file
         default_storage.delete(path)
-
-        return JsonResponse({'success': True, 'scan_data': scan_data})
-
+        
+        return JsonResponse({
+            'success': True,
+            'result': result,
+            'confidence': confidence,
+            'recommendations': recommendations,
+            'scan_data': scan_data
+        })
+        
     except Exception as e:
+        # Clean up if error occurs
         if os.path.exists(full_path):
             default_storage.delete(path)
-        return JsonResponse({'success': False, 'message': f'Error processing image: {str(e)}'})
-
+        return JsonResponse({
+            'success': False,
+            'message': f'Error processing image: {str(e)}'
+        })
 
 def scan_history(request):
     # Generate realistic dummy history with 10 items (5 disease, 5 pest)
@@ -6907,7 +6798,7 @@ def scan_history(request):
     history = []
     
     # Disease scans
-    disease_results = ['Black Pod Disease', 'Fito Disease', 'Monilia Disease', 'Frosty Pod Rot', 'Witches Broom', 'Healthy', 'Unknown']
+    disease_results = ['Black Pod Rot', 'Phytophthora', 'Moniliasis (Frosty Pod Rot)', 'Cherelle Wilt', 'Healthy']
     for i in range(5):
         result = disease_results[i]
         history.append({
@@ -6921,7 +6812,7 @@ def scan_history(request):
         })
     
     # Pest scans
-    pest_results = ['Cocoa Pod Borer', 'Ant Weaver', 'Mealybugs', 'Aphids', 'Healthy', 'Unknown']
+    pest_results = ['Cocoa Pod Borer', 'Mirid Bugs', 'Mealybugs', 'Cocoa Thrips', 'Healthy']
     for i in range(5):
         result = pest_results[i]
         history.append({
@@ -6933,7 +6824,6 @@ def scan_history(request):
             'timestamp': (now - timedelta(days=i+6)).isoformat(),
             'image_path': f'scans/pest_{i+1}.jpg'
         })
-    
     
     # Sort by timestamp (newest first)
     history.sort(key=lambda x: x['timestamp'], reverse=True)
@@ -7123,8 +7013,8 @@ def admin_dashboard(request):
         chart_data['revenue_data'] = list(revenue_data.values())[::-1]
         
     except Exception as e:
+        print(f"Error fetching dashboard data: {e}")
     
-        pass
     # Prepare context with all data
     context = {
         'current_date': current_date,
@@ -7348,6 +7238,7 @@ def profile_image_upload_ajax(request):
             })
             
     except Exception as e:
+        print(f"Error in profile_image_upload_ajax: {e}")
         return JsonResponse({
             'success': False,
             'message': f'Error uploading image: {str(e)}'
@@ -7389,6 +7280,7 @@ def delete_profile_image_view(request):
                 'message': 'No image to delete.'
             })
     except Exception as e:
+        print(f"Error deleting profile image: {e}")
         return JsonResponse({
             'success': False, 
             'message': f'Error deleting image: {str(e)}'
@@ -7547,6 +7439,7 @@ import pytz
 import random
 
 # Initialize Firestore
+db = firestore.client()
 
 # Sample farm data (fallback)
 SAMPLE_FARMS = [
@@ -7611,6 +7504,7 @@ SAMPLE_FARMS = [
 @admin_required
 def admin_dashboard(request):
     """Enhanced Admin Dashboard with comprehensive analytics"""
+    print("[DEBUG] Accessing Admin Dashboard:", request.session.get('user_email'), request.session.get('role'))
     
     # Initialize timezone
     tz = pytz.timezone('Asia/Manila')
@@ -7644,10 +7538,12 @@ def admin_dashboard(request):
     
     try:
         # ===== FETCH SCANS DATA =====
+        print("[DEBUG] Fetching scans data...")
         scans_ref = db.collection('scans')
         all_scans = list(scans_ref.stream())
         total_scan_count = len(all_scans)
         
+        print(f"[DEBUG] Found {total_scan_count} total scans")
         
         # Get recent scans for activity
         recent_scans = []
@@ -7704,13 +7600,14 @@ def admin_dashboard(request):
         })
         
     except Exception as e:
+        print(f"[ERROR] Error fetching scans data: {e}")
         # Use fallback data for scans
         context.update({
             'total_scan_count': 45,  # Fallback number
             'recent_scans': [
                 {'result': 'Healthy', 'confidence': 95, 'type': 'disease', 'date': 'Jan 15'},
                 {'result': 'Black Pod Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
-                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'pest', 'date': 'Jan 13'},
+                {'result': 'Thrips', 'confidence': 92, 'type': 'pest', 'date': 'Jan 13'},
                 {'result': 'Healthy', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
                 {'result': 'Frosty Pod Rot', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
             ],
@@ -7720,6 +7617,7 @@ def admin_dashboard(request):
     
     try:
         # ===== FETCH ORDERS DATA =====
+        print("[DEBUG] Fetching orders data...")
         orders_ref = db.collection('orders')
         all_orders = list(orders_ref.stream())
         order_count = len(all_orders)
@@ -7790,6 +7688,7 @@ def admin_dashboard(request):
         })
         
     except Exception as e:
+        print(f"[ERROR] Error fetching orders data: {e}")
         # Use fallback data for orders
         context.update({
             'order_count': 28,
@@ -7807,6 +7706,7 @@ def admin_dashboard(request):
     
     try:
         # ===== FETCH FARMS DATA =====
+        print("[DEBUG] Fetching farms data...")
         farms_ref = db.collection('farms')
         firebase_farms = list(farms_ref.stream())
         
@@ -7822,18 +7722,25 @@ def admin_dashboard(request):
         })
         
     except Exception as e:
+        print(f"[ERROR] Error fetching farms data: {e}")
         # Use sample farms as fallback
         context.update({
             'farm_count': len(SAMPLE_FARMS),
             'recent_farms': SAMPLE_FARMS[:3],
         })
     
+    print(f"[DEBUG] Final context data:")
+    print(f"  - Total Scans: {context['total_scan_count']}")
+    print(f"  - Total Orders: {context['order_count']}")
+    print(f"  - Total Revenue: {context['total_revenue']}")
+    print(f"  - Total Farms: {context['farm_count']}")
     
     return render(request, 'admin/admin_dashboard.html', context)
 
 @admin_required
 def image_analysis(request):
     """Image Analysis view with scan data and charts"""
+    print("[DEBUG] Accessing Image Analysis:", request.session.get('user_email'))
     
     # Initialize timezone
     tz = pytz.timezone('Asia/Manila')
@@ -7851,6 +7758,7 @@ def image_analysis(request):
     
     try:
         # ===== FETCH ALL USER SCANS DATA =====
+        print("[DEBUG] Fetching user scans data...")
         
         # Try different collection names that might be used for user scans
         possible_collections = ['user_scans', 'scans', 'scan_results', 'image_scans']
@@ -7861,18 +7769,22 @@ def image_analysis(request):
                 scans_ref = db.collection(collection_name)
                 collection_scans = list(scans_ref.stream())
                 if collection_scans:
+                    print(f"[DEBUG] Found {len(collection_scans)} scans in collection '{collection_name}'")
                     all_scans.extend(collection_scans)
                     break  # Use the first collection that has data
             except Exception as e:
+                print(f"[DEBUG] Collection '{collection_name}' not found or error: {e}")
                 continue
         
         if not all_scans:
+            print("[DEBUG] No scans found in any collection, trying to fetch from 'scans' with different structure")
             # Try fetching with different query structure
             try:
                 scans_ref = db.collection('scans')
                 all_scans = list(scans_ref.stream())
+                print(f"[DEBUG] Found {len(all_scans)} scans in 'scans' collection")
             except Exception as e:
-                pass
+                print(f"[DEBUG] Error fetching from 'scans' collection: {e}")
         
         # Process scans data
         scans_list = []
@@ -7890,9 +7802,12 @@ def image_analysis(request):
             date_str = date.strftime('%b %d')
             daily_counts[date.strftime('%Y-%m-%d')] = 0
         
+        print(f"[DEBUG] Processing {len(all_scans)} scans...")
+        
         for scan_doc in all_scans:
             try:
                 scan_data = scan_doc.to_dict()
+                print(f"[DEBUG] Processing scan {scan_doc.id}: {scan_data}")
                 
                 # Handle different timestamp field names
                 timestamp_field = None
@@ -7942,33 +7857,15 @@ def image_analysis(request):
                     confidence = 0
                 
                 # Handle different field names for user info
-                user_name = (scan_data.get('user_name') or 
-                            scan_data.get('username') or 
-                            scan_data.get('user') or 
-                            'Unknown User')
-                
-                user_email = (scan_data.get('user_email') or 
-                             scan_data.get('email') or '')
-                
-                # If no user info, try to fetch from users collection
-                if (not user_email or user_email == 'unknown@example.com') and scan_data.get('user_id'):
-                    user_id = scan_data.get('user_id')
-                    if user_id and user_id != 'guest':
-                        try:
-                            user_doc = db.collection('users').document(user_id).get()
-                            if user_doc.exists:
-                                user_data = user_doc.to_dict()
-                                user_email = user_data.get('email', '')
-                                if not user_name or user_name == 'Unknown User':
-                                    user_name = user_data.get('name', 'Unknown User')
-                        except Exception as e:
-                            pass
+                username = (scan_data.get('user_email') or 
+                           scan_data.get('username') or 
+                           scan_data.get('user') or 
+                           'Unknown User')
                 
                 # Handle image name
                 image_name = (scan_data.get('image_name') or 
                              scan_data.get('filename') or 
-                             scan_data.get('file_name') or
-                             f'Image_{scan_doc.id[:8]}.jpg')
+                             f'scan_{scan_doc.id[:8]}')
                 
                 # Count by type
                 if scan_type == 'disease':
@@ -7989,20 +7886,17 @@ def image_analysis(request):
                 scans_list.append({
                     'id': scan_doc.id,
                     'type': scan_type,
-                    'result': result,
                     'primary_class': result,
-                    'confidence': confidence,
                     'primary_confidence': confidence,
                     'image_name': image_name,
-                    'user': user_name,
-                    'username': user_name,
-                    'user_email': user_email,
+                    'username': username,
                     'timestamp': formatted_timestamp,
                     'hidden': scan_data.get('hidden', False),
                     'raw_data': scan_data  # Keep raw data for debugging
                 })
                 
             except Exception as e:
+                print(f"[ERROR] Error processing scan {scan_doc.id}: {e}")
                 continue
         
         # Prepare chart data
@@ -8019,38 +7913,24 @@ def image_analysis(request):
         scans_list.sort(key=lambda x: x['timestamp'], reverse=True)
         
         # Filter out hidden scans unless specifically requested
-        show_hidden = request.GET.get('show_hidden') == 'true'
-        if not show_hidden:
+        if request.GET.get('show_hidden') != 'true':
             visible_scans = [scan for scan in scans_list if not scan.get('hidden', False)]
         else:
             visible_scans = scans_list
-        
-        # Pagination - limit to 50 scans per page
-        page = int(request.GET.get('page', 1))
-        per_page = 50
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        paginated_scans = visible_scans[start_idx:end_idx]
-        
-        total_pages = (len(visible_scans) + per_page - 1) // per_page
         
         context.update({
             'total_scans': len(scans_list),
             'disease_scans': disease_count,
             'pest_scans': pest_count,
             'today_scans': today_count,
-            'scans': paginated_scans,
+            'scans': visible_scans,
             'chart_data': json.dumps(chart_data),
-            'show_hidden': show_hidden,
-            'current_page': page,
-            'total_pages': total_pages,
-            'has_previous': page > 1,
-            'has_next': page < total_pages,
-            'visible_count': len(visible_scans),
-            'hidden_count': len(scans_list) - len([s for s in scans_list if not s.get('hidden', False)]),
         })
         
+        print(f"[DEBUG] Final counts - Total: {len(scans_list)}, Disease: {disease_count}, Pest: {pest_count}, Today: {today_count}")
+        
     except Exception as e:
+        print(f"[ERROR] Error fetching scans data: {e}")
         import traceback
         traceback.print_exc()
         
@@ -8082,7 +7962,7 @@ def image_analysis(request):
                 {
                     'id': 'sample2',
                     'type': 'pest',
-                    'primary_class': 'Monilia',
+                    'primary_class': 'Thrips',
                     'primary_confidence': 92.3,
                     'image_name': 'cacao_pod_002.jpg',
                     'username': 'user@example.com',
@@ -8265,6 +8145,128 @@ def dashboard_api(request):
 # ===============================
 # SCAN-RELATED VIEWS ONLY
 # ===============================
+import os
+import json
+import uuid
+from datetime import datetime, timedelta
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.conf import settings
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+import firebase_admin
+from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
+import pytz
+from .decorators import admin_required, user_required
+
+# Initialize Firestore
+# Firebase already initialized in firebase_config
+
+db = firestore.client()
+
+# Load ML models
+try:
+    disease_model = tf.keras.models.load_model('models/cacao_disease_model.h5')
+    print("Disease model loaded successfully")
+except Exception as e:
+    print(f"Error loading disease model: {e}")
+    disease_model = None
+
+try:
+    pest_model = tf.keras.models.load_model('models/pest_model.h5')
+    print("Pest model loaded successfully")
+except Exception as e:
+    print(f"Error loading pest model: {e}")
+    pest_model = None
+
+# Disease and Pest classes
+DISEASE_CLASSES = [
+    'Black Pod Disease',
+    'Frosty Pod Rot',
+    'Witches Broom',
+    'Swollen Shoot Virus',
+    'Healthy'
+]
+
+PEST_CLASSES = [
+    'Cocoa Pod Borer',
+    'Thrips',
+    'Mealybugs',
+    'Aphids',
+    'Healthy'
+]
+
+# Recommendations
+DISEASE_RECOMMENDATIONS = {
+    'Black Pod Disease': [
+        'Remove and destroy infected pods immediately',
+        'Improve drainage and air circulation',
+        'Apply copper-based fungicides',
+        'Harvest ripe pods promptly'
+    ],
+    'Frosty Pod Rot': [
+        'Remove infected pods and plant debris',
+        'Prune to improve air circulation',
+        'Apply protective fungicides during wet season',
+        'Plant resistant varieties'
+    ],
+    'Witches Broom': [
+        'Prune infected branches 30cm below symptoms',
+        'Remove all brooms and infected tissue',
+        'Apply copper fungicides',
+        'Maintain good farm hygiene'
+    ],
+    'Swollen Shoot Virus': [
+        'Remove and destroy infected trees',
+        'Control mealybug vectors',
+        'Plant virus-free seedlings',
+        'Maintain isolation between plantings'
+    ],
+    'Healthy': [
+        'Continue current management practices',
+        'Regular monitoring for early detection',
+        'Maintain proper nutrition and irrigation',
+        'Keep farm clean and well-maintained'
+    ]
+}
+
+PEST_RECOMMENDATIONS = {
+    'Cocoa Pod Borer': [
+        'Regular pod harvesting every 7-10 days',
+        'Remove and destroy infected pods',
+        'Use pheromone traps',
+        'Apply biological control agents'
+    ],
+    'Thrips': [
+        'Use blue sticky traps',
+        'Apply neem oil or insecticidal soap',
+        'Maintain proper humidity levels',
+        'Remove weeds around plantation'
+    ],
+    'Mealybugs': [
+        'Use biological control with natural enemies',
+        'Apply systemic insecticides if severe',
+        'Maintain ant control',
+        'Regular monitoring and early intervention'
+    ],
+    'Aphids': [
+        'Encourage natural predators',
+        'Use reflective mulches',
+        'Apply insecticidal soap',
+        'Remove heavily infested shoots'
+    ],
+    'Healthy': [
+        'Continue integrated pest management',
+        'Regular monitoring for early detection',
+        'Maintain beneficial insect populations',
+        'Keep plantation clean and well-managed'
+    ]
+}
 
 def preprocess_image(image_file):
     """Preprocess image for model prediction"""
@@ -8318,6 +8320,7 @@ def scan_image(request):
             user_name = request.session.get('name', 'Guest User')
             user_type = 'user' if uid != 'guest' else 'user'
             
+            print(f"[DEBUG] Processing scan - UID: {uid}, Type: {scan_type}, User: {user_email}")
             
             # Check if models are available, otherwise simulate
             if disease_model and pest_model:
@@ -8367,8 +8370,9 @@ def scan_image(request):
             try:
                 doc_ref = db.collection('scans').document(scan_id)
                 doc_ref.set(scan_data)
+                print(f"[DEBUG] Scan saved to Firestore with ID: {scan_id}")
             except Exception as firestore_error:
-                pass  # Fixed empty block
+                print(f"[ERROR] Failed to save to Firestore: {firestore_error}")
                 # Continue without Firestore for now
             
             # Return response
@@ -8381,9 +8385,11 @@ def scan_image(request):
                 'recommendations': recommendations
             }
             
+            print(f"[DEBUG] Scan completed successfully: {predicted_class} ({confidence:.2%})")
             return JsonResponse(response_data)
             
         except Exception as e:
+            print(f"[ERROR] Scan processing error: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'error': str(e)
@@ -8400,6 +8406,7 @@ def scan_history(request):
         if not uid:
             return JsonResponse({'success': True, 'scans': []})
 
+        print(f"[DEBUG] Fetching scan history for user: {uid}")
 
         # Get user's scans from Firestore
         scans_ref = db.collection('scans').where('user_id', '==', uid).order_by('timestamp', direction=firestore.Query.DESCENDING)
@@ -8429,9 +8436,11 @@ def scan_history(request):
 
             scans.append(scan_data)
 
+        print(f"[DEBUG] Found {len(scans)} scans for user {uid}")
         return JsonResponse({'success': True, 'scans': scans})
 
     except Exception as e:
+        print(f"[ERROR] Error getting scan history: {str(e)}")
         return JsonResponse({'success': False, 'message': str(e)})
 
 @csrf_exempt
@@ -8458,10 +8467,12 @@ def delete_user_scan(request, scan_id):
             
             # Delete the scan
             scan_ref.delete()
+            print(f"[DEBUG] Scan {scan_id} deleted by user {uid}")
             
             return JsonResponse({'success': True, 'message': 'Scan deleted successfully'})
             
         except Exception as e:
+            print(f"[ERROR] Error deleting scan: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
@@ -8471,8 +8482,9 @@ def delete_user_scan(request, scan_id):
 # ===============================
 
 @admin_required
-def image_analysis_v3_legacy(request):
+def image_analysis(request):
     """Admin image analysis view with proper scan fetching"""
+    print("[DEBUG] Admin accessing image analysis")
     
     # Initialize timezone
     tz = pytz.timezone('Asia/Manila')
@@ -8483,6 +8495,7 @@ def image_analysis_v3_legacy(request):
         scans_ref = db.collection('scans')
         all_scans = list(scans_ref.stream())
         
+        print(f"[DEBUG] Found {len(all_scans)} total scans in Firestore")
         
         # Process scans data
         scans_data = []
@@ -8541,6 +8554,7 @@ def image_analysis_v3_legacy(request):
                 scans_data.append(scan_data)
                 
             except Exception as e:
+                print(f"[ERROR] Error processing scan {doc.id}: {e}")
                 continue
         
         # Prepare chart data
@@ -8565,8 +8579,10 @@ def image_analysis_v3_legacy(request):
             'chart_data': json.dumps(chart_data),
         }
         
+        print(f"[DEBUG] Image analysis context: Total={len(scans_data)}, Disease={disease_count}, Pest={pest_count}")
         
     except Exception as e:
+        print(f"[ERROR] Error in image_analysis: {str(e)}")
         import traceback
         traceback.print_exc()
         
@@ -8597,6 +8613,7 @@ def toggle_scan_visibility(request, scan_id):
                 scan_ref.update({'hidden': not current_hidden})
                 
                 action = 'hidden' if not current_hidden else 'shown'
+                print(f"[DEBUG] Scan {scan_id} {action}")
                 
                 return JsonResponse({
                     'success': True,
@@ -8607,6 +8624,7 @@ def toggle_scan_visibility(request, scan_id):
                 return JsonResponse({'success': False, 'message': 'Scan not found'})
                 
         except Exception as e:
+            print(f"[ERROR] Error toggling scan visibility: {str(e)}")
             return JsonResponse({'success': False, 'message': str(e)})
     
     return JsonResponse({'success': False, 'message': 'Invalid request method'})
@@ -8619,8 +8637,10 @@ def delete_scan(request, scan_id):
         try:
             scan_ref = db.collection('scans').document(scan_id)
             scan_ref.delete()
+            print(f"[DEBUG] Scan {scan_id} deleted by admin")
             messages.success(request, 'Scan deleted successfully')
         except Exception as e:
+            print(f"[ERROR] Error deleting scan: {str(e)}")
             messages.error(request, f'Error deleting scan: {str(e)}')
         
         return redirect('image_analysis')
@@ -8630,6 +8650,7 @@ def delete_scan(request, scan_id):
 @admin_required
 def admin_dashboard_scans(request):
     """Admin Dashboard scan statistics only"""
+    print("[DEBUG] Fetching scan statistics for admin dashboard")
     
     # Initialize default values
     scan_stats = {
@@ -8690,9 +8711,10 @@ def admin_dashboard_scans(request):
             'recent_scans': recent_scans,
         })
         
+        print(f"[DEBUG] Scan stats - Total: {total_scans}, Disease: {disease_scans}, Pest: {pest_scans}, Today: {today_scans}")
         
     except Exception as e:
-        pass  # Fixed empty block
+        print(f"[ERROR] Error fetching scan statistics: {e}")
         # Use fallback data
     
     return scan_stats
@@ -8858,7 +8880,14 @@ def _doc_to_user(doc) -> SimpleNamespace:
         ),
     )
 
-# Admin Reports Image anlysis Print
+
+def admin_user_list(request):
+    db = get_db()
+    query = db.collection(USERS_COLLECTION).where(LOGIN_REGISTERED_FIELD, "==", True)
+    users = [_doc_to_user(doc) for doc in query.stream()]
+    return render(request, "admin/user_management.html", {"users": users})
+
+
 
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
@@ -8881,13 +8910,7 @@ from reportlab.lib.units import inch
 
 from google.cloud import firestore
 
-
-def admin_required(view_func):
-    """Decorator for admin required views"""
-    def wrapper(request, *args, **kwargs):
-        # Add your admin check logic here
-        return view_func(request, *args, **kwargs)
-    return wrapper
+db = firestore.Client()
 
 @admin_required
 def print_preview(request):
@@ -8919,9 +8942,8 @@ def print_preview(request):
                 confidence = float(confidence)
             except (ValueError, TypeError):
                 confidence = 0
-        # Convert to percentage - handle both decimal and already percentage values
-        if confidence <= 1:
-            confidence = confidence * 100
+        # Convert to percentage
+        confidence = confidence * 100 if confidence <= 1 else confidence
         scan_data['confidence'] = confidence
         scan_data['primary_confidence'] = confidence
         
@@ -8929,36 +8951,21 @@ def print_preview(request):
         scan_data['result'] = result
         scan_data['primary_class'] = result
         
-        # Get username and email with proper fallbacks
-        username = scan_data.get('user_name', scan_data.get('user', scan_data.get('username', 'Unknown User')))
-        user_email = scan_data.get('user_email', scan_data.get('email', ''))
-        
-        # If email is empty or 'unknown@example.com', try to fetch from Firestore users collection
-        if not user_email or user_email == 'unknown@example.com':
-            user_id = scan_data.get('user_id')
-            if user_id and user_id != 'guest':
-                try:
-                    # Try to get user email from Firestore users collection
-                    user_doc = db.collection('users').document(user_id).get()
-                    if user_doc.exists:
-                        user_data = user_doc.to_dict()
-                        user_email = user_data.get('email', '')
-                        if not username or username == 'Unknown User':
-                            username = user_data.get('name', 'Unknown User')
-                except Exception as e:
-        
-                    pass
-        # Final fallback: if still no email, use username
-        if not user_email:
-            user_email = username
-        
+        username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
         scan_data['username'] = username
         scan_data['user'] = username
-        scan_data['user_email'] = user_email
         
-        # Ensure image_name is set
-        if not scan_data.get('image_name'):
-            scan_data['image_name'] = 'Image_' + scan_data.get('scan_id', doc.id)[:8] + '.jpg'
+        # FIXED: Use your custom user model instead of default User
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_obj = User.objects.get(username=username)
+            scan_data['user_email'] = user_obj.email
+        except User.DoesNotExist:
+            scan_data['user_email'] = 'N/A'
+        except Exception as e:
+            # Fallback if there's any error
+            scan_data['user_email'] = scan_data.get('user_email', 'N/A')
         
         # Apply confidence filter
         if confidence_level:
@@ -9037,9 +9044,8 @@ def export_pdf(request):
                 confidence = float(confidence)
             except (ValueError, TypeError):
                 confidence = 0
-        # Convert to percentage - handle both decimal and already percentage values
-        if confidence <= 1:
-            confidence = confidence * 100
+        # Convert to percentage
+        confidence = confidence * 100 if confidence <= 1 else confidence
         scan_data['confidence'] = confidence
         scan_data['primary_confidence'] = confidence
         
@@ -9047,36 +9053,9 @@ def export_pdf(request):
         scan_data['result'] = result
         scan_data['primary_class'] = result
         
-        # Get username and email with proper fallbacks
-        username = scan_data.get('user_name', scan_data.get('user', scan_data.get('username', 'Unknown User')))
-        user_email = scan_data.get('user_email', scan_data.get('email', ''))
-        
-        # If email is empty or 'unknown@example.com', try to fetch from Firestore users collection
-        if not user_email or user_email == 'unknown@example.com':
-            user_id = scan_data.get('user_id')
-            if user_id and user_id != 'guest':
-                try:
-                    # Try to get user email from Firestore users collection
-                    user_doc = db.collection('users').document(user_id).get()
-                    if user_doc.exists:
-                        user_data = user_doc.to_dict()
-                        user_email = user_data.get('email', '')
-                        if not username or username == 'Unknown User':
-                            username = user_data.get('name', 'Unknown User')
-                except Exception as e:
-        
-                    pass
-        # Final fallback: if still no email, use username
-        if not user_email:
-            user_email = username
-        
+        username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
         scan_data['username'] = username
         scan_data['user'] = username
-        scan_data['user_email'] = user_email
-        
-        # Ensure image_name is set
-        if not scan_data.get('image_name'):
-            scan_data['image_name'] = 'Image_' + scan_data.get('scan_id', doc.id)[:8] + '.jpg'
         
         # Apply same filters as print_preview
         if confidence_level:
@@ -9128,7 +9107,7 @@ def export_pdf(request):
         ['Total Scans', str(len(scans))],
         ['Disease Scans', str(len([s for s in scans if s.get('type') == 'disease']))],
         ['Pest Scans', str(len([s for s in scans if s.get('type') == 'pest']))],
-        ['Generated', datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %H:%M:%S')]
+        ['Generated', datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %H:%M:%S')]  # Changed to Manila
     ]
     
     summary_table = Table(summary_data, colWidths=[2*inch, 2*inch])
@@ -9149,7 +9128,7 @@ def export_pdf(request):
     # Scan results table
     if scans:
         # Table headers
-        data = [['Image Name', 'Type', 'Result', 'Confidence', 'User Email', 'Date']]
+        data = [['Image Name', 'Type', 'Result', 'Confidence', 'User', 'Date']]
         
         # Table data
         for scan in scans:
@@ -9161,7 +9140,7 @@ def export_pdf(request):
                 scan.get('type', 'N/A').title(),
                 scan.get('result', 'N/A'),
                 f"{scan.get('confidence', 0):.1f}%",
-                scan.get('user_email', 'Unknown User'),  # Use user_email instead of username
+                scan.get('username', 'Unknown User'),
                 date_str
             ])
         
@@ -9220,9 +9199,8 @@ def image_analysis_dashboard(request):
                     confidence = float(confidence)
                 except (ValueError, TypeError):
                     confidence = 0
-            if confidence <= 1:
-                confidence = confidence * 100
-            confidence = round(float(confidence), 1)
+            # Convert to percentage
+            confidence = confidence * 100 if confidence <= 1 else confidence
             scan_data['confidence'] = confidence
             scan_data['primary_confidence'] = confidence
             
@@ -9231,21 +9209,8 @@ def image_analysis_dashboard(request):
             scan_data['primary_class'] = result
             
             username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
-            user_email = scan_data.get('user_email', scan_data.get('email', ''))
-            
-            # If no email in Firestore, try to get from Django user model
-            if not user_email and username != 'Unknown User':
-                try:
-                    from django.contrib.auth import get_user_model
-                    User = get_user_model()
-                    user_obj = User.objects.get(username=username)
-                    user_email = user_obj.email
-                except:
-                    user_email = username  # Fallback to username if email not found
-            
             scan_data['username'] = username
             scan_data['user'] = username
-            scan_data['user_email'] = user_email or username
             
             # Count statistics
             if scan_data.get('type') == 'disease':
@@ -9349,41 +9314,17 @@ def export_scan_data(request):
         response['Content-Disposition'] = f'attachment; filename="scan_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
         
         writer = csv.writer(response)
-        writer.writerow(['ID', 'Image Name', 'Type', 'Primary Class', 'Confidence', 'Username', 'User Email', 'Timestamp', 'Hidden'])
+        writer.writerow(['ID', 'Image Name', 'Type', 'Primary Class', 'Confidence', 'Username', 'Timestamp', 'Hidden'])
         
         for doc in docs:
             scan_data = doc.to_dict()
-            
-            confidence = scan_data.get('confidence', scan_data.get('primary_confidence', 0))
-            if isinstance(confidence, str):
-                try:
-                    confidence = float(confidence)
-                except (ValueError, TypeError):
-                    confidence = 0
-            if confidence <= 1:
-                confidence = confidence * 100
-            confidence = round(float(confidence), 1)
-                
-            username = scan_data.get('user', scan_data.get('username', 'Unknown User'))
-            user_email = scan_data.get('user_email', scan_data.get('email', ''))
-            
-            if not user_email and username != 'Unknown User':
-                try:
-                    from django.contrib.auth import get_user_model
-                    User = get_user_model()
-                    user_obj = User.objects.get(username=username)
-                    user_email = user_obj.email
-                except:
-                    user_email = username
-            
             writer.writerow([
                 doc.id,
                 scan_data.get('image_name', ''),
                 scan_data.get('type', ''),
                 scan_data.get('primary_class', ''),
-                f"{confidence:.1f}%",
-                username,
-                user_email or username,
+                scan_data.get('primary_confidence', ''),
+                scan_data.get('username', ''),
                 scan_data.get('timestamp', ''),
                 scan_data.get('hidden', False)
             ])
@@ -9419,1636 +9360,3 @@ def debug_firestore_collections(request):
             'success': False,
             'error': str(e)
         })
-
-
-#Admin Reports Ecommerce Print
-from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse
-from django.contrib import messages
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from datetime import datetime, timedelta
-import pytz
-from firebase_admin import firestore
-import json
-from calendar import monthrange
-from collections import defaultdict
-
-# Initialize Firestore
-
-
-def get_customer_name(user_email):
-    """Fetch customer name from users collection or order data"""
-    try:
-        # First try to get from users collection
-        users_ref = db.collection('users')
-        user_query = users_ref.where('email', '==', user_email).limit(1)
-        users = list(user_query.stream())
-        
-        if users:
-            user_data = users[0].to_dict()
-            full_name = (user_data.get('full_name') or 
-                        user_data.get('name') or 
-                        user_data.get('displayName') or
-                        f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip() or
-                        f"{user_data.get('firstName', '')} {user_data.get('lastName', '')}".strip())
-            
-            if full_name and full_name.strip():
-                return full_name.strip()
-        
-        # This will be handled in the calling function by checking order data
-        return user_email.split('@')[0] if user_email and user_email != 'N/A' else 'Unknown Customer'
-        
-    except Exception as e:
-        return user_email.split('@')[0] if user_email and user_email != 'N/A' else 'Unknown Customer'
-
-import json
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-import pytz
-from datetime import datetime
-
-@admin_required
-@require_http_methods(["POST"])
-def update_order_status_v2(request):
-    """Update order status with stock deduction and email notifications (version 2 - gets order_id from body)"""
-    try:
-        # ✅ Parse JSON from request body
-        data = json.loads(request.body.decode("utf-8"))
-        order_id = data.get("order_id")
-        new_status = data.get("status")
-
-        if not order_id or not new_status:
-            return JsonResponse({"success": False, "message": "Missing order_id or status"}, status=400)
-
-        order_ref = db.collection("orders").document(order_id)
-        order_doc = order_ref.get()
-
-        if not order_doc.exists:
-            return JsonResponse({"success": False, "message": "Order not found"}, status=404)
-
-        order_data = order_doc.to_dict()
-        old_status = order_data.get("status")
-
-        # ✅ Update Firestore
-        order_ref.update({
-            "status": new_status,
-            "updated_at": datetime.now(pytz.timezone("Asia/Manila")),
-            "updated_by": request.session.get("admin_email", "admin"),
-        })
-
-        if new_status == "delivered" and old_status != "delivered":
-            deduct_stock_for_order(order_data)
-
-        send_status_change_email(order_data, new_status)
-
-        return JsonResponse({"success": True, "message": f"Order status updated to {new_status}"})
-
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "message": "Invalid JSON data"}, status=400)
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
-
-def deduct_stock_for_order(order_data):
-    """Deduct stock quantities when order is delivered"""
-    try:
-        products_ref = db.collection('products')
-        
-        for item in order_data.get('items', []):
-            product_id = item.get('product_id')
-            quantity_ordered = int(item.get('quantity', 0))
-            
-            if not product_id:
-                continue
-                
-            # Get current product data
-            product_ref = products_ref.document(product_id)
-            product_doc = product_ref.get()
-            
-            if product_doc.exists:
-                product_data = product_doc.to_dict()
-                current_stock = int(product_data.get('stock_quantity', 0))
-                new_stock = max(0, current_stock - quantity_ordered)
-                
-                # Update stock in Firebase
-                product_ref.update({
-                    'stock_quantity': new_stock,
-                    'last_updated': datetime.now(pytz.timezone('Asia/Manila'))
-                })
-                
-            else:
-                pass  # Auto-fixed empty block
-                
-    except Exception as e:
-
-        pass
-def admin_reports(request):
-    """Generate admin reports with proper error handling"""
-    try:
-        # Get current date in Philippines timezone
-        philippines_tz = pytz.timezone('Asia/Manila')
-        now = datetime.now(philippines_tz)
-        current_year = now.year
-        current_month = now.month
-        
-        # Fetch all orders from Firestore
-        orders_ref = db.collection('orders')
-        all_orders = list(orders_ref.stream())
-        
-        # Process orders
-        monthly_orders = []
-        total_orders = 0
-        delivered_orders = 0
-        pending_orders = 0
-        total_revenue = 0
-        
-        # For charts
-        daily_sales = defaultdict(float)
-        product_sales = defaultdict(int)
-        
-        # Track processed orders to avoid duplicates
-        processed_order_ids = set()
-        
-        for order_doc in all_orders:
-            order_data = order_doc.to_dict()
-            order_id = order_doc.id
-            
-            # Skip if already processed
-            if order_id in processed_order_ids:
-                continue
-            processed_order_ids.add(order_id)
-            
-            try:
-                order_timestamp = None
-                
-                timestamp_fields = ['timestamp', 'created_at', 'order_date', 'date_created', 'createdAt']
-                for field in timestamp_fields:
-                    if field in order_data and order_data[field] is not None:
-                        timestamp_value = order_data[field]
-                        
-                        try:
-                            # Handle different timestamp formats
-                            if hasattr(timestamp_value, 'timestamp'):
-                                # Firestore timestamp
-                                order_timestamp = datetime.fromtimestamp(timestamp_value.timestamp(), tz=philippines_tz)
-                            elif isinstance(timestamp_value, str):
-                                # String timestamp - try multiple formats
-                                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%SZ']:
-                                    try:
-                                        if 'T' in timestamp_value:
-                                            timestamp_value = timestamp_value.replace('Z', '')
-                                        order_timestamp = datetime.strptime(timestamp_value, fmt)
-                                        order_timestamp = philippines_tz.localize(order_timestamp)
-                                        break
-                                    except:
-                                        continue
-                            elif isinstance(timestamp_value, (int, float)):
-                                # Unix timestamp
-                                if timestamp_value > 1e10:  # Milliseconds
-                                    timestamp_value = timestamp_value / 1000
-                                order_timestamp = datetime.fromtimestamp(timestamp_value, tz=philippines_tz)
-                            
-                            if order_timestamp:
-                                break
-                        except Exception as e:
-                            continue
-                
-                if not order_timestamp:
-                    order_timestamp = now
-                
-                # Count all orders regardless of month for totals
-                total_orders += 1
-                
-                # Get order details
-                user_email = order_data.get('user_email', order_data.get('email', 'N/A'))
-                
-                customer_name = (order_data.get('customer_name') or 
-                               order_data.get('user_name') or 
-                               order_data.get('name') or
-                               order_data.get('full_name') or
-                               get_customer_name(user_email))
-                
-                amount_php = float(order_data.get('total_amount', 0))
-                
-                status = order_data.get('status', 'pending').lower()
-                
-                order_info = {
-                    'id': order_doc.id,
-                    'order_id': order_data.get('order_id', order_doc.id),
-                    'user_email': user_email,
-                    'customer_name': customer_name,
-                    'total_amount': amount_php,  # Direct PHP amount from Firestore
-                    'status': status,
-                    'timestamp': order_timestamp,
-                    'items': order_data.get('items', [])
-                }
-                
-                # Update metrics based on status
-                if status in ['delivered', 'completed', 'shipped']:
-                    delivered_orders += 1
-                    total_revenue += amount_php  # Direct PHP amount
-                    
-                    # Add to daily sales for chart (current month only)
-                    if (order_timestamp.year == current_year and 
-                        order_timestamp.month == current_month):
-                        day_key = order_timestamp.strftime('%Y-%m-%d')
-                        daily_sales[day_key] += amount_php
-                elif status in ['pending', 'processing', 'confirmed']:
-                    pending_orders += 1
-                
-                # Add to monthly orders if in current month
-                if (order_timestamp.year == current_year and 
-                    order_timestamp.month == current_month):
-                    monthly_orders.append(order_info)
-                
-                # Count product sales
-                for item in order_info['items']:
-                    if isinstance(item, dict):
-                        product_name = item.get('name', item.get('product_name', 'Unknown'))
-                        quantity = item.get('quantity', item.get('qty', 1))
-                        try:
-                            quantity = int(quantity)
-                        except:
-                            quantity = 1
-                        product_sales[product_name] += quantity
-                        
-            except Exception as e:
-                continue
-        
-        # Sort monthly orders by timestamp (newest first)
-        monthly_orders.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Prepare chart data
-        chart_dates = []
-        chart_sales = []
-        
-        # Get days in current month
-        days_in_month = monthrange(current_year, current_month)[1]
-        for day in range(1, days_in_month + 1):
-            date_key = f"{current_year}-{current_month:02d}-{day:02d}"
-            chart_dates.append(f"{current_month}/{day}")
-            chart_sales.append(daily_sales.get(date_key, 0))
-        
-        # Get top 5 products
-        top_products = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        context = {
-            'current_month': now.strftime('%B'),
-            'current_year': current_year,
-            'total_orders': total_orders,
-            'delivered_orders': delivered_orders,
-            'pending_orders': pending_orders,
-            'total_revenue': total_revenue,
-            'monthly_orders': monthly_orders,
-            'chart_dates': json.dumps(chart_dates),
-            'chart_sales': json.dumps(chart_sales),
-            'top_products': top_products,
-        }
-        
-        return render(request, 'admin/reports.html', context)
-
-    except Exception as e:
-        context = {
-            'current_month': datetime.now().strftime('%B'),
-            'current_year': datetime.now().year,
-            'total_orders': 0,
-            'delivered_orders': 0,
-            'pending_orders': 0,
-            'total_revenue': 0,
-            'monthly_orders': [],
-            'chart_dates': json.dumps([]),
-            'chart_sales': json.dumps([]),
-            'top_products': [],
-            'error_message': f'Error loading reports: {str(e)}',
-        }
-        return render(request, 'admin/reports.html', context)
-
-def print_monthly_report(request, year, month):
-    """Generate printable monthly report for specific year and month"""
-    try:
-        year = int(year)
-        month = int(month)
-        
-        philippines_tz = pytz.timezone('Asia/Manila')
-        
-        # Fetch all orders from Firestore
-        orders_ref = db.collection('orders')
-        all_orders = list(orders_ref.stream())
-        
-        # Process orders for the specified month
-        monthly_orders = []
-        total_revenue = 0
-        delivered_orders = 0
-        total_orders = 0
-        
-        # Track processed orders to avoid duplicates
-        processed_order_ids = set()
-        
-        for order_doc in all_orders:
-            order_data = order_doc.to_dict()
-            order_id = order_doc.id
-            
-            # Skip if already processed
-            if order_id in processed_order_ids:
-                continue
-            processed_order_ids.add(order_id)
-            
-            try:
-                order_timestamp = None
-                
-                timestamp_fields = ['timestamp', 'created_at', 'order_date', 'date_created', 'createdAt']
-                for field in timestamp_fields:
-                    if field in order_data and order_data[field] is not None:
-                        timestamp_value = order_data[field]
-                        
-                        try:
-                            if hasattr(timestamp_value, 'timestamp'):
-                                order_timestamp = datetime.fromtimestamp(timestamp_value.timestamp(), tz=philippines_tz)
-                            elif isinstance(timestamp_value, str):
-                                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%SZ']:
-                                    try:
-                                        if 'T' in timestamp_value:
-                                            timestamp_value = timestamp_value.replace('Z', '')
-                                        order_timestamp = datetime.strptime(timestamp_value, fmt)
-                                        order_timestamp = philippines_tz.localize(order_timestamp)
-                                        break
-                                    except:
-                                        continue
-                            elif isinstance(timestamp_value, (int, float)):
-                                if timestamp_value > 1e10:
-                                    timestamp_value = timestamp_value / 1000
-                                order_timestamp = datetime.fromtimestamp(timestamp_value, tz=philippines_tz)
-                            
-                            if order_timestamp:
-                                break
-                        except Exception:
-                            continue
-                
-                if not order_timestamp:
-                    continue
-                
-                # Check if order is in specified month/year
-                if (order_timestamp.year == year and 
-                    order_timestamp.month == month):
-                    
-                    user_email = order_data.get('user_email', order_data.get('email', 'N/A'))
-                    
-                    customer_name = (order_data.get('customer_name') or 
-                                   order_data.get('user_name') or 
-                                   order_data.get('name') or
-                                   order_data.get('full_name') or
-                                   get_customer_name(user_email))
-                    
-                    amount_php = float(order_data.get('total_amount', 0))
-                    
-                    order_info = {
-                        'id': order_doc.id,
-                        'order_id': order_data.get('order_id', order_doc.id),
-                        'user_email': user_email,
-                        'customer_name': customer_name,
-                        'total_amount': amount_php,  # Direct PHP amount
-                        'status': order_data.get('status', 'pending').lower(),
-                        'timestamp': order_timestamp,
-                        'items': order_data.get('items', [])
-                    }
-                    
-                    monthly_orders.append(order_info)
-                    total_orders += 1
-                    
-                    if order_info['status'] in ['delivered', 'completed', 'shipped']:
-                        delivered_orders += 1
-                        total_revenue += amount_php  # Direct PHP amount
-                        
-            except Exception as e:
-                continue
-        
-        monthly_orders.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Get month name
-        month_names = [
-            '', 'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ]
-        month_name = month_names[month] if 1 <= month <= 12 else 'Unknown'
-        
-        context = {
-            'year': year,
-            'month': month,
-            'month_name': month_name,
-            'total_orders': total_orders,
-            'delivered_orders': delivered_orders,
-            'total_revenue': total_revenue,
-            'monthly_orders': monthly_orders,
-            'report_date': datetime.now(pytz.timezone('Asia/Manila')).strftime('%B %d, %Y at %I:%M %p'),
-        }
-        
-        return render(request, 'admin/print_monthly_report.html', context)
-
-    except Exception as e:
-        context = {
-            'year': year,
-            'month': month,
-            'month_name': 'Unknown',
-            'total_orders': 0,
-            'delivered_orders': 0,
-            'total_revenue': 0,
-            'monthly_orders': [],
-            'report_date': datetime.now().strftime('%B %d, %Y'),
-            'error_message': f'Error generating report: {str(e)}',
-        }
-        return render(request, 'admin/print_monthly_report.html', context)
-
-@csrf_exempt
-def get_monthly_data(request):
-    """API endpoint to get monthly data for AJAX requests"""
-    try:
-        year = int(request.GET.get('year', datetime.now().year))
-        month = int(request.GET.get('month', datetime.now().month))
-        
-        philippines_tz = pytz.timezone('Asia/Manila')
-        orders_ref = db.collection('orders')
-        all_orders = list(orders_ref.stream())
-        
-        monthly_stats = {
-            'total_orders': 0,
-            'delivered_orders': 0,
-            'pending_orders': 0,
-            'total_revenue': 0,
-            'orders': []
-        }
-        
-        processed_order_ids = set()
-        
-        for order_doc in all_orders:
-            order_data = order_doc.to_dict()
-            order_id = order_doc.id
-            
-            if order_id in processed_order_ids:
-                continue
-            processed_order_ids.add(order_id)
-            
-            try:
-                order_timestamp = None
-                timestamp_fields = ['timestamp', 'created_at', 'order_date', 'date_created', 'createdAt']
-                
-                for field in timestamp_fields:
-                    if field in order_data and order_data[field] is not None:
-                        timestamp_value = order_data[field]
-                        
-                        try:
-                            if hasattr(timestamp_value, 'timestamp'):
-                                order_timestamp = datetime.fromtimestamp(timestamp_value.timestamp(), tz=philippines_tz)
-                            elif isinstance(timestamp_value, str):
-                                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%SZ']:
-                                    try:
-                                        if 'T' in timestamp_value:
-                                            timestamp_value = timestamp_value.replace('Z', '')
-                                        order_timestamp = datetime.strptime(timestamp_value, fmt)
-                                        order_timestamp = philippines_tz.localize(order_timestamp)
-                                        break
-                                    except:
-                                        continue
-                            elif isinstance(timestamp_value, (int, float)):
-                                if timestamp_value > 1e10:
-                                    timestamp_value = timestamp_value / 1000
-                                order_timestamp = datetime.fromtimestamp(timestamp_value, tz=philippines_tz)
-                            
-                            if order_timestamp:
-                                break
-                        except Exception:
-                            continue
-                
-                if not order_timestamp:
-                    continue
-                
-                if (order_timestamp.year == year and order_timestamp.month == month):
-                    amount_php = float(order_data.get('total_amount', 0))
-                    status = order_data.get('status', 'pending').lower()
-                    
-                    monthly_stats['total_orders'] += 1
-                    
-                    if status in ['delivered', 'completed', 'shipped']:
-                        monthly_stats['delivered_orders'] += 1
-                        monthly_stats['total_revenue'] += amount_php  # Direct PHP amount
-                    elif status in ['pending', 'processing', 'confirmed']:
-                        monthly_stats['pending_orders'] += 1
-                        
-            except Exception:
-                continue
-        
-        return JsonResponse(monthly_stats)
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-#Session
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .decorators import admin_required, user_required, guest_required, anonymous_required
-
-def unauthorized(request):
-    """Unauthorized access page"""
-    context = {
-        'user_role': request.session.get('role'),
-        'user_name': request.session.get('name'),
-    }
-    return render(request, 'errors/unauthorized.html', context)
-
-# Custom 403 handler
-def custom_403(request, exception=None):
-    """Custom 403 forbidden handler"""
-    context = {
-        'user_role': request.session.get('role'),
-        'user_name': request.session.get('name'),
-    }
-    return render(request, 'errors/403.html', context, status=403)
-
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.core.files.storage import default_storage
-from django.conf import settings
-import json
-import os
-import uuid
-from datetime import datetime, timedelta
-import pytz
-import firebase_admin
-from firebase_admin import credentials, firestore
-import logging
-import traceback
-import numpy as np
-from PIL import Image
-import random
-
-# Initialize Firebase (assuming it's already configured)
-
-logger = logging.getLogger(__name__)
-
-def scan_history(request):
-    """Get scan history for current user with proper formatting"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            return JsonResponse({'success': True, 'scans': []})
-
-
-        # Get user's scans from Firestore
-        scans_ref = db.collection('scans').where('user_id', '==', uid).order_by('timestamp', direction=firestore.Query.DESCENDING)
-        scans = []
-
-        for doc in scans_ref.stream():
-            scan_data = doc.to_dict()
-            scan_data['id'] = doc.id
-
-            if 'confidence' in scan_data:
-                confidence = scan_data['confidence']
-                if isinstance(confidence, (int, float)):
-                    # If confidence is between 0-1, convert to percentage
-                    if confidence <= 1.0:
-                        scan_data['confidence'] = round(confidence * 100, 1)
-                    else:
-                        scan_data['confidence'] = round(confidence, 1)
-
-            if 'result' in scan_data:
-                result_words = scan_data['result'].split()
-                if len(result_words) > 2:
-                    scan_data['short_name'] = ' '.join(result_words[:2])
-                    scan_data['full_name'] = scan_data['result']
-                else:
-                    scan_data['short_name'] = scan_data['result']
-                    scan_data['full_name'] = scan_data['result']
-
-            # Handle timestamp formatting
-            if 'timestamp' in scan_data and scan_data['timestamp']:
-                if hasattr(scan_data['timestamp'], 'seconds'):
-                    # Convert Firestore timestamp to ISO string
-                    timestamp_dt = datetime.fromtimestamp(scan_data['timestamp'].seconds, tz=pytz.UTC)
-                    scan_data['timestamp'] = timestamp_dt.isoformat()
-                elif not isinstance(scan_data['timestamp'], str):
-                    scan_data['timestamp'] = scan_data['timestamp'].isoformat()
-
-            scans.append(scan_data)
-
-        return JsonResponse({'success': True, 'scans': scans})
-
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-@csrf_exempt
-def delete_user_scan(request, scan_id):
-    """Delete user's scan with proper error handling"""
-    if request.method == 'POST':
-        try:
-            uid = request.session.get('uid')
-            if not uid:
-                return JsonResponse({'success': False, 'error': 'Authentication required'})
-            
-            # Get scan document
-            scan_ref = db.collection('scans').document(scan_id)
-            scan_doc = scan_ref.get()
-            
-            if not scan_doc.exists:
-                return JsonResponse({'success': False, 'error': 'Scan not found'})
-            
-            scan_data = scan_doc.to_dict()
-            
-            # Check if scan belongs to current user
-            if scan_data.get('user_id') != uid:
-                return JsonResponse({'success': False, 'error': 'Unauthorized'})
-            
-            # Delete the scan
-            scan_ref.delete()
-            
-            return JsonResponse({'success': True, 'message': 'Scan deleted successfully'})
-            
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-def scan_details(request, scan_id):
-    """Get detailed information about a specific scan"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            return JsonResponse({'success': False, 'error': 'Authentication required'})
-        
-        # Get scan document
-        scan_ref = db.collection('scans').document(scan_id)
-        scan_doc = scan_ref.get()
-        
-        if not scan_doc.exists:
-            return JsonResponse({'success': False, 'error': 'Scan not found'})
-        
-        scan_data = scan_doc.to_dict()
-        
-        # Check if scan belongs to current user
-        if scan_data.get('user_id') != uid:
-            return JsonResponse({'success': False, 'error': 'Unauthorized'})
-        
-        scan_data['id'] = scan_id
-        
-        if 'confidence' in scan_data:
-            confidence = scan_data['confidence']
-            if isinstance(confidence, (int, float)):
-                if confidence <= 1.0:
-                    scan_data['confidence'] = round(confidence * 100, 1)
-                else:
-                    scan_data['confidence'] = round(confidence, 1)
-        
-        # Handle timestamp
-        if 'timestamp' in scan_data and scan_data['timestamp']:
-            if hasattr(scan_data['timestamp'], 'seconds'):
-                timestamp_dt = datetime.fromtimestamp(scan_data['timestamp'].seconds, tz=pytz.UTC)
-                scan_data['timestamp'] = timestamp_dt.isoformat()
-        
-        return JsonResponse({'success': True, 'scan': scan_data})
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@csrf_exempt
-def scan_image(request):
-    """Process uploaded image for disease/pest detection"""
-    if request.method == 'POST':
-        try:
-            if 'image' not in request.FILES:
-                return JsonResponse({'success': False, 'message': 'No image provided'})
-            
-            image_file = request.FILES['image']
-            scan_type = request.POST.get('scan_type', 'disease')
-            uid = request.session.get('uid')
-            
-            if not uid:
-                return JsonResponse({'success': False, 'message': 'Authentication required'})
-            
-            # Validate image
-            if image_file.size > 5 * 1024 * 1024:  # 5MB limit
-                return JsonResponse({'success': False, 'message': 'Image too large (max 5MB)'})
-            
-            # Save image temporarily
-            file_extension = os.path.splitext(image_file.name)[1]
-            unique_filename = f"{uuid.uuid4()}{file_extension}"
-            file_path = f"temp_scans/{unique_filename}"
-            
-            saved_path = default_storage.save(file_path, image_file)
-            full_path = os.path.join(settings.MEDIA_ROOT, saved_path)
-            
-            # Mock prediction (replace with your actual model prediction)
-            if scan_type == 'disease':
-                classes = ['Black Pod Disease', 'Fito Disease',  'Healthy', 'Monilia Disease', 'Unknown Data', 'Mirids',]
-            else:
-                classes = ['Ant Weaver', 'Aphids', 'Healthy', 'Mealy Bug', 'Unknown Data', 'Pod Borer',]
-            
-            # Simulate prediction
-            predicted_class = random.choice(classes)
-            confidence_decimal = random.uniform(0.7, 0.95)  # Store as decimal
-            
-            confidence_percentage = round(confidence_decimal * 100, 1)
-            
-            # Get recommendations
-            recommendations = get_recommendations(predicted_class)
-            
-            # Save scan to Firestore
-            scan_data = {
-                'user_id': uid,
-                'type': scan_type,
-                'result': predicted_class,
-                'confidence': confidence_decimal,  # Store as decimal
-                'recommendations': recommendations,
-                'timestamp': firestore.SERVER_TIMESTAMP,
-                'image_path': saved_path
-            }
-            
-            # Add to Firestore
-            scan_ref = db.collection('scans').add(scan_data)
-            scan_id = scan_ref[1].id
-            
-            # Clean up temporary file
-            if os.path.exists(full_path):
-                os.remove(full_path)
-            
-            return JsonResponse({
-                'success': True,
-                'result': predicted_class,
-                'confidence': confidence_percentage,  # Return as percentage
-                'recommendations': recommendations,
-                'scan_id': scan_id
-            })
-            
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)})
-    
-    return JsonResponse({'success': False, 'message': 'Invalid request method'})
-
-def get_recommendations(result):
-    """Get recommendations based on scan result"""
-    recommendations_map = {
-    # Shared Classes
-    'Healthy': [
-        'Continue regular monitoring',
-        'Maintain good farm hygiene',
-        'Keep optimal growing conditions'
-    ],
-    'Unknown Data': [
-        'Scan unclear — please retake image',
-        'Ensure good lighting and focus',
-        'Upload again for accurate detection'
-    ],
-
-    # Disease Classes
-    'Black Pod Disease': [
-        'Remove infected pods immediately',
-        'Improve drainage around trees',
-        'Apply copper-based fungicide',
-        'Increase air circulation'
-    ],
-    'Fito Disease': [
-        'Prune affected branches',
-        'Apply appropriate fungicide',
-        'Monitor humidity levels',
-        'Remove fallen debris'
-    ],
-    'Monilia Disease': [
-        'Remove infected pods weekly',
-        'Apply preventive fungicide',
-        'Improve tree spacing',
-        'Control humidity'
-    ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Regular monitoring'
-    ],
-
-    # Pest Classes
-    'Ant Weaver': [
-        'Control ant colonies',
-        'Remove ant bridges',
-        'Use ant baits',
-        'Maintain clean surroundings'
-    ],
-    'Aphids': [
-        'Use beneficial insects',
-        'Apply neem oil',
-        'Remove affected shoots',
-        'Control ant populations'
-    ],
-    'Mealy Bug': [
-        'Apply insecticidal soap',
-        'Use biological control agents',
-        'Remove heavily infested parts',
-        'Monitor regularly'
-    ],
-    'Pod Borer': [
-        'Remove infested pods',
-        'Use pheromone traps',
-        'Apply biological control',
-        'Regular monitoring'
-    ]
-}
-
-    return recommendations_map.get(result, recommendations_map['Healthy'])
-
-# New oct
-@user_required
-def userdashboard(request):
-    """Enhanced User Dashboard with comprehensive analytics"""
-        
-    if request.session.get('role') == 'guest':
-        messages.error(request, "Guest users cannot access user dashboard.")
-        return redirect('guest_dashboard')
-        
-    uid = request.session.get('uid')
-    user_email = request.session.get('user_email')
-        
-    try:
-        # ===== FETCH ORDERS DATA =====
-        orders_ref = db.collection('orders')
-        user_orders_query = orders_ref.where('firebase_uid', '==', uid)
-        user_orders = list(user_orders_query.stream())
-        total_orders = len(user_orders)
-        pending_orders = len([o for o in user_orders if o.to_dict().get('status') == 'pending'])
-        delivered_orders = len([o for o in user_orders if o.to_dict().get('status') == 'delivered'])
-        total_spent = sum(float(o.to_dict().get('total_amount', 0)) for o in user_orders if o.to_dict().get('status') == 'delivered')
-
-        # Recent orders for display
-        recent_orders = []
-        for doc in sorted(user_orders, key=lambda x: x.to_dict().get('created_at', datetime.now(pytz.timezone('Asia/Manila'))), reverse=True)[:5]:
-            order_data = doc.to_dict()
-            order_data['id'] = doc.id
-            if 'created_at' in order_data and order_data['created_at']:
-                if hasattr(order_data['created_at'], 'seconds'):
-                    order_data['created_at'] = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC).astimezone(pytz.timezone('Asia/Manila')),
-            recent_orders.append(order_data)
-                
-        # ===== FETCH SCANS DATA =====
-        scans_ref = db.collection('scans')
-        user_scans_query = scans_ref.where('user_id', '==', uid)
-        user_scans = list(user_scans_query.stream())
-                
-        total_scans = len(user_scans)
-        disease_scans = len([s for s in user_scans if s.to_dict().get('type') == 'disease'])
-        pest_scans = len([s for s in user_scans if s.to_dict().get('type') == 'pest'])
-                
-        recent_scans = []
-        for doc in sorted(user_scans, key=lambda x: x.to_dict().get('timestamp', datetime.now(pytz.timezone('Asia/Manila'))), reverse=True)[:5]:
-            scan_data = doc.to_dict()
-            scan_data['id'] = doc.id
-            
-            # Convert confidence to percentage if it's stored as decimal (0.0-1.0)
-            confidence = scan_data.get('confidence', 0)
-            if isinstance(confidence, (int, float)):
-                if confidence <= 1.0:
-                    scan_data['confidence'] = round(confidence * 100, 1)
-                else:
-                    scan_data['confidence'] = round(confidence, 1)
-            
-            if 'timestamp' in scan_data and scan_data['timestamp']:
-                if hasattr(scan_data['timestamp'], 'seconds'):
-                    scan_data['timestamp'] = datetime.fromtimestamp(scan_data['timestamp'].seconds)
-            recent_scans.append(scan_data)
-                
-        # ===== FETCH FARM MAPS DATA (FIXED) =====
-        total_farm_area = sum(farm.get('area', 0) for farm in SAMPLE_FARMS)
-        total_trees = sum(farm.get('trees', 0) for farm in SAMPLE_FARMS)
-        total_maps = len(SAMPLE_FARMS)
-        
-        try:
-            farms_ref = db.collection('farms')
-            firebase_farms = list(farms_ref.stream())
-            
-            for farm_doc in firebase_farms:
-                farm_data = farm_doc.to_dict()
-                total_farm_area += float(farm_data.get('area', 0))
-                total_trees += int(farm_data.get('trees', 0))
-            
-            total_maps += len(firebase_farms)
-            
-            
-        except Exception as farm_error:
-            pass
-                
-        # ===== PREPARE CHART DATA =====
-        tz = pytz.timezone('Asia/Manila')
-        today = datetime.now(tz)
-        orders_chart_data = []
-        scans_chart_data = []
-                
-        # Last 7 days data for line chart
-        for i in range(6, -1, -1):
-            date = today - timedelta(days=i)
-            date_str = date.strftime('%Y-%m-%d')
-                        
-            daily_orders = len([
-                o for o in user_orders 
-                if o.to_dict().get('created_at') and
-                o.to_dict()['created_at'].astimezone(tz).date() == date.date()
-            ])
-                        
-            daily_scans = len([
-                s for s in user_scans 
-                if s.to_dict().get('timestamp') and
-                s.to_dict()['timestamp'].astimezone(tz).date() == date.date()
-            ])
-                        
-            orders_chart_data.append({
-                'date': date_str,
-                'count': daily_orders,
-                'label': date.strftime('%b %d')
-            })
-                        
-            scans_chart_data.append({
-                'date': date_str,
-                'count': daily_scans,
-                'label': date.strftime('%b %d')
-            })
-        
-        monthly_orders = {}
-        monthly_scans = {}
-        for i in range(5, -1, -1):
-            month_date = today - timedelta(days=30*i)
-            month_key = month_date.strftime('%b')
-            monthly_orders[month_key] = 0
-            monthly_scans[month_key] = 0
-        
-        for order in user_orders:
-            order_date = order.to_dict().get('created_at')
-            if order_date:
-                month_key = order_date.astimezone(tz).strftime('%b')
-                if month_key in monthly_orders:
-                    monthly_orders[month_key] += 1
-        
-        for scan in user_scans:
-            scan_date = scan.to_dict().get('timestamp')
-            if scan_date:
-                month_key = scan_date.astimezone(tz).strftime('%b')
-                if month_key in monthly_scans:
-                    monthly_scans[month_key] += 1
-        
-        monthly_chart_data = {
-            'labels': list(monthly_orders.keys()),
-            'orders': list(monthly_orders.values()),
-            'scans': list(monthly_scans.values())
-        }
-        
-        cancelled_orders = len([o for o in user_orders if o.to_dict().get('status') == 'cancelled'])
-        processing_orders = len([o for o in user_orders if o.to_dict().get('status') == 'processing'])
-        confirmed_orders = len([o for o in user_orders if o.to_dict().get('status') == 'confirmed'])
-        
-        order_status_distribution = {
-            'pending': pending_orders,
-            'processing': processing_orders,
-            'delivered': delivered_orders,
-            'cancelled': cancelled_orders,
-            'confirmed': confirmed_orders
-        }
-                
-        scan_distribution = {
-            'disease': disease_scans,
-            'pest': pest_scans
-        }
-                
-        context = {
-            'name': request.session.get('name'),
-            'email': user_email,
-            'role': request.session.get('role'),
-            'uid': uid,
-                        
-            'total_orders': total_orders,
-            'total_scans': total_scans,
-            'total_maps': total_maps,
-                        
-            'pending_orders': pending_orders,
-            'delivered_orders': delivered_orders,
-            'total_spent': round(total_spent, 2),
-            'disease_scans': disease_scans,
-            'pest_scans': pest_scans,
-            
-            'total_farm_area': round(total_farm_area, 1),
-            'total_trees': total_trees,
-                        
-            'recent_orders': recent_orders,
-            'recent_scans': recent_scans,
-            'recent_farms': SAMPLE_FARMS[:3],
-                        
-            'orders_chart_data': json.dumps(orders_chart_data),
-            'scans_chart_data': json.dumps(scans_chart_data),
-            'scan_distribution': json.dumps(scan_distribution),
-            'monthly_chart_data': json.dumps(monthly_chart_data),
-            'order_status_distribution': json.dumps(order_status_distribution),
-                        
-            'current_date': today.strftime('%Y-%m-%d'),
-            'current_time': today.strftime('%H:%M:%S'),
-        }
-            
-    except Exception as e:
-        
-        # Fallback data if Firebase fails
-        fallback_area = sum(farm.get('area', 0) for farm in SAMPLE_FARMS)
-        fallback_trees = sum(farm.get('trees', 0) for farm in SAMPLE_FARMS)
-        fallback_maps = len(SAMPLE_FARMS)
-        
-        try:
-            farms_ref = db.collection('farms')
-            firebase_farms = list(farms_ref.stream())
-            for farm_doc in firebase_farms:
-                farm_data = farm_doc.to_dict()
-                fallback_area += float(farm_data.get('area', 0))
-                fallback_trees += int(farm_data.get('trees', 0))
-            fallback_maps += len(firebase_farms)
-        except:
-            pass
-        
-        context = {
-            'name': request.session.get('name'),
-            'email': user_email,
-            'role': request.session.get('role'),
-            'uid': uid,
-            'total_orders': 0,
-            'total_scans': 0,
-            'total_maps': fallback_maps,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'disease_scans': 0,
-            'pest_scans': 0,
-            'total_farm_area': round(fallback_area, 1),
-            'total_trees': fallback_trees,
-            'recent_orders': [],
-            'recent_scans': [],
-            'recent_farms': SAMPLE_FARMS[:3],
-            'orders_chart_data': json.dumps([]),
-            'scans_chart_data': json.dumps([]),
-            'scan_distribution': json.dumps({'disease': 0, 'pest': 0}),
-            'monthly_chart_data': json.dumps({'labels': [], 'orders': [], 'scans': []}),
-            'order_status_distribution': json.dumps({'pending': 0, 'processing': 0, 'delivered': 0, 'cancelled': 0}),
-            'current_date': datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d'),
-            'current_time': datetime.now(pytz.timezone('Asia/Manila')).strftime('%H:%M:%S'),
-        }
-        
-    return render(request, 'user/userdashboard.html', context)
-
-def user_orders(request):
-    """Display user's orders from Firestore (excluding hidden orders)"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            messages.error(request, 'Please log in to view your orders.')
-            return redirect('login')
-
-        # Get all orders for this user first
-        orders_ref = db.collection('orders')
-        query = orders_ref.where('firebase_uid', '==', uid).order_by('created_at', direction=firestore.Query.DESCENDING)
-
-        orders_data = []
-        for doc in query.stream():
-            order_data = doc.to_dict()
-            order_data['id'] = doc.id
-            
-            # Skip hidden orders (check if hidden field exists and is True)
-            if order_data.get('hidden', False):
-                continue
-            
-            # Convert Firestore timestamp to datetime if needed
-            if 'created_at' in order_data and order_data['created_at']:
-                if hasattr(order_data['created_at'], 'seconds'):
-                    order_data['created_at'] = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC).astimezone(pytz.timezone('Asia/Manila'))
-            
-            items = order_data.get('items', [])
-            for item in items:
-                item['total_price'] = float(item.get('price', 0)) * int(item.get('quantity', 0))
-            
-            # Calculate total items
-            order_data['total_items'] = len(items)
-            
-            orders_data.append(order_data)
-
-        # Calculate statistics
-        total_orders = len(orders_data)
-        pending_orders = len([o for o in orders_data if o.get('status') == 'pending'])
-        delivered_orders = len([o for o in orders_data if o.get('status') == 'delivered'])
-        total_spent = sum(float(o.get('total_amount', 0)) for o in orders_data if o.get('status') == 'delivered')
-
-        context = {
-            'orders': orders_data,
-            'total_orders': total_orders,
-            'pending_orders': pending_orders,
-            'delivered_orders': delivered_orders,
-            'total_spent': total_spent,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-
-        return render(request, 'user/orders.html', context)
-
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
-
-def user_orders(request):
-    """Display user's orders from Firestore (excluding hidden orders)"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            messages.error(request, 'Please log in to view your orders.')
-            return redirect('login')
-
-        # Get all orders for this user first
-        orders_ref = db.collection('orders')
-        query = orders_ref.where('firebase_uid', '==', uid).order_by('created_at', direction=firestore.Query.DESCENDING)
-
-        orders_data = []
-        for doc in query.stream():
-            order_data = doc.to_dict()
-            order_data['id'] = doc.id
-            
-            # Skip hidden orders (check if hidden field exists and is True)
-            if order_data.get('hidden', False):
-                continue
-            
-            # Convert Firestore timestamp to datetime if needed
-            if 'created_at' in order_data and order_data['created_at']:
-                if hasattr(order_data['created_at'], 'seconds'):
-                    order_data['created_at'] = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC).astimezone(pytz.timezone('Asia/Manila'))
-            
-            items = order_data.get('items', [])
-            for item in items:
-                item['total_price'] = float(item.get('price', 0)) * int(item.get('quantity', 0))
-            
-            # Calculate total items
-            order_data['total_items'] = len(items)
-            
-            orders_data.append(order_data)
-
-        # Calculate statistics
-        total_orders = len(orders_data)
-        pending_orders = len([o for o in orders_data if o.get('status') == 'pending'])
-        delivered_orders = len([o for o in orders_data if o.get('status') == 'delivered'])
-        total_spent = sum(float(o.get('total_amount', 0)) for o in orders_data if o.get('status') == 'delivered')
-
-        context = {
-            'orders': orders_data,
-            'total_orders': total_orders,
-            'pending_orders': pending_orders,
-            'delivered_orders': delivered_orders,
-            'total_spent': total_spent,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-
-        return render(request, 'user/orders.html', context)
-
-    except Exception as e:
-        messages.error(request, 'Error loading orders. Please try again.')
-        return render(request, 'user/orders.html', {'orders': []})
-
-@admin_required
-# Add this to your views.py file - Replace the admin_dashboard function
-
-def admin_dashboard(request):
-    """Enhanced Admin Dashboard with comprehensive analytics"""
-    
-    # Initialize timezone
-    tz = pytz.timezone('Asia/Manila')
-    today = datetime.now(tz)
-    
-    # Initialize default values
-    context = {
-        'name': request.session.get('name'),
-        'email': request.session.get('user_email'),
-        'role': request.session.get('role'),
-        'current_date': today.strftime('%Y-%m-%d'),
-        'current_time': today.strftime('%H:%M:%S'),
-        
-        # Default values
-        'total_scan_count': 0,
-        'order_count': 0,
-        'total_revenue': 0,
-        'farm_count': len(SAMPLE_FARMS),
-        
-        # Recent activity
-        'recent_farms': SAMPLE_FARMS[:3],
-        'recent_orders': [],
-        'recent_scans': [],
-        
-        # Chart data (initialize as empty)
-        'revenue_labels': json.dumps([]),
-        'revenue_data': json.dumps([]),
-        'scan_labels': json.dumps([]),
-        'scan_data': json.dumps([]),
-        
-        'disease_labels': json.dumps([]),
-        'disease_data': json.dumps([]),
-        'order_status_labels': json.dumps([]),
-        'order_status_data': json.dumps([]),
-    }
-    
-    try:
-        # ===== FETCH SCANS DATA =====
-        scans_ref = db.collection('scans')
-        all_scans = list(scans_ref.stream())
-        total_scan_count = len(all_scans)
-        
-        
-        # Get recent scans for activity
-        recent_scans = []
-        scans_by_date = sorted(all_scans, key=lambda x: x.to_dict().get('timestamp', datetime.now(pytz.timezone('Asia/Manila'))), reverse=True)
-        
-        disease_distribution = {}
-        
-        for doc in scans_by_date[:5]:
-            scan_data = doc.to_dict()
-            timestamp = scan_data.get('timestamp')
-            if timestamp:
-                if hasattr(timestamp, 'seconds'):
-                    formatted_date = datetime.fromtimestamp(timestamp.seconds).strftime('%b %d')
-                else:
-                    formatted_date = timestamp.strftime('%b %d') if hasattr(timestamp, 'strftime') else 'Recent'
-            else:
-                formatted_date = 'Recent'
-            
-            confidence_value = float(scan_data.get('confidence', 0))
-            # If confidence is between 0 and 1, multiply by 100
-            if confidence_value <= 1.0:
-                confidence_percentage = round(confidence_value * 100)
-            else:
-                confidence_percentage = round(confidence_value)
-                
-            recent_scans.append({
-                'result': scan_data.get('result', 'Unknown'),
-                'confidence': confidence_percentage,
-                'type': scan_data.get('type', 'disease'),
-                'date': formatted_date
-            })
-        
-        for doc in all_scans:
-            scan_data = doc.to_dict()
-            result = scan_data.get('result', 'Unknown')
-            disease_distribution[result] = disease_distribution.get(result, 0) + 1
-        
-        # Prepare disease chart data
-        disease_labels = list(disease_distribution.keys())
-        disease_data = list(disease_distribution.values())
-        
-        # Prepare scan chart data (last 7 days)
-        scan_labels = []
-        scan_counts = []
-        
-        for i in range(6, -1, -1):
-            date = today - timedelta(days=i)
-            date_str = date.strftime('%b %d')
-            scan_labels.append(date_str)
-            
-            # Count scans for this date
-            daily_scans = 0
-            for scan_doc in all_scans:
-                scan_data = scan_doc.to_dict()
-                scan_timestamp = scan_data.get('timestamp')
-                if scan_timestamp:
-                    if hasattr(scan_timestamp, 'seconds'):
-                        scan_date = datetime.fromtimestamp(scan_timestamp.seconds).date()
-                    else:
-                        scan_date = scan_timestamp.date() if hasattr(scan_timestamp, 'date') else today.date()
-                    
-                    if scan_date == date.date():
-                        daily_scans += 1
-            
-            scan_counts.append(daily_scans)
-        
-        context.update({
-            'total_scan_count': total_scan_count,
-            'recent_scans': recent_scans,
-            'scan_labels': json.dumps(scan_labels),
-            'scan_data': json.dumps(scan_counts),
-            'disease_labels': json.dumps(disease_labels),
-            'disease_data': json.dumps(disease_data),
-        })
-        
-    except Exception as e:
-        # Use fallback data for scans
-        context.update({
-            'total_scan_count': 45,
-            'recent_scans': [
-                {'result': 'Healthy', 'confidence': 95, 'type': 'disease', 'date': 'Jan 15'},
-                {'result': 'Black Pod Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
-                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'pest', 'date': 'Jan 13'},
-                {'result': 'Healthy', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
-                {'result': 'Frosty Pod Rot', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
-            ],
-            'scan_labels': json.dumps(['Jan 09', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14', 'Jan 15']),
-            'scan_data': json.dumps([3, 5, 8, 6, 9, 7, 12]),
-            'disease_labels': json.dumps(['Healthy', 'Black Pod Disease', 'Monilia Disease', 'Frosty Pod Rot', 'Witches Broom']),
-            'disease_data': json.dumps([18, 12, 8, 5, 2]),
-        })
-    
-    try:
-        # ===== FETCH ORDERS DATA =====
-        orders_ref = db.collection('orders')
-        all_orders = list(orders_ref.stream())
-        order_count = len(all_orders)
-        
-        # Calculate total revenue from delivered orders
-        total_revenue = 0
-        recent_orders = []
-        
-        order_status_distribution = {
-            'pending': 0,
-            'confirmed': 0,
-            'processing': 0,
-            'delivered': 0,
-            'cancelled': 0
-        }
-        
-        orders_by_date = sorted(all_orders, key=lambda x: x.to_dict().get('created_at', datetime.now(pytz.timezone('Asia/Manila'))), reverse=True)
-        
-        for doc in orders_by_date:
-            order_data = doc.to_dict()
-            
-            status = order_data.get('status', 'pending')
-            if status in order_status_distribution:
-                order_status_distribution[status] += 1
-            
-            # Add to revenue if delivered
-            if status == 'delivered':
-                total_revenue += float(order_data.get('total_amount', 0))
-            
-            # Add to recent orders (first 5)
-            if len(recent_orders) < 5:
-                created_at = order_data.get('created_at')
-                if created_at:
-                    if hasattr(created_at, 'seconds'):
-                        formatted_date = datetime.fromtimestamp(created_at.seconds).strftime('%b %d')
-                    else:
-                        formatted_date = created_at.strftime('%b %d') if hasattr(created_at, 'strftime') else 'Recent'
-                else:
-                    formatted_date = 'Recent'
-                
-                recent_orders.append({
-                    'id': doc.id,
-                    'amount': float(order_data.get('total_amount', 0)),
-                    'status': status,
-                    'created_at': formatted_date
-                })
-        
-        # Prepare revenue chart data (last 7 days)
-        revenue_labels = []
-        revenue_data = []
-        
-        for i in range(6, -1, -1):
-            date = today - timedelta(days=i)
-            date_str = date.strftime('%b %d')
-            revenue_labels.append(date_str)
-            
-            # Calculate revenue for this date
-            daily_revenue = 0
-            for order_doc in all_orders:
-                order_data = order_doc.to_dict()
-                if order_data.get('status') == 'delivered':
-                    order_timestamp = order_data.get('created_at')
-                    if order_timestamp:
-                        if hasattr(order_timestamp, 'seconds'):
-                            order_date = datetime.fromtimestamp(order_timestamp.seconds).date()
-                        else:
-                            order_date = order_timestamp.date() if hasattr(order_timestamp, 'date') else today.date()
-                        
-                        if order_date == date.date():
-                            daily_revenue += float(order_data.get('total_amount', 0))
-            
-            revenue_data.append(daily_revenue)
-        
-        order_status_labels = list(order_status_distribution.keys())
-        order_status_data = list(order_status_distribution.values())
-        
-        context.update({
-            'order_count': order_count,
-            'total_revenue': round(total_revenue, 2),
-            'recent_orders': recent_orders,
-            'revenue_labels': json.dumps(revenue_labels),
-            'revenue_data': json.dumps(revenue_data),
-            'disease_labels': json.dumps(disease_labels),
-            'disease_data': json.dumps(disease_data),
-            'order_status_labels': json.dumps(order_status_labels),
-            'order_status_data': json.dumps(order_status_data),
-        })
-        
-    except Exception as e:
-        # Use fallback data for orders
-        context.update({
-            'order_count': 28,
-            'total_revenue': 15750.00,
-            'recent_orders': [
-                {'id': 'ORD001', 'amount': 1250.00, 'status': 'delivered', 'created_at': 'Jan 15'},
-                {'id': 'ORD002', 'amount': 890.00, 'status': 'pending', 'created_at': 'Jan 14'},
-                {'id': 'ORD003', 'amount': 2100.00, 'status': 'delivered', 'created_at': 'Jan 13'},
-                {'id': 'ORD004', 'amount': 675.00, 'status': 'processing', 'created_at': 'Jan 12'},
-                {'id': 'ORD005', 'amount': 1450.00, 'status': 'delivered', 'created_at': 'Jan 11'},
-            ],
-            'revenue_labels': json.dumps(['Jan 09', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14', 'Jan 15']),
-            'revenue_data': json.dumps([1200, 2100, 1800, 2400, 1950, 2800, 3200]),
-            'order_status_labels': json.dumps(['pending', 'confirmed', 'processing', 'delivered', 'cancelled']),
-            'order_status_data': json.dumps([5, 3, 8, 10, 2]),
-        })
-    
-    try:
-        # ===== FETCH FARMS DATA =====
-        farms_ref = db.collection('farms')
-        firebase_farms = list(farms_ref.stream())
-        
-        # Combine Firebase farms with sample farms
-        total_farm_count = len(SAMPLE_FARMS) + len(firebase_farms)
-        
-        # Prepare recent farms (prioritize sample farms for display)
-        recent_farms = SAMPLE_FARMS[:3]
-        
-        context.update({
-            'farm_count': total_farm_count,
-            'recent_farms': recent_farms,
-        })
-        
-    except Exception as e:
-        context.update({
-            'farm_count': len(SAMPLE_FARMS),
-            'recent_farms': SAMPLE_FARMS[:3],
-        })
-    
-    return render(request, 'admin/admin_dashboard.html', context)
-
-# User management
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from firebase_admin import firestore
-import json
-
-
-@admin_required
-def admin_user_management(request):
-    """Admin user management view - shows only non-hidden registered users"""
-    try:
-        # Fetch all users from Firestore
-        users_ref = db.collection('users')
-        users_docs = users_ref.stream()
-        
-        users_list = []
-        total_users = 0
-        active_users = 0
-        admin_users = 0
-        regular_users = 0
-        
-        for doc in users_docs:
-            user_data = doc.to_dict()
-            user_id = doc.id
-            
-            # Skip hidden users
-            if user_data.get('is_hidden', False):
-                continue
-            
-            # Only include registered users (with email and name)
-            if not user_data.get('email') or not user_data.get('name'):
-                continue
-            
-            # Count statistics (excluding hidden users)
-            total_users += 1
-            
-            # Check if user is active
-            is_active = user_data.get('is_active', True)
-            if is_active:
-                active_users += 1
-            
-            # Count by role
-            role = user_data.get('role', 'user')
-            if role == 'admin':
-                admin_users += 1
-            else:
-                regular_users += 1
-            
-            # Prepare user data for display
-            users_list.append({
-                'id': user_id,
-                'name': user_data.get('name', 'N/A'),
-                'email': user_data.get('email', 'N/A'),
-                'role': role,
-                'is_active': is_active,
-            })
-        
-        # Apply search filter if provided
-        search_query = request.GET.get('search', '').strip().lower()
-        if search_query:
-            users_list = [
-                user for user in users_list
-                if search_query in user['name'].lower() or search_query in user['email'].lower()
-            ]
-        
-        # Apply role filter if provided
-        role_filter = request.GET.get('role', '').strip()
-        if role_filter:
-            users_list = [user for user in users_list if user['role'] == role_filter]
-        
-        # Apply status filter if provided
-        status_filter = request.GET.get('status', '').strip()
-        if status_filter == 'active':
-            users_list = [user for user in users_list if user['is_active']]
-        elif status_filter == 'inactive':
-            users_list = [user for user in users_list if not user['is_active']]
-        
-        context = {
-            'users': users_list,
-            'total_users': total_users,
-            'active_users': active_users,
-            'admin_users': admin_users,
-            'regular_users': regular_users,
-            'search_query': search_query,
-            'role_filter': role_filter,
-            'status_filter': status_filter,
-        }
-        
-        return render(request, 'admin/user_management.html', context)
-        
-    except Exception as e:
-        messages.error(request, f'Error loading users: {str(e)}')
-        return render(request, 'admin/user_management.html', {
-            'users': [],
-            'total_users': 0,
-            'active_users': 0,
-            'admin_users': 0,
-            'regular_users': 0,
-        })
-
-
-@admin_required
-def hide_user(request, user_id):
-    """Hide a user from the admin view (doesn't delete account or records)"""
-    try:
-        # Update user document to set is_hidden flag
-        user_ref = db.collection('users').document(user_id)
-        user_doc = user_ref.get()
-        
-        if not user_doc.exists:
-            return JsonResponse({
-                'success': False,
-                'message': 'User not found'
-            }, status=404)
-        
-        # Set is_hidden flag to True
-        user_ref.update({
-            'is_hidden': True
-        })
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'User hidden successfully'
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error hiding user: {str(e)}'
-        }, status=500)
-
-
-@admin_required
-def unhide_user(request, user_id):
-    """Unhide a user to show them in the admin view again"""
-    try:
-        # Update user document to set is_hidden flag to False
-        user_ref = db.collection('users').document(user_id)
-        user_doc = user_ref.get()
-        
-        if not user_doc.exists:
-            return JsonResponse({
-                'success': False,
-                'message': 'User not found'
-            }, status=404)
-        
-        # Set is_hidden flag to False
-        user_ref.update({
-            'is_hidden': False
-        })
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'User unhidden successfully'
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error unhiding user: {str(e)}'
-        }, status=500)
-
-

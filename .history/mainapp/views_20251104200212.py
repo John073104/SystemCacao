@@ -24,104 +24,6 @@ import requests, jwt
 from . import firebase_config
 db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
 
-# ===============================
-# NOTIFICATION SYSTEM
-# ===============================
-def create_notification(user_id, title, message, notification_type='info', order_id=None, metadata=None):
-    """
-    Create a notification for a user
-    Args:
-        user_id: Firebase UID of the user
-        title: Notification title
-        message: Notification message
-        notification_type: Type of notification (info, success, warning, error, order_status)
-        order_id: Related order ID (optional)
-        metadata: Additional metadata (optional)
-    """
-    try:
-        if not db:
-            return False
-        
-        from datetime import datetime
-        import pytz
-        
-        philippines_tz = pytz.timezone('Asia/Manila')
-        notification_data = {
-            'user_id': user_id,
-            'title': title,
-            'message': message,
-            'type': notification_type,
-            'order_id': order_id,
-            'metadata': metadata or {},
-            'read': False,
-            'created_at': datetime.now(philippines_tz),
-            'timestamp': firestore.SERVER_TIMESTAMP
-        }
-        
-        db.collection('notifications').add(notification_data)
-        return True
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error creating notification: {e}")
-        return False
-
-def get_user_notifications(user_id, limit=10, unread_only=False):
-    """Get notifications for a user"""
-    try:
-        if not db:
-            return []
-        
-        # Note: This query requires a Firestore composite index
-        # Create index at: Firebase Console > Firestore > Indexes
-        # Fields: user_id (Ascending), created_at (Descending)
-        query = db.collection('notifications').where('user_id', '==', user_id)
-        
-        if unread_only:
-            query = query.where('read', '==', False)
-        
-        # Try ordering by created_at, fallback to unordered if index missing
-        try:
-            query = query.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
-            notifications = []
-            for doc in query.stream():
-                notif_data = doc.to_dict()
-                notif_data['id'] = doc.id
-                notifications.append(notif_data)
-            return notifications
-        except Exception as index_error:
-            # Index not created yet, fetch without ordering
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Firestore index missing for notifications query. Fetching unordered.")
-            
-            notifications = []
-            for doc in query.limit(limit).stream():
-                notif_data = doc.to_dict()
-                notif_data['id'] = doc.id
-                notifications.append(notif_data)
-            
-            # Sort in Python instead
-            notifications.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-            return notifications[:limit]
-        
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error fetching notifications: {e}")
-        return []
-
-def mark_notification_read(notification_id):
-    """Mark a notification as read"""
-    try:
-        if not db:
-            return False
-        
-        db.collection('notifications').document(notification_id).update({'read': True})
-        return True
-    except Exception as e:
-        return False
-
 from django.contrib.auth import login
 # from django.contrib.auth.models import User
 
@@ -448,7 +350,7 @@ def marketplace(request):
             product = doc.to_dict()
             product['id'] = doc.id
             
-            # Ensure images is a list with fallback
+            # Ensure images is a list
             if 'images' in product:
                 if isinstance(product['images'], str):
                     try:
@@ -459,31 +361,6 @@ def marketplace(request):
                     product['images'] = []
             else:
                 product['images'] = []
-            
-            # Add fallback placeholder if no images
-            if not product['images'] or len(product['images']) == 0:
-                product['images'] = ['/static/images/placeholder-product.jpg']
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            # Ensure image paths start with / or http, but block /media/ paths
-            cleaned_images = []
-            for img in product['images']:
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    # Relative path, prefix with /static/
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
             
             # Only show active products
             if product.get('is_active', True):
@@ -567,7 +444,7 @@ def guest_marketplace(request):
             product = doc.to_dict()
             product['id'] = doc.id
             
-            # Ensure images is a list with fallback
+            # Ensure images is a list
             if 'images' in product:
                 if isinstance(product['images'], str):
                     try:
@@ -578,25 +455,6 @@ def guest_marketplace(request):
                     product['images'] = []
             else:
                 product['images'] = []
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            cleaned_images = []
-            for img in product.get('images', []):
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
             
             # Only show active products
             if product.get('is_active', True):
@@ -1463,13 +1321,8 @@ def order_confirmation(request, order_id):
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
 
-        # Ensure items are accessible in template as both order.items and order_items
+        # Items are stored inline on the order document
         order_items = order_data.get('items', [])
-        order_data['items'] = order_items  # Make sure items is in order_data
-        
-        # Ensure total_amount exists
-        if 'total_amount' not in order_data:
-            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_items)
 
         context = {
             'order': order_data,
@@ -1483,18 +1336,8 @@ def order_confirmation(request, order_id):
 
     except Exception as e:
         logger.exception("Order confirmation error")
-        # Don't show error message - let template handle gracefully
-        # Only redirect if it's a critical error
-        context = {
-            'order': {'order_id': order_id, 'items': [], 'total_amount': 0},
-            'order_items': [],
-            'order_id': order_id,
-            'user_name': request.session.get('name'),
-            'user_email': user_email or '',
-            'payment_status': 'pending',
-            'error': True
-        }
-        return render(request, 'user/order_confirmation.html', context)
+        messages.error(request, 'Error loading order details.')
+        return redirect('userdashboard')
 
 def logout_view(request):
     """Logout view"""
@@ -2088,10 +1931,10 @@ def send_status_change_email(order_data, new_status):
             )
             
         else:
-            pass  # Customer email not available
             
     except Exception as e:
-        pass  # Error sending email
+
+        pass
 from django.shortcuts import render
 from django.http import JsonResponse
 from firebase_admin import firestore
@@ -3791,7 +3634,6 @@ def api_farms_firebase(request):
                 db.collection('farms').document(str(farm_id)).delete()
             except Exception as firebase_error:
                 # If Firebase fails, delete from sample data
-                pass
             
             # Remove from sample data
             SAMPLE_FARMS[:] = [farm for farm in SAMPLE_FARMS if str(farm['id']) != str(farm_id)]
@@ -3910,7 +3752,6 @@ def api_user_farm_request_firebase(request):
                 db.collection('farm_requests').add(request_data)
             except Exception as firebase_error:
                 # Continue even if Firebase fails, we have local storage
-                pass
             
             return JsonResponse({
                 'success': True,
@@ -4055,93 +3896,6 @@ def api_reject_farm_request(request):
                 'success': False,
                 'error': str(e)
             })
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-# ===============================
-# NOTIFICATION API ENDPOINTS
-# ===============================
-
-@csrf_exempt
-def api_get_notifications(request):
-    """API endpoint to fetch user notifications"""
-    try:
-        uid = request.session.get('uid')
-        if not uid:
-            return JsonResponse({'success': False, 'error': 'Not authenticated'})
-        
-        limit = int(request.GET.get('limit', 10))
-        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
-        
-        notifications = get_user_notifications(uid, limit=limit, unread_only=unread_only)
-        
-        # Convert datetime objects to strings for JSON serialization
-        for notif in notifications:
-            if 'created_at' in notif and hasattr(notif['created_at'], 'strftime'):
-                notif['created_at'] = notif['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        unread_count = len([n for n in notifications if not n.get('read', False)])
-        
-        return JsonResponse({
-            'success': True,
-            'notifications': notifications,
-            'unread_count': unread_count
-        })
-    except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error fetching notifications: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
-
-@csrf_exempt
-def api_mark_notification_read(request):
-    """API endpoint to mark notification as read"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            notification_id = data.get('notification_id')
-            
-            if not notification_id:
-                return JsonResponse({'success': False, 'error': 'notification_id required'})
-            
-            success = mark_notification_read(notification_id)
-            
-            return JsonResponse({
-                'success': success,
-                'message': 'Notification marked as read' if success else 'Failed to mark as read'
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-@csrf_exempt
-def api_mark_all_notifications_read(request):
-    """API endpoint to mark all user notifications as read"""
-    if request.method == 'POST':
-        try:
-            uid = request.session.get('uid')
-            if not uid:
-                return JsonResponse({'success': False, 'error': 'Not authenticated'})
-            
-            if not db:
-                return JsonResponse({'success': False, 'error': 'Database unavailable'})
-            
-            # Get all unread notifications for this user
-            query = db.collection('notifications').where('user_id', '==', uid).where('read', '==', False)
-            docs = query.stream()
-            
-            count = 0
-            for doc in docs:
-                doc.reference.update({'read': True})
-                count += 1
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Marked {count} notifications as read'
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
@@ -5467,27 +5221,14 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
     
 @user_required
 def order_detail(request, order_id):
     """Order detail view for users"""
     try:
         uid = request.session.get('uid')
-        user_email = request.session.get('user_email') or request.session.get('email')
-        
         if not uid:
             messages.error(request, 'Please log in to view order details.')
             return redirect('login')
@@ -5502,54 +5243,29 @@ def order_detail(request, order_id):
 
         order_data = order_doc.to_dict()
         
-        # Check if order belongs to current user (more flexible ownership check)
-        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
-        owner_email = order_data.get('customer_email') or order_data.get('user_email')
-        
-        # Allow access if either UID or email matches - silently redirect if no match
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+        # Check if order belongs to current user
+        if order_data.get('firebase_uid') != uid:
+            messages.error(request, 'Access denied.')
             return redirect('user_orders')
 
         order_data['id'] = order_doc.id
         
         # Convert timestamp if needed
-        if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+        # NEW (shows correct Philippines time)
+        if hasattr(order_data['created_at'], 'seconds'):
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
-        
-        # Ensure items and total_amount exist
-        if 'items' not in order_data:
-            order_data['items'] = []
-        if 'total_amount' not in order_data and order_data.get('items'):
-            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_data['items'])
 
         context = {
             'order': order_data,
-            'user_name': request.session.get('name'),
-            'user_email': user_email,
         }
 
         return render(request, 'user/order_detail.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Order detail error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'order': {
-                'id': order_id,
-                'order_id': order_id,
-                'items': [],
-                'total_amount': 0,
-                'status': 'unknown'
-            },
-            'user_name': request.session.get('name'),
-            'user_email': request.session.get('user_email'),
-            'error': True
-        }
-        return render(request, 'user/order_detail.html', context)
+        messages.error(request, 'Error loading order details.')
+        return redirect('user_orders')
 
 # ===============================
 # ADMIN ORDER MANAGEMENT
@@ -8368,7 +8084,6 @@ def scan_image(request):
                 doc_ref = db.collection('scans').document(scan_id)
                 doc_ref.set(scan_data)
             except Exception as firestore_error:
-                pass  # Fixed empty block
                 # Continue without Firestore for now
             
             # Return response
@@ -8692,7 +8407,6 @@ def admin_dashboard_scans(request):
         
         
     except Exception as e:
-        pass  # Fixed empty block
         # Use fallback data
     
     return scan_stats
@@ -9537,7 +9251,6 @@ def deduct_stock_for_order(order_data):
                 })
                 
             else:
-                pass  # Auto-fixed empty block
                 
     except Exception as e:
 
@@ -10545,19 +10258,8 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
 
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""

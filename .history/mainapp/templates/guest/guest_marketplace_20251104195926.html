@@ -1,0 +1,289 @@
+{% extends "guest.html" %}
+{% load static %}
+
+{% block title %}Cacao Marketplace{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    .filter-badge {
+        transition: all 0.2s ease-in-out;
+    }
+    .filter-badge:hover {
+        transform: scale(1.05);
+    }
+    .login-overlay {
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(4px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+    <!-- Header Section -->
+    <div class="bg-white text-gray-800 shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <img alt="CacaoGuard logo" class="w-10 h-10 rounded-full" src="{% static 'images/NOBGHERO.png' %}"/>
+                        <span class="ml-2 font-semibold text-xl"></span>
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-3xl font-bold">Welcome to CacaoGuard Marketplace</h1>
+                        <p class="text-blue-100">Discover a wide range of products and services for your needs.</p>
+                    </div>
+                </div>
+                
+                
+                <!-- Login/Register Buttons -->
+                <div class="mt-4 lg:mt-0 flex space-x-3">
+                   <a href="{% url 'guest_dashboard' %}" class="px-4 py-2 bg-blue-300 text-white rounded-lg hover:bg-blue-400 transition-colors">
+                       <svg class="w-5 h-5 inline mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.75L12 3l9 6.75V21a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 21V9.75z" />
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 22V12h6v10" />
+                       </svg>
+                       Dashboard
+                   </a>
+
+                    <a href="{% url 'login' %}" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                        Login
+                    </a>
+                    <a href="{% url 'signup' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                        Sign Up
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6">
+<div class="flex items-center mb-2">
+  <div class="w-14 h-14 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg mr-4 animate-bounce">
+    <i class="fas fa-store "></i>
+  </div>
+  <h1 class="text-3xl font-bold text-gray-800">Cacao Products Marketplace</h1>
+</div>
+
+
+    <p class="text-gray-600 ml-18">Discover and purchase premium cacao products from local farmers</p>
+</div>
+        <!-- Filters Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <form method="GET" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Search -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
+                        <input type="text" name="search" value="{{ current_search }}" 
+                               placeholder="Search cacao products..." 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <!-- <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category }}" {% if category == current_category %}selected{% endif %}>
+                                {{ category|title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div> -->
+                    
+                    <!-- Product Type Filter -->
+                    <!-- <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Product Type</label>
+                        <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <option value="">All Types</option>
+                            {% for type_value, type_label in product_types %}
+                            <option value="{{ type_value }}" {% if type_value == current_type %}selected{% endif %}>
+                                {{ type_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div> -->
+                    
+                    <!-- Sort -->
+                    <!-- <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                        <select name="sort" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name</option>
+                            <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                            <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                            <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest First</option>
+                        </select>
+                    </div> -->
+                </div>
+                
+                <div class="flex flex-wrap gap-2">
+                    <button type="submit" class="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+                        Apply Filters
+                    </button>
+                    <a href="{% url 'guest_marketplace' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                        Clear All
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Login Notice -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-blue-800">
+                    <a href="{% url 'login' %}" class="font-medium underline">Login</a> or 
+                    <a href="{% url 'signup' %}" class="font-medium underline">Create Account</a> 
+                    to add products to cart and place orders.
+                </p>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {% for product in products %}
+            <div class="product-card bg-white rounded-xl shadow-sm overflow-hidden">
+                <!-- Product Image -->
+                <div class="aspect-w-1 aspect-h-1 bg-gray-200">
+                    {% if product.images %}
+                    <img src="{{ product.images.0 }}" alt="{{ product.name }}" 
+                         class="w-full h-48 object-cover">
+                    {% else %}
+                    <div class="w-full h-48 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                        <svg class="w-16 h-16 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Product Info -->
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="text-lg font-semibold text-gray-900 line-clamp-2">{{ product.name }}</h3>
+                        {% if product.featured %}
+                        <span class="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">Featured</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ product.description }}</p>
+                    
+                    <!-- Product Details -->
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center text-sm text-gray-500">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                            {{ product.product_type|title }}
+                        </div>
+                        
+                        {% if product.origin %}
+                        <div class="flex items-center text-sm text-gray-500">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            {{ product.origin }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex items-center text-sm text-gray-500">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                            Stock: {{ product.stock_quantity }} {{ product.unit }}
+                        </div>
+                    </div>
+                    
+                    <!-- Price and Actions -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-2xl font-bold text-amber-600">₱{{ product.price }}</span>
+                            <span class="text-sm text-gray-500">/ {{ product.unit }}</span>
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <a href="{% url 'guest_product_detail' product.id %}" 
+                               class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                                View
+                            </a>
+                            
+                            <button onclick="showLoginModal()" 
+                                    class="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-12">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                <p class="text-gray-500">Try adjusting your search criteria or browse all products.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="fixed inset-0 login-overlay hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+        <div class="text-center">
+            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Login Required</h3>
+            <p class="text-gray-500 mb-6">Please login to add products to cart and place orders.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeLoginModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <a href="{% url 'login' %}" class="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-center">
+                    Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showLoginModal() {
+    document.getElementById('loginModal').classList.remove('hidden');
+    document.getElementById('loginModal').classList.add('flex');
+}
+
+function closeLoginModal() {
+    document.getElementById('loginModal').classList.add('hidden');
+    document.getElementById('loginModal').classList.remove('flex');
+}
+
+// Close modal when clicking outside
+document.getElementById('loginModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLoginModal();
+    }
+});
+</script>
+{% endblock %}

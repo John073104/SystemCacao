@@ -5467,19 +5467,8 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
     
 @user_required
 def order_detail(request, order_id):
@@ -5506,8 +5495,9 @@ def order_detail(request, order_id):
         owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
         owner_email = order_data.get('customer_email') or order_data.get('user_email')
         
-        # Allow access if either UID or email matches - silently redirect if no match
+        # Allow access if either UID or email matches
         if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+            messages.error(request, 'Access denied.')
             return redirect('user_orders')
 
         order_data['id'] = order_doc.id
@@ -10545,19 +10535,8 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
 
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""
