@@ -1648,7 +1648,7 @@ PHILIPPINES_TZ = pytz.timezone('Asia/Manila')
 @admin_required
 @require_http_methods(["POST"])
 def update_order_status(request, order_id):
-    """Update order status with stock deduction and email notifications"""
+    """Update order status with stock deduction, email and in-app notifications"""
     try:
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
@@ -1673,6 +1673,32 @@ def update_order_status(request, order_id):
         
         # Send email notification
         send_status_change_email(order_data, new_status)
+        
+        # Create in-app notification for user
+        user_id = order_data.get('firebase_uid') or order_data.get('user_id')
+        order_number = order_data.get('order_id', 'N/A')
+        
+        if user_id:
+            from .views import create_notification
+            
+            status_messages = {
+                'confirmed': f'Your order #{order_number} has been confirmed and is being prepared.',
+                'processing': f'Your order #{order_number} is now being processed.',
+                'shipped': f'Great news! Your order #{order_number} has been shipped.',
+                'delivered': f'Your order #{order_number} has been delivered. Thank you!',
+                'cancelled': f'Your order #{order_number} has been cancelled.'
+            }
+            
+            notification_message = status_messages.get(new_status, f'Order #{order_number} status updated to {new_status}')
+            
+            create_notification(
+                user_id=user_id,
+                title=f'Order {new_status.title()}',
+                message=notification_message,
+                notification_type='order_status',
+                order_id=order_number,
+                metadata={'status': new_status, 'old_status': old_status}
+            )
         
         return JsonResponse({'success': True, 'message': f'Order status updated to {new_status}'})
         
@@ -5660,7 +5686,7 @@ def admin_order_detail(request, order_id):
 @admin_required
 @csrf_exempt
 def update_order_status(request):
-    """API endpoint to update order status"""
+    """API endpoint to update order status with notifications"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -5673,12 +5699,47 @@ def update_order_status(request):
                     'message': 'Order ID and status are required'
                 })
 
-            # Update in Firestore
+            # Get order data first for notification
             order_ref = db.collection('orders').document(order_id)
+            order_doc = order_ref.get()
+            
+            if not order_doc.exists:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Order not found'
+                })
+            
+            order_data = order_doc.to_dict()
+            user_id = order_data.get('firebase_uid') or order_data.get('user_id')
+            
+            # Update in Firestore
             order_ref.update({
                 'status': new_status,
                 'updated_at': firestore.SERVER_TIMESTAMP
             })
+
+            # Create notification for user
+            if user_id:
+                from .notifications import create_notification
+                
+                status_messages = {
+                    'pending': ('Order Received', f'📦 Your order #{order_id} has been received and is awaiting confirmation.'),
+                    'confirmed': ('Order Confirmed', f'✅ Great news! Your order #{order_id} has been confirmed and is being prepared.'),
+                    'processing': ('Order Processing', f'⚙️ Your order #{order_id} is now being processed and will be shipped soon.'),
+                    'shipped': ('Order Shipped', f'🚚 Your order #{order_id} has been shipped! It\'s on its way to you.'),
+                    'delivered': ('Order Delivered', f'🎉 Your order #{order_id} has been successfully delivered! Enjoy your products.'),
+                    'cancelled': ('Order Cancelled', f'❌ Your order #{order_id} has been cancelled. Contact support if you have questions.'),
+                }
+                
+                if new_status in status_messages:
+                    title, message = status_messages[new_status]
+                    create_notification(
+                        user_id=user_id,
+                        title=title,
+                        message=message,
+                        notification_type='order_status',
+                        related_id=order_id
+                    )
 
             return JsonResponse({
                 'success': True,

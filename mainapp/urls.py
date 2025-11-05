@@ -136,6 +136,11 @@ urlpatterns = [
     path('api/admin/approve-farm/', views.api_approve_farm_request, name='api_approve_farm_request'),
     path('api/admin/reject-farm/', views.api_reject_farm_request, name='api_reject_farm_request'),
 
+    # Notification APIs
+    path('api/notifications/', views.api_get_notifications, name='api_get_notifications'),
+    path('api/notifications/mark-read/', views.api_mark_notification_read, name='api_mark_notification_read'),
+    path('api/notifications/mark-all-read/', views.api_mark_all_notifications_read, name='api_mark_all_notifications_read'),
+
     # Guest APIs
     path('api/guest/scan/', views.guest_scan_diagnose, name='guest_scan_image_api'),
     path('api/guest/limits/', views.get_daily_scan_limits, name='get_guest_scan_limits'),

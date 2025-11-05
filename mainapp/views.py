@@ -24,6 +24,85 @@ import requests, jwt
 from . import firebase_config
 db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
 
+# ===============================
+# NOTIFICATION SYSTEM
+# ===============================
+def create_notification(user_id, title, message, notification_type='info', order_id=None, metadata=None):
+    """
+    Create a notification for a user
+    Args:
+        user_id: Firebase UID of the user
+        title: Notification title
+        message: Notification message
+        notification_type: Type of notification (info, success, warning, error, order_status)
+        order_id: Related order ID (optional)
+        metadata: Additional metadata (optional)
+    """
+    try:
+        if not db:
+            return False
+        
+        from datetime import datetime
+        import pytz
+        
+        philippines_tz = pytz.timezone('Asia/Manila')
+        notification_data = {
+            'user_id': user_id,
+            'title': title,
+            'message': message,
+            'type': notification_type,
+            'order_id': order_id,
+            'metadata': metadata or {},
+            'read': False,
+            'created_at': datetime.now(philippines_tz),
+            'timestamp': firestore.SERVER_TIMESTAMP
+        }
+        
+        db.collection('notifications').add(notification_data)
+        return True
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating notification: {e}")
+        return False
+
+def get_user_notifications(user_id, limit=10, unread_only=False):
+    """Get notifications for a user"""
+    try:
+        if not db:
+            return []
+        
+        query = db.collection('notifications').where('user_id', '==', user_id)
+        
+        if unread_only:
+            query = query.where('read', '==', False)
+        
+        query = query.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
+        
+        notifications = []
+        for doc in query.stream():
+            notif_data = doc.to_dict()
+            notif_data['id'] = doc.id
+            notifications.append(notif_data)
+        
+        return notifications
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error fetching notifications: {e}")
+        return []
+
+def mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    try:
+        if not db:
+            return False
+        
+        db.collection('notifications').document(notification_id).update({'read': True})
+        return True
+    except Exception as e:
+        return False
+
 from django.contrib.auth import login
 # from django.contrib.auth.models import User
 
@@ -350,7 +429,7 @@ def marketplace(request):
             product = doc.to_dict()
             product['id'] = doc.id
             
-            # Ensure images is a list
+            # Ensure images is a list with fallback
             if 'images' in product:
                 if isinstance(product['images'], str):
                     try:
@@ -361,6 +440,16 @@ def marketplace(request):
                     product['images'] = []
             else:
                 product['images'] = []
+            
+            # Add fallback placeholder if no images
+            if not product['images'] or len(product['images']) == 0:
+                product['images'] = ['/static/images/placeholder-product.jpg']
+            
+            # Ensure image paths start with / or http
+            product['images'] = [
+                img if img.startswith(('/', 'http')) else f'/static/{img}' 
+                for img in product['images']
+            ]
             
             # Only show active products
             if product.get('is_active', True):
@@ -1321,8 +1410,13 @@ def order_confirmation(request, order_id):
             philippines_tz = pytz.timezone('Asia/Manila')
             order_data['created_at'] = utc_time.astimezone(philippines_tz)
 
-        # Items are stored inline on the order document
+        # Ensure items are accessible in template as both order.items and order_items
         order_items = order_data.get('items', [])
+        order_data['items'] = order_items  # Make sure items is in order_data
+        
+        # Ensure total_amount exists
+        if 'total_amount' not in order_data:
+            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_items)
 
         context = {
             'order': order_data,
@@ -1336,8 +1430,18 @@ def order_confirmation(request, order_id):
 
     except Exception as e:
         logger.exception("Order confirmation error")
-        messages.error(request, 'Error loading order details.')
-        return redirect('userdashboard')
+        # Don't show error message - let template handle gracefully
+        # Only redirect if it's a critical error
+        context = {
+            'order': {'order_id': order_id, 'items': [], 'total_amount': 0},
+            'order_items': [],
+            'order_id': order_id,
+            'user_name': request.session.get('name'),
+            'user_email': user_email or '',
+            'payment_status': 'pending',
+            'error': True
+        }
+        return render(request, 'user/order_confirmation.html', context)
 
 def logout_view(request):
     """Logout view"""
@@ -3898,6 +4002,93 @@ def api_reject_farm_request(request):
                 'success': False,
                 'error': str(e)
             })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+# ===============================
+# NOTIFICATION API ENDPOINTS
+# ===============================
+
+@csrf_exempt
+def api_get_notifications(request):
+    """API endpoint to fetch user notifications"""
+    try:
+        uid = request.session.get('uid')
+        if not uid:
+            return JsonResponse({'success': False, 'error': 'Not authenticated'})
+        
+        limit = int(request.GET.get('limit', 10))
+        unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
+        
+        notifications = get_user_notifications(uid, limit=limit, unread_only=unread_only)
+        
+        # Convert datetime objects to strings for JSON serialization
+        for notif in notifications:
+            if 'created_at' in notif and hasattr(notif['created_at'], 'strftime'):
+                notif['created_at'] = notif['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        unread_count = len([n for n in notifications if not n.get('read', False)])
+        
+        return JsonResponse({
+            'success': True,
+            'notifications': notifications,
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error fetching notifications: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@csrf_exempt
+def api_mark_notification_read(request):
+    """API endpoint to mark notification as read"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            notification_id = data.get('notification_id')
+            
+            if not notification_id:
+                return JsonResponse({'success': False, 'error': 'notification_id required'})
+            
+            success = mark_notification_read(notification_id)
+            
+            return JsonResponse({
+                'success': success,
+                'message': 'Notification marked as read' if success else 'Failed to mark as read'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@csrf_exempt
+def api_mark_all_notifications_read(request):
+    """API endpoint to mark all user notifications as read"""
+    if request.method == 'POST':
+        try:
+            uid = request.session.get('uid')
+            if not uid:
+                return JsonResponse({'success': False, 'error': 'Not authenticated'})
+            
+            if not db:
+                return JsonResponse({'success': False, 'error': 'Database unavailable'})
+            
+            # Get all unread notifications for this user
+            query = db.collection('notifications').where('user_id', '==', uid).where('read', '==', False)
+            docs = query.stream()
+            
+            count = 0
+            for doc in docs:
+                doc.reference.update({'read': True})
+                count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Marked {count} notifications as read'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 

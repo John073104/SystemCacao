@@ -76,6 +76,43 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <!-- Notification Bell -->
+                        <div x-data="notificationDropdown()" class="relative">
+                            <button @click="toggleDropdown()" class="relative p-2 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/30 transition">
+                                <i class="fas fa-bell text-xl"></i>
+                                <span x-show="unreadCount > 0" x-text="unreadCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
+                            </button>
+                            
+                            <!-- Dropdown -->
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl overflow-hidden z-50">
+                                <div class="bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-3 flex items-center justify-between">
+                                    <h3 class="text-white font-semibold">Notifications</h3>
+                                    <button @click="markAllRead()" class="text-white text-xs hover:underline">Mark all read</button>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    <template x-if="notifications.length === 0">
+                                        <div class="p-4 text-center text-gray-500">
+                                            <i class="fas fa-bell-slash text-3xl mb-2"></i>
+                                            <p>No notifications</p>
+                                        </div>
+                                    </template>
+                                    <template x-for="notif in notifications" :key="notif.id">
+                                        <div @click="markRead(notif.id)" :class="notif.read ? 'bg-white' : 'bg-blue-50'" class="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer">
+                                            <div class="flex items-start">
+                                                <i :class="getNotificationIcon(notif.type)" class="mt-1 mr-3"></i>
+                                                <div class="flex-1">
+                                                    <h4 class="font-semibold text-sm text-gray-800" x-text="notif.title"></h4>
+                                                    <p class="text-xs text-gray-600 mt-1" x-text="notif.message"></p>
+                                                    <p class="text-xs text-gray-400 mt-1" x-text="formatTime(notif.created_at)"></p>
+                                                </div>
+                                                <span x-show="!notif.read" class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <span class="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-full text-sm font-medium border border-white/30">
                             <i class="fas fa-circle text-green-300 mr-1"></i>System Online
                         </span>
@@ -325,6 +362,119 @@
                 }
             } catch (e) { console.error('Error initializing Order Status Chart:', e); }
         });
+        
+        // Notification Dropdown Component
+        function notificationDropdown() {
+            return {
+                open: false,
+                notifications: [],
+                unreadCount: 0,
+                
+                toggleDropdown() {
+                    this.open = !this.open;
+                    if (this.open) {
+                        this.fetchNotifications();
+                    }
+                },
+                
+                async fetchNotifications() {
+                    try {
+                        const response = await fetch('/api/notifications/?limit=10');
+                        const data = await response.json();
+                        if (data.success) {
+                            this.notifications = data.notifications;
+                            this.unreadCount = data.unread_count;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching notifications:', error);
+                    }
+                },
+                
+                async markRead(notifId) {
+                    try {
+                        const response = await fetch('/api/notifications/mark-read/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({ notification_id: notifId })
+                        });
+                        if (response.ok) {
+                            this.fetchNotifications();
+                        }
+                    } catch (error) {
+                        console.error('Error marking notification as read:', error);
+                    }
+                },
+                
+                async markAllRead() {
+                    try {
+                        const response = await fetch('/api/notifications/mark-all-read/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCookie('csrftoken')
+                            }
+                        });
+                        if (response.ok) {
+                            this.fetchNotifications();
+                        }
+                    } catch (error) {
+                        console.error('Error marking all as read:', error);
+                    }
+                },
+                
+                getNotificationIcon(type) {
+                    const icons = {
+                        'order_status': 'fas fa-shopping-cart text-blue-500',
+                        'success': 'fas fa-check-circle text-green-500',
+                        'warning': 'fas fa-exclamation-triangle text-yellow-500',
+                        'error': 'fas fa-exclamation-circle text-red-500',
+                        'info': 'fas fa-info-circle text-blue-500'
+                    };
+                    return icons[type] || icons['info'];
+                },
+                
+                formatTime(timestamp) {
+                    if (!timestamp) return '';
+                    const date = new Date(timestamp);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000); // seconds
+                    
+                    if (diff < 60) return 'Just now';
+                    if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+                    if (diff < 86400) return Math.floor(diff / 3600) + ' hours ago';
+                    return Math.floor(diff / 86400) + ' days ago';
+                },
+                
+                getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                },
+                
+                init() {
+                    // Fetch notifications on page load
+                    this.fetchNotifications();
+                    // Poll for new notifications every 30 seconds
+                    setInterval(() => {
+                        if (!this.open) {
+                            this.fetchNotifications();
+                        }
+                    }, 30000);
+                }
+            }
+        }
     </script>
     </div>
         </div>
