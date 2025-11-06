@@ -25,6 +25,52 @@ from . import firebase_config
 db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
 
 # ===============================
+# PRODUCT IMAGE HELPERS
+# ===============================
+def normalize_product_images(product):
+    """
+    Normalize product images to handle missing media files on Render.
+    Replaces /media/ paths with placeholder since Render filesystem is ephemeral.
+    This is a CRITICAL fix for production - media files don't persist across deploys.
+    """
+    import json
+    
+    # Ensure images is a list
+    if 'images' in product:
+        if isinstance(product['images'], str):
+            try:
+                product['images'] = json.loads(product['images'])
+            except:
+                product['images'] = [product['images']] if product['images'] else []
+        elif not isinstance(product['images'], list):
+            product['images'] = []
+    else:
+        product['images'] = []
+    
+    # Clean and normalize image paths
+    cleaned_images = []
+    placeholder = '/static/images/placeholder-product.jpg'
+    
+    for img in product['images']:
+        if not img:
+            continue
+        # Replace /media/ paths with placeholder (critical for Render deployment)
+        if img.startswith('/media/'):
+            cleaned_images.append(placeholder)
+        elif img.startswith(('http://', 'https://')):
+            cleaned_images.append(img)
+        elif img.startswith('/static/'):
+            cleaned_images.append(img)
+        elif img.startswith('/'):
+            cleaned_images.append(img)
+        else:
+            cleaned_images.append(f'/static/{img}')
+    
+    # Fallback to placeholder if no valid images
+    product['images'] = cleaned_images if cleaned_images else [placeholder]
+    return product
+
+# ===============================
 # NOTIFICATION SYSTEM
 # ===============================
 def create_notification(user_id, title, message, notification_type='info', order_id=None, metadata=None):
@@ -448,42 +494,8 @@ def marketplace(request):
             product = doc.to_dict()
             product['id'] = doc.id
             
-            # Ensure images is a list with fallback
-            if 'images' in product:
-                if isinstance(product['images'], str):
-                    try:
-                        product['images'] = json.loads(product['images'])
-                    except:
-                        product['images'] = [product['images']] if product['images'] else []
-                elif not isinstance(product['images'], list):
-                    product['images'] = []
-            else:
-                product['images'] = []
-            
-            # Add fallback placeholder if no images
-            if not product['images'] or len(product['images']) == 0:
-                product['images'] = ['/static/images/placeholder-product.jpg']
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            # Ensure image paths start with / or http, but block /media/ paths
-            cleaned_images = []
-            for img in product['images']:
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    # Relative path, prefix with /static/
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
+            # Apply centralized image normalization (CRITICAL for Render)
+            product = normalize_product_images(product)
             
             # Only show active products
             if product.get('is_active', True):
@@ -567,36 +579,8 @@ def guest_marketplace(request):
             product = doc.to_dict()
             product['id'] = doc.id
             
-            # Ensure images is a list with fallback
-            if 'images' in product:
-                if isinstance(product['images'], str):
-                    try:
-                        product['images'] = json.loads(product['images'])
-                    except:
-                        product['images'] = [product['images']] if product['images'] else []
-                elif not isinstance(product['images'], list):
-                    product['images'] = []
-            else:
-                product['images'] = []
-            
-            # Replace /media/ paths with placeholder (since media files don't persist on Render)
-            cleaned_images = []
-            for img in product.get('images', []):
-                if not img:
-                    continue
-                # If it's a /media/ path, replace with placeholder
-                if img.startswith('/media/'):
-                    cleaned_images.append('/static/images/placeholder-product.jpg')
-                elif img.startswith(('http://', 'https://')):
-                    cleaned_images.append(img)
-                elif img.startswith('/static/'):
-                    cleaned_images.append(img)
-                elif img.startswith('/'):
-                    cleaned_images.append(img)
-                else:
-                    cleaned_images.append(f'/static/{img}')
-            
-            product['images'] = cleaned_images if cleaned_images else ['/static/images/placeholder-product.jpg']
+            # Apply centralized image normalization (CRITICAL for Render)
+            product = normalize_product_images(product)
             
             # Only show active products
             if product.get('is_active', True):
@@ -1135,6 +1119,9 @@ def marketplace(request):
     # Get products from Firestore
     products = firestore_service.get_products()
     
+    # Apply image normalization to ALL products (CRITICAL for Render deployment)
+    products = [normalize_product_images(p) for p in products]
+    
     # Filter products
     if category:
         products = [p for p in products if p.get('category') == category]
@@ -1191,9 +1178,12 @@ def product_detail(request, product_id):
         messages.error(request, 'Product not found.')
         return redirect('marketplace')
     
+    # Apply image normalization (CRITICAL for Render)
+    product = normalize_product_images(product)
+    
     # Get related products
     related_products = firestore_service.get_products(limit=4)
-    related_products = [p for p in related_products if p.get('id') != product_id][:4]
+    related_products = [normalize_product_images(p) for p in related_products if p.get('id') != product_id][:4]
     
     context = {
         'product': product,
@@ -1785,6 +1775,9 @@ def admin_ecommerce(request):
 def admin_products(request):
     """Admin products management"""
     products = firestore_service.get_products(active_only=False)
+    
+    # Apply image normalization to ALL products (CRITICAL for Render)
+    products = [normalize_product_images(p) for p in products]
     
     # Add pagination
     paginator = Paginator(products, 10)
@@ -5221,6 +5214,9 @@ def guest_marketplace(request):
         # Use sample products for guests (no Firebase dependency)
         products = SAMPLE_PRODUCTS.copy()
         
+        # Apply image normalization (CRITICAL for Render)
+        products = [normalize_product_images(p) for p in products]
+        
         # Apply basic filters
         category = request.GET.get('category')
         search = request.GET.get('search')
@@ -5339,6 +5335,9 @@ def guest_marketplace(request):
     # Get products from Firestore
     products = firestore_service.get_products()
     
+    # Apply image normalization to ALL products (CRITICAL for Render deployment)
+    products = [normalize_product_images(p) for p in products]
+    
     # Filter products
     if category:
         products = [p for p in products if p.get('category') == category]
@@ -5387,9 +5386,12 @@ def guest_product_detail(request, product_id):
         messages.error(request, 'Product not found.')
         return redirect('guest_marketplace')
     
+    # Apply image normalization (CRITICAL for Render)
+    product = normalize_product_images(product)
+    
     # Get related products
     related_products = firestore_service.get_products(limit=4)
-    related_products = [p for p in related_products if p.get('id') != product_id][:4]
+    related_products = [normalize_product_images(p) for p in related_products if p.get('id') != product_id][:4]
     
     context = {
         'product': product,
