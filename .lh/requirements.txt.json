@@ -1,0 +1,18 @@
+{
+    "sourceFile": "requirements.txt",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762430347225,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762430347225,
+            "name": "Commit-0",
+            "content": "# Core Django\r\nDjango==5.1\r\ndjangorestframework==3.15.2\r\ngunicorn==21.2.0\r\nwhitenoise==6.6.0\r\npython-dotenv==1.0.1\r\n\r\n# Image Storage\r\ncloudinary==1.41.0\r\n\r\n# Firebase & Google Cloud\r\nfirebase-admin==6.6.0\r\ngoogle-cloud-firestore==2.20.1\r\ngoogle-cloud-storage==3.1.0\r\ngoogle-auth==2.38.0\r\n\r\n# PyTorch & ML (Linux compatible, Python 3.13 compatible)\r\ntorch==2.6.0\r\ntorchvision==0.21.0\r\nnumpy==2.0.2\r\nopencv-python-headless==4.10.0.84\r\npillow==11.0.0\r\n\r\n# Utilities\r\nrequests==2.32.3\r\npython-dateutil==2.9.0.post0\r\npytz==2025.1\r\nreportlab==4.2.5\r\n"
+        }
+    ]
+}

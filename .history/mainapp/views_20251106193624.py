@@ -29,8 +29,9 @@ db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db
 # ===============================
 def normalize_product_images(product):
     """
-    Normalize product images - keeps Cloudinary URLs, only replaces old /media/ paths.
-    Cloudinary URLs (https://res.cloudinary.com/...) are kept as-is.
+    Normalize product images to handle missing media files on Render.
+    Replaces /media/ paths with placeholder since Render filesystem is ephemeral.
+    This is a CRITICAL fix for production - media files don't persist across deploys.
     """
     import json
     
@@ -53,16 +54,11 @@ def normalize_product_images(product):
     for img in product['images']:
         if not img:
             continue
-        # Keep Cloudinary URLs as-is (they start with https://res.cloudinary.com)
-        if 'cloudinary.com' in img:
-            cleaned_images.append(img)
-        # Keep other external URLs
+        # Replace /media/ paths with placeholder (critical for Render deployment)
+        if img.startswith('/media/'):
+            cleaned_images.append(placeholder)
         elif img.startswith(('http://', 'https://')):
             cleaned_images.append(img)
-        # Replace old /media/ paths with placeholder (ephemeral on Render)
-        elif img.startswith('/media/'):
-            cleaned_images.append(placeholder)
-        # Keep static paths
         elif img.startswith('/static/'):
             cleaned_images.append(img)
         elif img.startswith('/'):

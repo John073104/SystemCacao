@@ -355,22 +355,20 @@ SESSION_SAVE_EVERY_REQUEST = True
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 
-# Cloudinary Settings (FREE image hosting for product images)
+# Cloudinary Settings (FREE image hosting)
 try:
     import cloudinary
     import cloudinary.uploader
     import cloudinary.api
 
     cloudinary.config(
-        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'driikw8gl'),
-        api_key=os.getenv('CLOUDINARY_API_KEY', '234447251498868'),
-        api_secret=os.getenv('CLOUDINARY_API_SECRET', 'vnAHNsYf1saLaSGU7X8sQpQY4d4'),
+        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'your_cloud_name'),
+        api_key=os.getenv('CLOUDINARY_API_KEY', 'your_api_key'),
+        api_secret=os.getenv('CLOUDINARY_API_SECRET', 'your_api_secret'),
         secure=True
     )
-    CLOUDINARY_ENABLED = True
 except ImportError:
     # Cloudinary not installed - will use placeholder images
-    CLOUDINARY_ENABLED = False
     pass
 
 LOGGING = {

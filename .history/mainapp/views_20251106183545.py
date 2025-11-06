@@ -29,8 +29,9 @@ db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db
 # ===============================
 def normalize_product_images(product):
     """
-    Normalize product images - keeps Cloudinary URLs, only replaces old /media/ paths.
-    Cloudinary URLs (https://res.cloudinary.com/...) are kept as-is.
+    Normalize product images to handle missing media files on Render.
+    Replaces /media/ paths with placeholder since Render filesystem is ephemeral.
+    This is a CRITICAL fix for production - media files don't persist across deploys.
     """
     import json
     
@@ -53,16 +54,11 @@ def normalize_product_images(product):
     for img in product['images']:
         if not img:
             continue
-        # Keep Cloudinary URLs as-is (they start with https://res.cloudinary.com)
-        if 'cloudinary.com' in img:
-            cleaned_images.append(img)
-        # Keep other external URLs
+        # Replace /media/ paths with placeholder (critical for Render deployment)
+        if img.startswith('/media/'):
+            cleaned_images.append(placeholder)
         elif img.startswith(('http://', 'https://')):
             cleaned_images.append(img)
-        # Replace old /media/ paths with placeholder (ephemeral on Render)
-        elif img.startswith('/media/'):
-            cleaned_images.append(placeholder)
-        # Keep static paths
         elif img.startswith('/static/'):
             cleaned_images.append(img)
         elif img.startswith('/'):
@@ -1795,31 +1791,21 @@ def admin_products(request):
     return render(request, 'admin/products.html', context)
 
 def handle_uploaded_images(image_files):
-    """Handle uploaded image files and upload to Cloudinary (FREE hosting)"""
-    import cloudinary.uploader
+    """Handle uploaded image files and return their URLs"""
     image_urls = []
     
     for image_file in image_files:
-        try:
-            # Upload to Cloudinary
-            upload_result = cloudinary.uploader.upload(
-                image_file,
-                folder="cacaoguard/products",  # Organize in folder
-                resource_type="image",
-                transformation=[
-                    {'width': 800, 'height': 800, 'crop': 'limit'},  # Optimize size
-                    {'quality': 'auto'}  # Auto quality
-                ]
-            )
-            # Get the secure URL
-            image_url = upload_result.get('secure_url')
-            image_urls.append(image_url)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error uploading to Cloudinary: {e}")
-            # Fallback to placeholder if upload fails
-            image_urls.append('/static/images/placeholder-product.jpg')
+        # Generate unique filename
+        file_extension = os.path.splitext(image_file.name)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        
+        # Save to media/products/ folder
+        file_path = f"products/{unique_filename}"
+        saved_path = default_storage.save(file_path, ContentFile(image_file.read()))
+        
+        # Get the URL for the saved file
+        file_url = default_storage.url(saved_path)
+        image_urls.append(file_url)
     
     return image_urls
 
@@ -5972,12 +5958,9 @@ def order_confirmation(request, order_id):
         order_data = docs[0].to_dict()
         order_data['id'] = docs[0].id
         
-        # Check if order belongs to current user (more flexible ownership check)
-        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
-        owner_email = order_data.get('customer_email') or order_data.get('user_email')
-        
-        # Allow access if either UID or email matches - silently redirect if no match
-        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+        # Check if order belongs to current user
+        if order_data.get('firebase_uid') != uid:
+            messages.error(request, 'Access denied.')
             return redirect('userdashboard')
         
         # Convert timestamp
@@ -6000,17 +5983,8 @@ def order_confirmation(request, order_id):
         return render(request, 'user/order_confirmation.html', context)
         
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Order confirmation error (duplicate)")
-        # Don't show error message - render with safe defaults
-        context = {
-            'order': {'id': order_id, 'order_id': order_id, 'items': [], 'total_amount': 0},
-            'order_id': order_id,
-            'user_name': request.session.get('name'),
-            'user_email': request.session.get('user_email')
-        }
-        return render(request, 'user/order_confirmation.html', context)
+        messages.error(request, 'Error loading order details.')
+        return redirect('user_orders')
 
 # Helper function to get product by ID
 def get_product_by_id(product_id):
@@ -10640,19 +10614,8 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("User orders error (duplicate)")
-        # Don't show error message - render with safe defaults
-        context = {
-            'orders': [],
-            'total_orders': 0,
-            'pending_orders': 0,
-            'delivered_orders': 0,
-            'total_spent': 0,
-            'user_email': request.session.get('user_email', 'User'),
-        }
-        return render(request, 'user/orders.html', context)
+        messages.error(request, 'Error loading orders. Please try again.')
+        return render(request, 'user/orders.html', {'orders': []})
 
 @admin_required
 # Add this to your views.py file - Replace the admin_dashboard function

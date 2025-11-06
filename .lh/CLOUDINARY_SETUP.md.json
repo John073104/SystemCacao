@@ -1,0 +1,22 @@
+{
+    "sourceFile": "CLOUDINARY_SETUP.md",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1762429415496,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1762429451470,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -17,9 +17,9 @@\n 1. Login to Cloudinary Dashboard: https://console.cloudinary.com/\r\n 2. You'll see your credentials:\r\n    - **Cloud Name**: (driikw8gl)\r\n    - **API Key**: (234447251498868)\r\n-   - **API Secret**: (e.g., \"abcdefghijklmnopqrstuvwxyz123\")\r\n+   - **API Secret**: (vnAHNsYf1saLaSGU7X8sQpQY4d4\r\n \r\n ### 3. Add to Render Environment Variables\r\n 1. Go to your Render dashboard: https://dashboard.render.com/\r\n 2. Select your web service\r\n"
+                }
+            ],
+            "date": 1762429415496,
+            "name": "Commit-0",
+            "content": "# Cloudinary Setup for Product Images\r\n\r\n## Why Cloudinary?\r\n- ✅ **FREE** 25GB storage + 25GB bandwidth/month\r\n- ✅ Images persist across Render deploys\r\n- ✅ Auto image optimization\r\n- ✅ CDN delivery (fast worldwide)\r\n\r\n## Setup Steps:\r\n\r\n### 1. Create FREE Cloudinary Account\r\n1. Go to: https://cloudinary.com/users/register_free\r\n2. Sign up with email\r\n3. Verify your email\r\n\r\n### 2. Get Your API Credentials\r\n1. Login to Cloudinary Dashboard: https://console.cloudinary.com/\r\n2. You'll see your credentials:\r\n   - **Cloud Name**: (driikw8gl)\r\n   - **API Key**: (e.g., \"123456789012345\")\r\n   - **API Secret**: (e.g., \"abcdefghijklmnopqrstuvwxyz123\")\r\n\r\n### 3. Add to Render Environment Variables\r\n1. Go to your Render dashboard: https://dashboard.render.com/\r\n2. Select your web service\r\n3. Go to **Environment** tab\r\n4. Add these variables:\r\n   ```\r\n   CLOUDINARY_CLOUD_NAME=your_cloud_name\r\n   CLOUDINARY_API_KEY=your_api_key\r\n   CLOUDINARY_API_SECRET=your_api_secret\r\n   ```\r\n5. Click **Save Changes**\r\n\r\n### 4. Test Locally (Optional)\r\nCreate `.env` file in project root:\r\n```\r\nCLOUDINARY_CLOUD_NAME=your_cloud_name\r\nCLOUDINARY_API_KEY=your_api_key\r\nCLOUDINARY_API_SECRET=your_api_secret\r\n```\r\n\r\n### 5. Redeploy on Render\r\n- Push changes to GitHub\r\n- Render will auto-deploy\r\n- Now when admin uploads product images, they go to Cloudinary!\r\n\r\n## How It Works:\r\n1. **Admin uploads image** → Uploaded to Cloudinary\r\n2. **Cloudinary returns URL** → Saved in Firestore\r\n3. **User views marketplace** → Images loaded from Cloudinary CDN\r\n4. **Images persist forever** → No more 404 errors!\r\n\r\n## Check Your Images:\r\nAfter uploading products, check Cloudinary dashboard:\r\n- Media Library → cacaoguard/products folder\r\n- You'll see all uploaded product images\r\n\r\n## Free Tier Limits:\r\n- Storage: 25GB\r\n- Bandwidth: 25GB/month\r\n- Transformations: 25,000/month\r\n- More than enough for your app!\r\n"
+        }
+    ]
+}

@@ -370,7 +370,6 @@ try:
     CLOUDINARY_ENABLED = True
 except ImportError:
     # Cloudinary not installed - will use placeholder images
-    CLOUDINARY_ENABLED = False
     pass
 
 LOGGING = {
