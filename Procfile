@@ -1,2 +1,2 @@
-web: gunicorn cacaoguard.wsgi:application --log-file -
+web: gunicorn cacaoguard.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-file - --log-level info
 release: python manage.py migrate
