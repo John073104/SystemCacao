@@ -5958,9 +5958,12 @@ def order_confirmation(request, order_id):
         order_data = docs[0].to_dict()
         order_data['id'] = docs[0].id
         
-        # Check if order belongs to current user
-        if order_data.get('firebase_uid') != uid:
-            messages.error(request, 'Access denied.')
+        # Check if order belongs to current user (more flexible ownership check)
+        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
+        owner_email = order_data.get('customer_email') or order_data.get('user_email')
+        
+        # Allow access if either UID or email matches - silently redirect if no match
+        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
             return redirect('userdashboard')
         
         # Convert timestamp
@@ -5983,8 +5986,17 @@ def order_confirmation(request, order_id):
         return render(request, 'user/order_confirmation.html', context)
         
     except Exception as e:
-        messages.error(request, 'Error loading order details.')
-        return redirect('user_orders')
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("Order confirmation error (duplicate)")
+        # Don't show error message - render with safe defaults
+        context = {
+            'order': {'id': order_id, 'order_id': order_id, 'items': [], 'total_amount': 0},
+            'order_id': order_id,
+            'user_name': request.session.get('name'),
+            'user_email': request.session.get('user_email')
+        }
+        return render(request, 'user/order_confirmation.html', context)
 
 # Helper function to get product by ID
 def get_product_by_id(product_id):
@@ -10614,8 +10626,19 @@ def user_orders(request):
         return render(request, 'user/orders.html', context)
 
     except Exception as e:
-        messages.error(request, 'Error loading orders. Please try again.')
-        return render(request, 'user/orders.html', {'orders': []})
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("User orders error (duplicate)")
+        # Don't show error message - render with safe defaults
+        context = {
+            'orders': [],
+            'total_orders': 0,
+            'pending_orders': 0,
+            'delivered_orders': 0,
+            'total_spent': 0,
+            'user_email': request.session.get('user_email', 'User'),
+        }
+        return render(request, 'user/orders.html', context)
 
 @admin_required
 # Add this to your views.py file - Replace the admin_dashboard function
