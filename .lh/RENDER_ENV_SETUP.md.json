@@ -1,0 +1,18 @@
+{
+    "sourceFile": "RENDER_ENV_SETUP.md",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762430871687,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762430871686,
+            "name": "Commit-0",
+            "content": "# Add Cloudinary Environment Variables to Render\r\n\r\n## Step-by-Step Instructions:\r\n\r\n### 1. Go to Render Dashboard\r\nOpen: https://dashboard.render.com/\r\n\r\n### 2. Select Your Web Service\r\n- Click on your `cacaoguard` or `SystemCacao` web service\r\n\r\n### 3. Go to Environment Tab\r\n- On the left sidebar, click **Environment**\r\n\r\n### 4. Add Environment Variables\r\nClick **Add Environment Variable** button and add these THREE variables:\r\n\r\n**Variable 1:**\r\n```\r\nKey: CLOUDINARY_CLOUD_NAME\r\nValue: driikw8gl\r\n```\r\n\r\n**Variable 2:**\r\n```\r\nKey: CLOUDINARY_API_KEY\r\nValue: 234447251498868\r\n```\r\n\r\n**Variable 3:**\r\n```\r\nKey: CLOUDINARY_API_SECRET\r\nValue: vnAHNsYf1saLaSGU7X8sQpQY4d4\r\n```\r\n\r\n### 5. Save Changes\r\n- Click **Save Changes** button at the bottom\r\n- Render will automatically redeploy your service\r\n\r\n### 6. Wait for Deployment\r\n- Watch the deployment logs\r\n- Wait until it says \"Live\" (usually 2-5 minutes)\r\n\r\n### 7. Test\r\n- Go to your admin panel\r\n- Add a new product with an image\r\n- Check marketplace - the image should appear!\r\n\r\n---\r\n\r\n## ✅ Verification Checklist:\r\n- [ ] All 3 environment variables added\r\n- [ ] Deployment successful (status shows \"Live\")\r\n- [ ] Can add new product with image in admin\r\n- [ ] New product image shows in marketplace\r\n"
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "sourceFile": "check_products.py",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762476546204,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762476546204,
+            "name": "Commit-0",
+            "content": "\"\"\"Check what images products have in Firestore\"\"\"\r\nimport os\r\nimport sys\r\nimport django\r\n\r\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\r\nos.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cacaoguard.settings')\r\ndjango.setup()\r\n\r\nfrom mainapp.firebase_config import db\r\n\r\nprint(\"\\n\" + \"=\"*60)\r\nprint(\"CURRENT PRODUCTS IN FIRESTORE\")\r\nprint(\"=\"*60)\r\n\r\nproducts_ref = db.collection('products')\r\nfor doc in products_ref.stream():\r\n    product = doc.to_dict()\r\n    print(f\"\\n📦 {product.get('name', 'Unnamed')}\")\r\n    print(f\"   ID: {doc.id}\")\r\n    print(f\"   Images: {product.get('images', [])}\")\r\n"
+        }
+    ]
+}

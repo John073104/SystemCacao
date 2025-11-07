@@ -1,0 +1,18 @@
+{
+    "sourceFile": "MIGRATION_GUIDE.md",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762430871944,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762430871944,
+            "name": "Commit-0",
+            "content": "# Migration Guide: Old Products to Cloudinary\r\n\r\n## Problem\r\nOld products uploaded before Cloudinary integration have images stored at `/media/products/xxx.jpg` paths. These files don't exist on Render, so they show as placeholders.\r\n\r\n## Solution Options\r\n\r\n### Option 1: Auto-Replace with Placeholder (Fastest)\r\n**Good for:** Many products, will fix them later\r\n\r\n```bash\r\npython migrate_images_to_cloudinary.py\r\n# Choose option 2\r\n```\r\n\r\nThis will:\r\n- Replace all `/media/` paths with placeholder\r\n- You can later edit products in admin panel\r\n- Upload new images (will go to Cloudinary automatically)\r\n\r\n### Option 2: Manual Migration (Best Quality)\r\n**Good for:** 1-10 products you want to fix now\r\n\r\n```bash\r\npython migrate_images_to_cloudinary.py\r\n# Choose option 1\r\n# Follow prompts to upload each image\r\n```\r\n\r\nThis will:\r\n- Ask you for image file paths\r\n- Upload to Cloudinary\r\n- Update Firestore with new URLs\r\n\r\n### Option 3: Re-upload via Admin Panel (Recommended)\r\n**Good for:** When you have time, best result\r\n\r\n1. After adding Cloudinary env vars to Render\r\n2. Go to admin panel on your live site\r\n3. Edit each product\r\n4. Re-upload the images\r\n5. Save - images automatically go to Cloudinary!\r\n\r\n## Which Should You Choose?\r\n\r\n**If you have 1-5 products:**\r\n→ Use Option 3 (Admin Panel) - easiest!\r\n\r\n**If you have 6-20 products:**\r\n→ Use Option 2 (Manual Migration Script) - saves time\r\n\r\n**If you have 20+ products:**\r\n→ Use Option 1 (Auto-Placeholder) now\r\n→ Fix important products via admin panel later\r\n→ Others can wait\r\n\r\n## Current Status\r\n\r\nAfter you add Cloudinary env vars to Render:\r\n- ✅ NEW products: Images go to Cloudinary automatically\r\n- ❌ OLD products: Still show placeholder (need migration)\r\n\r\n## Don't Worry!\r\nThe migration script is optional. You can always:\r\n- Just use admin panel to re-upload images\r\n- Fix products one by one as needed\r\n- Leave less important products with placeholder for now\r\n"
+        }
+    ]
+}
