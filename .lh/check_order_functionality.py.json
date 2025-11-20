@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1762515080147,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1762517702819,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -45,28 +45,28 @@\n             print(f\"\\n   ⚠️  Missing fields: {missing_fields}\")\r\n         else:\r\n             print(\"\\n   ✅ All required fields present!\")\r\n \r\n-print(\"\\n\" + \"-\"*70)\r\n-print(\"ORDER SYSTEM STATUS:\")\r\n-print(\"-\"*70)\r\n+    print(\"\\n\" + \"-\"*70)\r\n+    print(\"ORDER SYSTEM STATUS:\")\r\n+    print(\"-\"*70)\r\n \r\n-# Check if all orders have payment_status\r\n-orders_without_payment_status = 0\r\n-for doc in orders:\r\n-    order = doc.to_dict()\r\n-    if 'payment_status' not in order:\r\n-        orders_without_payment_status += 1\r\n+    # Check if all orders have payment_status\r\n+    orders_without_payment_status = 0\r\n+    for doc in orders:\r\n+        order = doc.to_dict()\r\n+        if 'payment_status' not in order:\r\n+            orders_without_payment_status += 1\r\n \r\n-if orders_without_payment_status > 0:\r\n-    print(f\"⚠️  {orders_without_payment_status} orders missing payment_status field\")\r\n-else:\r\n-    print(\"✅ All orders have payment_status field\")\r\n+    if orders_without_payment_status > 0:\r\n+        print(f\"⚠️  {orders_without_payment_status} orders missing payment_status field\")\r\n+    else:\r\n+        print(\"✅ All orders have payment_status field\")\r\n \r\n-print(\"\\n\" + \"=\"*70)\r\n-print(\"FUNCTIONALITY CHECK:\")\r\n-print(\"=\"*70)\r\n-print(\"\"\"\r\n+    print(\"\\n\" + \"=\"*70)\r\n+    print(\"FUNCTIONALITY CHECK:\")\r\n+    print(\"=\"*70)\r\n+    print(\"\"\"\r\n When user successfully places order:\r\n \r\n 1. ✅ Order Creation:\r\n    - Order saved to Firestore with unique ID\r\n@@ -94,12 +94,12 @@\n - Order confirmation pages WORK (no 500 error)\r\n - GCash payment instructions NOT visible (needs redeploy)\r\n \"\"\")\r\n \r\n-print(\"✅ ORDER SYSTEM IS FUNCTIONAL!\")\r\n-print(\"\\n💡 The only missing piece is the GCash payment instructions\")\r\n-print(\"   template, which requires a Render redeploy (blocked by build limit)\")\r\n-print(\"\")\r\n+    print(\"✅ ORDER SYSTEM IS FUNCTIONAL!\")\r\n+    print(\"\\n💡 The only missing piece is the GCash payment instructions\")\r\n+    print(\"   template, which requires a Render redeploy (blocked by build limit)\")\r\n+    print(\"\")\r\n \r\n except Exception as e:\r\n     print(f\"\\n❌ Error checking orders: {e}\")\r\n     import traceback\r\n"
                 }
             ],
             "date": 1762515080138,

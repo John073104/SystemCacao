@@ -1,25 +1,25 @@
 /* Gradient Header Styles for Different User Types */
 
-/* Admin Header - Green Gradient */
+/* Admin Header - Orange Gradient */
 .admin-header-gradient {
-    background: linear-gradient(135deg, #059669 0%, #10b981 25%, #14b8a6 50%, #06b6d4 75%, #0d9488 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 8s ease infinite;
-}
-
-.admin-header-gradient:hover {
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 25%, #059669 50%, #10b981 75%, #06b6d4 100%);
-}
-
-/* User Header - Orange Gradient */
-.user-header-gradient {
     background: linear-gradient(135deg, #ea580c 0%, #f97316 25%, #fb923c 50%, #fbbf24 75%, #f59e0b 100%);
     background-size: 400% 400%;
     animation: gradientShift 8s ease infinite;
 }
 
-.user-header-gradient:hover {
+.admin-header-gradient:hover {
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 25%, #ea580c 50%, #f97316 75%, #fb923c 100%);
+}
+
+/* User Header - Green Gradient */
+.user-header-gradient {
+    background: linear-gradient(135deg, #059669 0%, #10b981 25%, #14b8a6 50%, #06b6d4 75%, #0d9488 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+}
+
+.user-header-gradient:hover {
+    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 25%, #059669 50%, #10b981 75%, #06b6d4 100%);
 }
 
 /* Guest Header - Blue Gradient */
