@@ -163,7 +163,8 @@
                             <!-- GCash Payment -->
                             <div class="flex items-center p-4 border-2 border-gray-300 hover:border-blue-400 rounded-lg transition-colors">
                                 <input type="radio" id="gcash" name="payment_method" value="gcash"
-                                       class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300">
+                                       class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300"
+                                       onchange="toggleGCashFields()">
                                 <label for="gcash" class="ml-3 flex items-center cursor-pointer flex-1">
                                     <div class="flex-shrink-0">
                                         <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,6 +176,38 @@
                                         <div class="text-sm text-gray-600">Pay instantly via GCash mobile wallet</div>
                                     </div>
                                 </label>
+                            </div>
+                            
+                            <!-- GCash Payment Details (Hidden by default) -->
+                            <div id="gcashDetails" style="display: none;" class="ml-7 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+                                <div class="text-sm text-blue-900">
+                                    <p class="font-semibold mb-2">📱 GCash Payment Instructions:</p>
+                                    <ol class="list-decimal list-inside space-y-1 text-gray-700">
+                                        <li>Send payment to: <strong class="text-blue-700">09XX XXX XXXX</strong></li>
+                                        <li>Amount: <strong class="text-blue-700">₱{{ total|floatformat:2 }}</strong></li>
+                                        <li>After payment, enter reference number below</li>
+                                        <li>Admin will verify your payment</li>
+                                    </ol>
+                                </div>
+                                
+                                <div>
+                                    <label for="gcash_reference" class="block text-sm font-medium text-gray-700 mb-2">
+                                        GCash Reference Number *
+                                    </label>
+                                    <input type="text" 
+                                           id="gcash_reference" 
+                                           name="gcash_reference" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           placeholder="Enter 13-digit reference number">
+                                    <p class="text-xs text-gray-500 mt-1">Example: 1234567890123</p>
+                                </div>
+                                
+                                <div class="bg-amber-50 border border-amber-200 rounded p-3">
+                                    <p class="text-xs text-amber-800">
+                                        ⚠️ <strong>Important:</strong> Your order will be on hold until admin verifies your payment. 
+                                        Make sure to enter the correct reference number.
+                                    </p>
+                                </div>
                             </div>
                             
                             <!-- Info note about payment -->
@@ -304,10 +337,32 @@
 </div>
 
 <script>
+// Toggle GCash payment fields
+function toggleGCashFields() {
+    const gcashRadio = document.getElementById('gcash');
+    const codRadio = document.getElementById('cod');
+    const gcashDetails = document.getElementById('gcashDetails');
+    const gcashReference = document.getElementById('gcash_reference');
+    
+    if (gcashRadio.checked) {
+        gcashDetails.style.display = 'block';
+        gcashReference.required = true;
+    } else {
+        gcashDetails.style.display = 'none';
+        gcashReference.required = false;
+        gcashReference.value = '';
+    }
+}
+
+// Add event listener to COD radio too
+document.getElementById('cod').addEventListener('change', toggleGCashFields);
+
 // Form validation
 document.querySelector('form').addEventListener('submit', function(e) {
     const phoneNumber = document.getElementById('phone_number').value;
     const shippingAddress = document.getElementById('shipping_address').value;
+    const gcashRadio = document.getElementById('gcash');
+    const gcashReference = document.getElementById('gcash_reference').value;
     
     if (!phoneNumber.trim()) {
         e.preventDefault();
@@ -321,6 +376,22 @@ document.querySelector('form').addEventListener('submit', function(e) {
         alert('Please enter your complete shipping address.');
         document.getElementById('shipping_address').focus();
         return;
+    }
+    
+    // Validate GCash reference if GCash is selected
+    if (gcashRadio.checked) {
+        if (!gcashReference.trim()) {
+            e.preventDefault();
+            alert('Please enter your GCash reference number.');
+            document.getElementById('gcash_reference').focus();
+            return;
+        }
+        if (gcashReference.trim().length < 10) {
+            e.preventDefault();
+            alert('Please enter a valid GCash reference number (at least 10 digits).');
+            document.getElementById('gcash_reference').focus();
+            return;
+        }
     }
     
     // Show loading state
