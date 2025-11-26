@@ -187,7 +187,14 @@
     // Close when clicking nav links on mobile
     const navLinks = sidebar.querySelectorAll('a');
     navLinks.forEach(link => {
-      link.addEventListener('click', () => {
+      link.addEventListener('click', (e) => {
+        // Instant visual feedback
+        const navItem = link.querySelector('.nav-item');
+        if (navItem && !navItem.classList.contains('active')) {
+          navItem.style.background = 'rgba(59, 130, 246, 0.2)';
+          navItem.style.transform = 'scale(0.98)';
+        }
+        
         if (window.innerWidth < 1024) {
           closeSidebar();
         }
@@ -200,6 +207,20 @@
         closeSidebar();
       }
     });
+
+    // Preload pages on hover for faster navigation
+    navLinks.forEach(link => {
+      link.addEventListener('mouseenter', () => {
+        const href = link.getAttribute('href');
+        if (href && !link.dataset.preloaded) {
+          const preloadLink = document.createElement('link');
+          preloadLink.rel = 'prefetch';
+          preloadLink.href = href;
+          document.head.appendChild(preloadLink);
+          link.dataset.preloaded = 'true';
+        }
+      });
+    });
   });
 </script>
 
@@ -209,11 +230,17 @@
   }
 
   .nav-item {
-    transition: background 0.3s ease;
+    transition: all 0.15s ease;
+    will-change: transform, background;
   }
 
   .nav-item:hover:not(.active) {
     background: rgba(59, 130, 246, 0.1);
+    transform: translateX(4px);
+  }
+
+  .nav-item:active {
+    transform: scale(0.98);
   }
 
   .nav-item.active {
