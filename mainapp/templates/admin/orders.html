@@ -1,5 +1,6 @@
 {% extends "admin/admin_dashboard.html" %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Order Management - Admin Dashboard{% endblock %}
 
@@ -253,7 +254,7 @@
                                 </p>
                                 <p class="text-sm text-gray-500">
                                     {% if order.created_at %}
-                                        {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"g:i A" }}
+                                        {{ order.created_at|localtime|date:"F d, Y" }} at {{ order.created_at|localtime|time:"g:i A" }}
                                     {% else %}
                                         {{ order.order_date }}
                                     {% endif %}

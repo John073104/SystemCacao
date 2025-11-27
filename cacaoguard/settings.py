@@ -176,13 +176,6 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
-from django.conf.urls import handler404
-handler404 = 'mainapp.views.page_not_found'
-from django.shortcuts import render
-def page_not_found(request, exception=None):
-    return render(request, '404.html', status=404)
-
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

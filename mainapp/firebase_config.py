@@ -31,8 +31,9 @@ if os.path.exists(cred_path) and not firebase_admin._apps:
 
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred, {
-            'storageBucket': 'systemcacao.appspot.com'  # ✅ This line fixes the error
+            'storageBucket': 'systemcacao.appspot.com'
         })
+        print("Firebase initialized with Authentication, Storage, and Firestore!")
 
     # Initialize Firestore client
     db = firestore.client()
@@ -40,6 +41,4 @@ else:
     # For deployments without Firebase (testing/CI)
     print(f"Warning: Firebase credentials not found at {cred_path}")
     db = None
-
-print("Firebase initialized with Authentication, Storage, and Firestore!")
 

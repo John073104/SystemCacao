@@ -1664,9 +1664,10 @@ def order_confirmation(request, order_id):
 
         # Convert timestamp to Asia/Manila if Firestore timestamp
         if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+            # Convert UTC timestamp to Manila timezone with proper timezone awareness
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
-            philippines_tz = pytz.timezone('Asia/Manila')
-            order_data['created_at'] = utc_time.astimezone(philippines_tz)
+            manila_tz = pytz.timezone('Asia/Manila')
+            order_data['created_at'] = utc_time.astimezone(manila_tz)
 
         # Ensure items are accessible in template as both order.items and order_items
         order_items = order_data.get('items', [])
@@ -1887,11 +1888,15 @@ def is_admin(user):
 @admin_required
 def admin_ecommerce(request):
     """Admin ecommerce dashboard with Firestore data - OPTIMIZED with caching"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         # Check if Firebase is initialized
         if db is None:
+            logger.error("Firebase database not initialized")
             return render(request, 'admin/ecommerce.html', {
-                'error': 'Database connection unavailable. Please add Firebase credentials.',
+                'error': 'Database connection unavailable. Please check Firebase credentials.',
                 'total_products': 0,
                 'total_orders': 0,
                 'pending_orders': 0,
@@ -1900,25 +1905,15 @@ def admin_ecommerce(request):
                 'low_stock_products': [],
             })
         
-        # ===== OPTIMIZED: CACHE + LIMIT ORDERS QUERY =====
-        # Try cache first (5 minute TTL)
-        cache_key = 'admin_ecommerce_orders_v1'
-        cached_orders = cache.get(cache_key)
-        
-        if cached_orders is not None:
-            all_orders_docs = cached_orders
-        else:
-            orders_ref = db.collection('orders')
-            # Fetch recent orders only (limit 100 for stats, 5 for display)
-            try:
-                recent_orders_query = orders_ref.order_by('created_at', direction=firestore.Query.DESCENDING).limit(100)
-                all_orders_docs = list(recent_orders_query.stream())
-            except:
-                # Fallback without ordering
-                all_orders_docs = list(orders_ref.limit(100).stream())
-            
-            # Cache for 5 minutes
-            cache.set(cache_key, all_orders_docs, 300)
+        # ===== FETCH ALL ORDERS (NO CACHE FOR DEBUGGING) =====
+        orders_ref = db.collection('orders')
+        # Fetch ALL orders to see total count
+        try:
+            all_orders_docs = list(orders_ref.stream())
+            logger.info(f"Fetched {len(all_orders_docs)} orders from Firestore")
+        except Exception as order_error:
+            logger.error(f"Error fetching orders: {str(order_error)}")
+            all_orders_docs = []
         
         total_orders = len(all_orders_docs)
         pending_orders = 0
@@ -1963,18 +1958,14 @@ def admin_ecommerce(request):
             reverse=True
         )[:5]
 
-        # ===== OPTIMIZED: PRODUCTS SECTION WITH CACHE =====
-        # Try cache first
-        cache_key_products = 'admin_ecommerce_products_v1'
-        all_products = cache.get(cache_key_products)
-        
-        if all_products is None:
-            # Get limited products for faster load
-            products_ref = db.collection('products')
-            # Limit to 200 products max (dashboard doesn't need all)
-            all_products = [doc.to_dict() for doc in products_ref.limit(200).stream()]
-            # Cache for 5 minutes
-            cache.set(cache_key_products, all_products, 300)
+        # ===== FETCH ALL PRODUCTS (NO CACHE FOR DEBUGGING) =====
+        products_ref = db.collection('products')
+        try:
+            all_products = [doc.to_dict() for doc in products_ref.stream()]
+            logger.info(f"Fetched {len(all_products)} products from Firestore")
+        except Exception as prod_error:
+            logger.error(f"Error fetching products: {str(prod_error)}")
+            all_products = []
         
         total_products = len(all_products)
         low_stock_products = [
@@ -1996,12 +1987,17 @@ def admin_ecommerce(request):
             # Full datasets (if needed in template)
             'all_products': all_products,
         }
-
+        
+        logger.info(f"Admin ecommerce loaded: {total_products} products, {total_orders} orders")
         return render(request, 'admin/ecommerce.html', context)
 
     except Exception as e:
-        # Fallback empty data
+        # Log the actual error
+        logger.error(f"Error loading admin ecommerce: {str(e)}", exc_info=True)
+        
+        # Fallback empty data with error message
         return render(request, 'admin/ecommerce.html', {
+            'error': f'Error loading data: {str(e)}',
             'total_products': 0,
             'total_orders': 0,
             'pending_orders': 0,
@@ -5808,9 +5804,10 @@ def order_detail(request, order_id):
         
         # Convert timestamp if needed
         if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+            # Convert UTC timestamp to Manila timezone with proper timezone awareness
             utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
-            philippines_tz = pytz.timezone('Asia/Manila')
-            order_data['created_at'] = utc_time.astimezone(philippines_tz)
+            manila_tz = pytz.timezone('Asia/Manila')
+            order_data['created_at'] = utc_time.astimezone(manila_tz)
         
         # Ensure items and total_amount exist
         if 'items' not in order_data:
@@ -5844,6 +5841,74 @@ def order_detail(request, order_id):
             'error': True
         }
         return render(request, 'user/order_detail.html', context)
+
+@user_required
+def order_receipt(request, order_id):
+    """View and print receipt for an order"""
+    try:
+        uid = request.session.get('uid')
+        user_email = request.session.get('user_email') or request.session.get('email')
+        
+        if not uid:
+            messages.error(request, 'Please log in to view receipt.')
+            return redirect('login')
+
+        # Get specific order from Firestore
+        order_ref = db.collection('orders').document(order_id)
+        order_doc = order_ref.get()
+
+        if not order_doc.exists:
+            messages.error(request, 'Order not found.')
+            return redirect('user_orders')
+
+        order_data = order_doc.to_dict()
+        
+        # Check if order belongs to current user
+        owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
+        owner_email = order_data.get('customer_email') or order_data.get('user_email')
+        
+        if owner_uid and owner_uid != uid and owner_email and owner_email != user_email:
+            return redirect('user_orders')
+
+        order_data['id'] = order_doc.id
+        
+        # Convert timestamp if needed
+        if order_data.get('created_at') and hasattr(order_data['created_at'], 'seconds'):
+            utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
+            manila_tz = pytz.timezone('Asia/Manila')
+            order_data['created_at'] = utc_time.astimezone(manila_tz)
+        
+        # Ensure items exist
+        if 'items' not in order_data:
+            order_data['items'] = []
+        
+        # Calculate values if missing
+        if 'total_amount' not in order_data:
+            order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_data['items'])
+        
+        if 'subtotal' not in order_data:
+            order_data['subtotal'] = order_data['total_amount']
+        
+        if 'tax_amount' not in order_data:
+            order_data['tax_amount'] = order_data['total_amount'] * 0.12
+        
+        if 'delivery_fee' not in order_data:
+            order_data['delivery_fee'] = 0
+
+        context = {
+            'order': order_data,
+            'name': request.session.get('name', user_email),
+            'current_date': datetime.now(pytz.timezone('Asia/Manila')),
+        }
+
+        return render(request, 'user/receipt.html', context)
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("Receipt view error")
+        messages.error(request, 'Error loading receipt.')
+        return redirect('user_orders')
 
 # ===============================
 # ADMIN ORDER MANAGEMENT
@@ -8205,16 +8270,28 @@ def image_analysis(request):
                 
                 scan_timestamp = scan_data.get(timestamp_field) if timestamp_field else None
                 
-                # Format timestamp
+                # Format timestamp - handle both old UTC timestamps and new Manila timestamps
                 if scan_timestamp:
                     if hasattr(scan_timestamp, 'seconds'):
-                        formatted_timestamp = datetime.fromtimestamp(scan_timestamp.seconds, tz)
+                        # Firestore timestamp object - check if it's already Manila time or UTC
+                        dt = datetime.fromtimestamp(scan_timestamp.seconds, tz=pytz.UTC)
+                        # If timestamp looks like it's from old system (before fix), it's UTC - convert to Manila
+                        # If it's from new system (after fix), it's already Manila time
+                        # We can detect by checking if the timestamp is timezone-aware in Manila
+                        try:
+                            # Try to get timezone info from the timestamp
+                            formatted_timestamp = dt.astimezone(tz)
+                        except:
+                            formatted_timestamp = dt.replace(tzinfo=tz)
                     elif isinstance(scan_timestamp, str):
                         try:
                             formatted_timestamp = datetime.fromisoformat(scan_timestamp.replace('Z', '+00:00'))
                             formatted_timestamp = formatted_timestamp.astimezone(tz)
                         except:
                             formatted_timestamp = today
+                    elif hasattr(scan_timestamp, 'tzinfo') and scan_timestamp.tzinfo:
+                        # Already timezone-aware datetime (new Manila timestamps)
+                        formatted_timestamp = scan_timestamp.astimezone(tz)
                     else:
                         formatted_timestamp = scan_timestamp if hasattr(scan_timestamp, 'strftime') else today
                 else:
@@ -8246,14 +8323,28 @@ def image_analysis(request):
                 # Handle different field names for user info
                 user_name = (scan_data.get('user_name') or 
                             scan_data.get('username') or 
-                            scan_data.get('user') or 
-                            'Unknown User')
+                            scan_data.get('user'))
                 
                 user_email = (scan_data.get('user_email') or 
                              scan_data.get('email') or '')
                 
-                # OPTIMIZED: Skip nested user lookups - use stored data only
-                # This avoids 100+ extra Firestore reads that slow page load
+                # If user name not stored, try to fetch from users collection using user_id
+                if not user_name:
+                    user_id = scan_data.get('user_id')
+                    if user_id:
+                        try:
+                            user_doc = db.collection('users').document(user_id).get()
+                            if user_doc.exists:
+                                user_data = user_doc.to_dict()
+                                user_name = user_data.get('name') or user_data.get('display_name') or 'Unknown User'
+                                if not user_email:
+                                    user_email = user_data.get('email', '')
+                            else:
+                                user_name = 'Unknown User'
+                        except:
+                            user_name = 'Unknown User'
+                    else:
+                        user_name = 'Unknown User'
                 
                 # Handle image name
                 image_name = (scan_data.get('image_name') or 
@@ -8276,6 +8367,9 @@ def image_analysis(request):
                 if scan_date_str in daily_counts:
                     daily_counts[scan_date_str] += 1
                 
+                # Get image path for admin viewing
+                image_path = scan_data.get('image_path', '')
+                
                 # Add to scans list
                 scans_list.append({
                     'id': scan_doc.id,
@@ -8285,6 +8379,7 @@ def image_analysis(request):
                     'confidence': confidence,
                     'primary_confidence': confidence,
                     'image_name': image_name,
+                    'image_path': image_path,
                     'user': user_name,
                     'username': user_name,
                     'user_email': user_email,
@@ -10419,13 +10514,21 @@ def scan_image(request):
             if image_file.size > 5 * 1024 * 1024:  # 5MB limit
                 return JsonResponse({'success': False, 'message': 'Image too large (max 5MB)'})
             
-            # Save image temporarily
-            file_extension = os.path.splitext(image_file.name)[1]
-            unique_filename = f"{uuid.uuid4()}{file_extension}"
-            file_path = f"temp_scans/{unique_filename}"
-            
-            saved_path = default_storage.save(file_path, image_file)
-            full_path = os.path.join(settings.MEDIA_ROOT, saved_path)
+            # Upload to Cloudinary
+            import cloudinary.uploader
+            try:
+                upload_result = cloudinary.uploader.upload(
+                    image_file,
+                    folder="cacaoguard/scans",
+                    resource_type="image",
+                    transformation=[
+                        {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                        {'quality': 'auto'}
+                    ]
+                )
+                image_url = upload_result.get('secure_url')
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': f'Image upload failed: {str(e)}'})
             
             # Mock prediction (replace with your actual model prediction)
             if scan_type == 'disease':
@@ -10442,24 +10545,30 @@ def scan_image(request):
             # Get recommendations
             recommendations = get_recommendations(predicted_class)
             
+            # Get user info from session
+            user_name = request.session.get('name', 'Unknown User')
+            user_email = request.session.get('user_email') or request.session.get('email', '')
+            
+            # Create Manila timezone timestamp
+            manila_tz = pytz.timezone('Asia/Manila')
+            manila_time = datetime.now(manila_tz)
+            
             # Save scan to Firestore
             scan_data = {
                 'user_id': uid,
+                'user_name': user_name,
+                'user_email': user_email,
                 'type': scan_type,
                 'result': predicted_class,
                 'confidence': confidence_decimal,  # Store as decimal
                 'recommendations': recommendations,
-                'timestamp': firestore.SERVER_TIMESTAMP,
-                'image_path': saved_path
+                'timestamp': manila_time,
+                'image_path': image_url
             }
             
             # Add to Firestore
             scan_ref = db.collection('scans').add(scan_data)
             scan_id = scan_ref[1].id
-            
-            # Clean up temporary file
-            if os.path.exists(full_path):
-                os.remove(full_path)
             
             return JsonResponse({
                 'success': True,

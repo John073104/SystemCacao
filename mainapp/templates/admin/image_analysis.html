@@ -1,5 +1,6 @@
 {% extends "admin/admin_dashboard.html" %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Image Analysis - CacaoGuard{% endblock %}
 
@@ -249,7 +250,10 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ scan.timestamp|date:"M d, Y g:i A" }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="viewDetails('{{ scan.id }}')" class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
+                    <button onclick="viewImage('{{ scan.image_path|escapejs }}')" class="text-green-600 hover:text-green-900 mr-3" title="View Image">
+                      <i class="fas fa-image"></i>
+                    </button>
+                    <button onclick="viewDetails('{{ scan.id }}', '{{ scan.image_path|escapejs }}')" class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
                       <i class="fas fa-eye"></i>
                     </button>
                     <button onclick="toggleScanVisibility('{{ scan.id }}', {% if scan.hidden %}true{% else %}false{% endif %})"
@@ -471,9 +475,9 @@
       }
 
       // Modal functions
-      function viewDetails(scanId) {
+      function viewDetails(scanId, imagePath) {
         // Find the scan data from the table row
-        const row = document.querySelector(`[onclick="viewDetails('${scanId}')"]`).closest('tr');
+        const row = document.querySelector(`[onclick*="viewDetails('${scanId}')"]`).closest('tr');
         const cells = row.querySelectorAll('td');
         
         const imageName = cells[0].querySelector('.text-sm.font-medium').textContent.trim();
@@ -483,8 +487,23 @@
         const user = cells[3].textContent.trim();
         const date = cells[4].textContent.trim();
         
+        // Build image display HTML
+        let imageHtml = '';
+        if (imagePath) {
+          imageHtml = `
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Uploaded Image</label>
+              <div class="border rounded-lg overflow-hidden bg-gray-50">
+                <img src="${imagePath}" alt="Scan Image" class="w-full h-auto max-h-96 object-contain" 
+                     onerror="this.parentElement.innerHTML='<div class=\\'p-4 text-center text-gray-500\\'>Image not available</div>'">
+              </div>
+            </div>
+          `;
+        }
+        
         document.getElementById('modalContent').innerHTML = `
           <div class="space-y-6">
+            ${imageHtml}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-4">
                 <div>
@@ -532,6 +551,26 @@
                   This scan was processed successfully. All analysis data has been stored and is available for review.
                 </p>
               </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('detailsModal').classList.remove('hidden');
+      }
+
+      function viewImage(imagePath) {
+        if (!imagePath) {
+          alert('Image not available');
+          return;
+        }
+        
+        document.getElementById('modalContent').innerHTML = `
+          <div class="space-y-4">
+            <div class="flex justify-center items-center bg-gray-50 rounded-lg p-4">
+              <img src="${imagePath}" alt="Uploaded Image" class="max-w-full max-h-[70vh] object-contain rounded shadow-lg" 
+                   onerror="this.parentElement.innerHTML='<div class=\\'p-8 text-center text-gray-500\\'>Image not available</div>'">
+            </div>
+            <div class="text-center text-sm text-gray-500">
+              Click outside to close
             </div>
           </div>
         `;

@@ -1,5 +1,6 @@
 {% extends "user/userdashboard.html" %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Order Confirmation - {{ order.order_id }}{% endblock %}
 
@@ -25,7 +26,7 @@
                 <h2 class="text-xl font-semibold text-gray-900">Order Summary</h2>
                 <p class="text-sm text-gray-500">
                     {% if order.created_at %}
-                        Placed on {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"g:i A" }}
+                        Placed on {{ order.created_at|localtime|date:"F d, Y" }} at {{ order.created_at|localtime|time:"g:i A" }}
                     {% endif %}
                 </p>
             </div>

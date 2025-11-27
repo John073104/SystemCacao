@@ -1,5 +1,6 @@
 {% extends "admin/admin_dashboard.html" %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Order Details - Admin{% endblock %}
 
@@ -37,7 +38,7 @@
                         {{ order.status|title }}
                     </span>
                 </p>
-                <p><strong>Date:</strong> {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"g:i A" }}</p>
+                <p><strong>Date:</strong> {{ order.created_at|localtime|date:"F d, Y" }} at {{ order.created_at|localtime|time:"g:i A" }}</p>
                 <p><strong>Total Items:</strong> {{ order.total_items }}</p>
                 <p><strong>Total Amount:</strong> ₱{{ order.total_amount|floatformat:2 }}</p>
             </div>
