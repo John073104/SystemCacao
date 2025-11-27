@@ -131,6 +131,20 @@ AUTH_PASSWORD_VALIDATORS = [
 # Store sessions in the database (default setting)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
+# ===============================
+# CACHING CONFIGURATION (for speed optimization)
+# ===============================
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'cacaoguard-cache',
+        'TIMEOUT': 300,  # 5 minutes default
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        }
+    }
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 

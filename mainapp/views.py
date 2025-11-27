@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from .firebase_config import auth
 import requests
@@ -9,6 +9,12 @@ from functools import wraps
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from .decorators import admin_required, user_required
+from django.core.cache import cache
+from django.views.decorators.csrf import csrf_exempt
+import json
+import logging
+from datetime import datetime
+import pytz
 
 
 FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
@@ -23,6 +29,29 @@ import requests, jwt
 # Import firebase_config to ensure Firebase is initialized
 from . import firebase_config
 db = firebase_config.db if hasattr(firebase_config, 'db') and firebase_config.db else None
+
+# ===============================
+# CACHING HELPER FOR SPEED
+# ===============================
+def get_cached_firestore_data(cache_key, collection_name, query_func=None, timeout=300):
+    """
+    Get Firestore data with caching for 5 minutes (300 seconds)
+    Speeds up repeated page loads dramatically
+    """
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
+    # Fetch from Firestore
+    try:
+        if query_func:
+            data = query_func()
+        else:
+            data = [doc.to_dict() for doc in db.collection(collection_name).limit(100).stream()]
+        cache.set(cache_key, data, timeout)
+        return data
+    except Exception as e:
+        return []
 
 # ===============================
 # PRODUCT IMAGE HELPERS
@@ -172,6 +201,84 @@ def mark_notification_read(notification_id):
     except Exception as e:
         return False
 
+@user_required
+@csrf_exempt
+def api_get_notifications(request):
+    """API endpoint to get user notifications"""
+    try:
+        uid = request.session.get('uid')
+        if not uid:
+            return JsonResponse({'success': False, 'message': 'Not authenticated'})
+        
+        limit = int(request.GET.get('limit', 10))
+        notifications = get_user_notifications(uid, limit=limit)
+        
+        # Count unread
+        unread_count = sum(1 for n in notifications if not n.get('read', False))
+        
+        # Format timestamps for JSON
+        for notif in notifications:
+            if 'created_at' in notif and hasattr(notif['created_at'], 'isoformat'):
+                notif['created_at'] = notif['created_at'].isoformat()
+            elif 'created_at' in notif and hasattr(notif['created_at'], 'seconds'):
+                notif['created_at'] = datetime.fromtimestamp(notif['created_at'].seconds, pytz.timezone('Asia/Manila')).isoformat()
+        
+        return JsonResponse({
+            'success': True,
+            'notifications': notifications,
+            'unread_count': unread_count
+        })
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {e}")
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@user_required
+@csrf_exempt
+def api_mark_notification_read(request):
+    """API endpoint to mark notification as read"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method'})
+    
+    try:
+        data = json.loads(request.body)
+        notification_id = data.get('notification_id')
+        
+        if not notification_id:
+            return JsonResponse({'success': False, 'message': 'No notification ID provided'})
+        
+        success = mark_notification_read(notification_id)
+        return JsonResponse({'success': success})
+    except Exception as e:
+        logger.error(f"Error marking notification read: {e}")
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@user_required
+@csrf_exempt
+def api_mark_all_notifications_read(request):
+    """API endpoint to mark all notifications as read"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method'})
+    
+    try:
+        uid = request.session.get('uid')
+        if not uid:
+            return JsonResponse({'success': False, 'message': 'Not authenticated'})
+        
+        # Get all unread notifications
+        notifications_ref = db.collection('notifications')
+        query = notifications_ref.where('user_id', '==', uid).where('read', '==', False)
+        
+        # Mark all as read
+        batch = db.batch()
+        for doc in query.stream():
+            batch.update(doc.reference, {'read': True})
+        batch.commit()
+        
+        return JsonResponse({'success': True})
+    except Exception as e:
+        logger.error(f"Error marking all notifications read: {e}")
+        return JsonResponse({'success': False, 'message': str(e)})
+
 from django.contrib.auth import login
 # from django.contrib.auth.models import User
 
@@ -184,6 +291,55 @@ import jwt
 from .models import CustomUser
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+# ===============================
+# SHIPPING COST CALCULATION
+# ===============================
+from geopy.distance import geodesic
+from geopy.geocoders import Nominatim
+
+# Base location (your warehouse/shop location in Philippines)
+BASE_LOCATION = (14.5995, 120.9842)  # Manila, Philippines (adjust to your actual location)
+
+def calculate_shipping_cost(address_string):
+    """
+    Calculate shipping cost based on distance from base location
+    Uses address string to geocode and calculate distance
+    Returns: (shipping_cost, distance_km, error_message)
+    """
+    try:
+        # Initialize geocoder
+        geolocator = Nominatim(user_agent="cacaoguard_shipping")
+        
+        # Geocode the address
+        location = geolocator.geocode(address_string + ", Philippines", timeout=10)
+        
+        if not location:
+            # Default shipping for unknown addresses
+            return 100.0, 0, "Address not found, using default shipping"
+        
+        # Calculate distance in kilometers
+        destination = (location.latitude, location.longitude)
+        distance_km = geodesic(BASE_LOCATION, destination).kilometers
+        
+        # Shipping cost calculation (Shopee-style tiered pricing)
+        if distance_km < 10:
+            shipping_cost = 50.0  # Within city
+        elif distance_km < 50:
+            shipping_cost = 100.0  # Nearby provinces
+        elif distance_km < 150:
+            shipping_cost = 150.0  # Regional
+        elif distance_km < 300:
+            shipping_cost = 200.0  # Far provinces
+        else:
+            shipping_cost = 250.0  # Very far (Mindanao, Visayas from Luzon)
+        
+        return shipping_cost, round(distance_km, 2), None
+        
+    except Exception as e:
+        logger.error(f"Shipping calculation error: {e}")
+        # Default shipping on error
+        return 100.0, 0, f"Error calculating shipping: {str(e)}"
 
 
 def login_view(request):
@@ -1295,7 +1451,7 @@ def add_to_cart(request):
 
 
 def checkout_view(request):
-    """Checkout process with Firebase session authentication"""
+    """Checkout process with Firebase session authentication and dynamic shipping"""
     
     # Check Firebase authentication using session data
     uid = request.session.get('uid')
@@ -1320,7 +1476,10 @@ def checkout_view(request):
     
     # Get detailed cart items
     cart_items = []
-    total_amount = 0
+    subtotal = 0
+    shipping_cost = 0
+    shipping_distance = 0
+    shipping_error = None
     
     for item_data in cart_items_data:
         try:
@@ -1354,11 +1513,19 @@ def checkout_view(request):
         if not email:
             email = user_email
         
+        # Calculate shipping cost based on address
+        shipping_cost, shipping_distance, shipping_error = calculate_shipping_cost(shipping_address)
+        subtotal = sum(item['subtotal'] for item in cart_items)
+        total_amount = subtotal + shipping_cost
+        
         # Validate required fields
         if not all([first_name, last_name, email, shipping_address, phone_number]):
             messages.error(request, 'Please fill in all required fields.')
             context = {
                 'cart_items': cart_items,
+                'subtotal': subtotal,
+                'shipping_cost': shipping_cost,
+                'shipping_distance': shipping_distance,
                 'total': total_amount,
                 'user_name': user_name,
                 'user_email': user_email,
@@ -1397,7 +1564,7 @@ def checkout_view(request):
                     'total_price': item['total_price']
                 })
             
-            # Create order data for Firestore
+            # Create order data for Firestore with shipping details
             order_data = {
                 'order_id': order_id,
                 'firebase_uid': uid,
@@ -1406,6 +1573,9 @@ def checkout_view(request):
                 'customer_email': email,
                 'customer_name': user_name,
                 'status': 'pending',
+                'subtotal': float(subtotal),
+                'shipping_cost': float(shipping_cost),
+                'shipping_distance_km': float(shipping_distance),
                 'total_amount': float(total_amount),
                 'shipping_address': shipping_address,
                 'phone_number': phone_number,
@@ -1721,7 +1891,7 @@ def is_admin(user):
 
 @admin_required
 def admin_ecommerce(request):
-    """Admin ecommerce dashboard with Firestore data"""
+    """Admin ecommerce dashboard with Firestore data - OPTIMIZED with caching"""
     try:
         # Check if Firebase is initialized
         if db is None:
@@ -1735,9 +1905,25 @@ def admin_ecommerce(request):
                 'low_stock_products': [],
             })
         
-        # ===== ORDERS SECTION =====
-        orders_ref = db.collection('orders')
-        all_orders_docs = list(orders_ref.stream())
+        # ===== OPTIMIZED: CACHE + LIMIT ORDERS QUERY =====
+        # Try cache first (5 minute TTL)
+        cache_key = 'admin_ecommerce_orders_v1'
+        cached_orders = cache.get(cache_key)
+        
+        if cached_orders is not None:
+            all_orders_docs = cached_orders
+        else:
+            orders_ref = db.collection('orders')
+            # Fetch recent orders only (limit 100 for stats, 5 for display)
+            try:
+                recent_orders_query = orders_ref.order_by('created_at', direction=firestore.Query.DESCENDING).limit(100)
+                all_orders_docs = list(recent_orders_query.stream())
+            except:
+                # Fallback without ordering
+                all_orders_docs = list(orders_ref.limit(100).stream())
+            
+            # Cache for 5 minutes
+            cache.set(cache_key, all_orders_docs, 300)
         
         total_orders = len(all_orders_docs)
         pending_orders = 0
@@ -1782,16 +1968,24 @@ def admin_ecommerce(request):
             reverse=True
         )[:5]
 
-        # ===== PRODUCTS SECTION =====
-        # Get ALL products from Firestore
-        products_ref = db.collection('products')
-        all_products = [doc.to_dict() for doc in products_ref.stream()]
+        # ===== OPTIMIZED: PRODUCTS SECTION WITH CACHE =====
+        # Try cache first
+        cache_key_products = 'admin_ecommerce_products_v1'
+        all_products = cache.get(cache_key_products)
+        
+        if all_products is None:
+            # Get limited products for faster load
+            products_ref = db.collection('products')
+            # Limit to 200 products max (dashboard doesn't need all)
+            all_products = [doc.to_dict() for doc in products_ref.limit(200).stream()]
+            # Cache for 5 minutes
+            cache.set(cache_key_products, all_products, 300)
         
         total_products = len(all_products)
         low_stock_products = [
             p for p in all_products 
             if p.get('stock_quantity', 0) <= 5
-        ]
+        ][:10]  # Show max 10 low stock products
 
         context = {
             # Core metrics
@@ -7952,7 +8146,7 @@ def admin_dashboard(request):
 
 @admin_required
 def image_analysis(request):
-    """Image Analysis view with scan data and charts"""
+    """Image Analysis view with scan data and charts - OPTIMIZED for speed"""
     
     # Initialize timezone
     tz = pytz.timezone('Asia/Manila')
@@ -7969,29 +8163,23 @@ def image_analysis(request):
     }
     
     try:
-        # ===== FETCH ALL USER SCANS DATA =====
+        # ===== OPTIMIZED: LIMIT QUERY TO RECENT SCANS ONLY =====
+        # Instead of fetching ALL scans, only get recent ones for display
+        # Fetch counts separately for statistics
         
-        # Try different collection names that might be used for user scans
-        possible_collections = ['user_scans', 'scans', 'scan_results', 'image_scans']
-        all_scans = []
+        page = int(request.GET.get('page', 1))
+        per_page = 50
         
-        for collection_name in possible_collections:
-            try:
-                scans_ref = db.collection(collection_name)
-                collection_scans = list(scans_ref.stream())
-                if collection_scans:
-                    all_scans.extend(collection_scans)
-                    break  # Use the first collection that has data
-            except Exception as e:
-                continue
+        # Use 'scans' collection (most common)
+        scans_ref = db.collection('scans')
         
-        if not all_scans:
-            # Try fetching with different query structure
-            try:
-                scans_ref = db.collection('scans')
-                all_scans = list(scans_ref.stream())
-            except Exception as e:
-                pass
+        # FAST: Get only recent scans with limit (ordered by timestamp)
+        try:
+            recent_scans_query = scans_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(per_page * page)
+            all_scans = list(recent_scans_query.stream())
+        except Exception as index_error:
+            # Fallback if timestamp index missing - just limit without order
+            all_scans = list(scans_ref.limit(per_page * page).stream())
         
         # Process scans data
         scans_list = []
@@ -8069,19 +8257,8 @@ def image_analysis(request):
                 user_email = (scan_data.get('user_email') or 
                              scan_data.get('email') or '')
                 
-                # If no user info, try to fetch from users collection
-                if (not user_email or user_email == 'unknown@example.com') and scan_data.get('user_id'):
-                    user_id = scan_data.get('user_id')
-                    if user_id and user_id != 'guest':
-                        try:
-                            user_doc = db.collection('users').document(user_id).get()
-                            if user_doc.exists:
-                                user_data = user_doc.to_dict()
-                                user_email = user_data.get('email', '')
-                                if not user_name or user_name == 'Unknown User':
-                                    user_name = user_data.get('name', 'Unknown User')
-                        except Exception as e:
-                            pass
+                # OPTIMIZED: Skip nested user lookups - use stored data only
+                # This avoids 100+ extra Firestore reads that slow page load
                 
                 # Handle image name
                 image_name = (scan_data.get('image_name') or 

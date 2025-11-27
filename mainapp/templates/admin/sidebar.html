@@ -188,6 +188,9 @@
     const navLinks = sidebar.querySelectorAll('a');
     navLinks.forEach(link => {
       link.addEventListener('click', (e) => {
+        // Show loading overlay immediately
+        showLoadingOverlay();
+        
         // Instant visual feedback
         const navItem = link.querySelector('.nav-item');
         if (navItem && !navItem.classList.contains('active')) {
@@ -208,8 +211,9 @@
       }
     });
 
-    // Preload pages on hover for faster navigation
+    // SPEED OPTIMIZATION: Aggressive prefetching
     navLinks.forEach(link => {
+      // Prefetch on hover
       link.addEventListener('mouseenter', () => {
         const href = link.getAttribute('href');
         if (href && !link.dataset.preloaded) {
@@ -220,7 +224,34 @@
           link.dataset.preloaded = 'true';
         }
       });
+      
+      // AGGRESSIVE: Prefetch all pages on page load (after 1 second)
+      setTimeout(() => {
+        const href = link.getAttribute('href');
+        if (href && !link.dataset.preloaded) {
+          const preloadLink = document.createElement('link');
+          preloadLink.rel = 'prefetch';
+          preloadLink.href = href;
+          document.head.appendChild(preloadLink);
+          link.dataset.preloaded = 'true';
+        }
+      }, 1000);
     });
+    
+    // Loading overlay function
+    function showLoadingOverlay() {
+      const overlay = document.createElement('div');
+      overlay.id = 'page-loading-overlay';
+      overlay.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+          <div style="text-align: center; color: white;">
+            <div style="width: 50px; height: 50px; border: 4px solid rgba(251, 146, 60, 0.3); border-top: 4px solid #fb923c; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px;"></div>
+            <p style="font-size: 14px; font-weight: 600;">Loading...</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
   });
 </script>
 
@@ -274,5 +305,10 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 2px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 </style>
