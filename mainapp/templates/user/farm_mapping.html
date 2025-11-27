@@ -341,11 +341,36 @@ function initializeUserMap() {
 function updateMapMarkers() {
     farmsData.forEach(farm => {
         if (farm.lat && farm.lng) {
+            // Different styled markers based on farm status
+            let markerIcon = '🌱'; // Default seedling
+            let markerColor = getStatusColor(farm.status);
+            
+            if (farm.status === 'Active') {
+                markerIcon = '🌿'; // Leaf for active
+            } else if (farm.status === 'Inactive') {
+                markerIcon = '🍂'; // Fallen leaf for inactive
+            } else if (farm.status === 'Maintenance') {
+                markerIcon = '🔧'; // Tool for maintenance
+            }
+            
             const marker = L.marker([farm.lat, farm.lng], {
                 icon: L.divIcon({
                     className: 'farm-marker',
-                    html: `<i class="fas fa-seedling" style="color: ${getStatusColor(farm.status)}"></i>`,
-                    iconSize: [20, 20]
+                    html: `<div style="background: linear-gradient(135deg, ${markerColor}, ${markerColor}dd); 
+                                   border: 3px solid white; 
+                                   border-radius: 50%; 
+                                   width: 36px; 
+                                   height: 36px; 
+                                   display: flex; 
+                                   align-items: center; 
+                                   justify-content: center; 
+                                   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                   font-size: 18px;">
+                                   ${markerIcon}
+                           </div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18],
+                    popupAnchor: [0, -18]
                 })
             }).addTo(userMap);
             

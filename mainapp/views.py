@@ -889,7 +889,7 @@ def _is_duplicate_scan(user_id, image_hash):
         return False
 
 def simulate_analysis(scan_type, image_file=None):
-    """Simulate ML analysis with deterministic results based on image hash"""
+    """Improved ML simulation with more realistic healthy detection"""
     classes, recommendations = (
         (DISEASE_CLASSES, DISEASE_RECOMMENDATIONS) if scan_type == 'disease' 
         else (PEST_CLASSES, PEST_RECOMMENDATIONS)
@@ -905,13 +905,59 @@ def simulate_analysis(scan_type, image_file=None):
             # Reset file pointer again for later use
             image_file.seek(0)
             
-            # Use hash to deterministically select class and confidence
-            hash_int = int(image_hash[:8], 16)
-            class_index = hash_int % len(classes)
-            result_class = classes[class_index]
-            
-            # Generate deterministic confidence (75-98%)
-            confidence = 0.75 + ((hash_int % 23) / 100.0)
+            # Analyze image brightness/color (simple heuristic for healthy detection)
+            from PIL import Image
+            try:
+                img = Image.open(image_file)
+                img = img.convert('RGB')
+                
+                # Get average color values
+                pixels = list(img.getdata())
+                avg_r = sum([p[0] for p in pixels[:1000]]) / min(1000, len(pixels))
+                avg_g = sum([p[1] for p in pixels[:1000]]) / min(1000, len(pixels))
+                avg_b = sum([p[2] for p in pixels[:1000]]) / min(1000, len(pixels))
+                
+                # Reset file pointer
+                image_file.seek(0)
+                
+                # If image is predominantly green, higher chance of healthy
+                green_dominance = avg_g > avg_r and avg_g > avg_b
+                brightness = (avg_r + avg_g + avg_b) / 3
+                
+                # Weighted selection based on image characteristics
+                if green_dominance and brightness > 100:
+                    # 70% chance healthy for green images
+                    hash_int = int(image_hash[:8], 16)
+                    if hash_int % 10 < 7:  # 70% chance
+                        result_class = 'Healthy'
+                        confidence = 0.85 + (random.random() * 0.13)  # 85-98%
+                    else:
+                        # Still might have issues
+                        hash_int = int(image_hash[:8], 16)
+                        class_index = hash_int % len(classes)
+                        result_class = classes[class_index]
+                        confidence = 0.70 + ((hash_int % 20) / 100.0)  # 70-90%
+                else:
+                    # Darker or less green images - more likely disease/pest
+                    hash_int = int(image_hash[:8], 16)
+                    # Filter out Healthy from choices for problematic images
+                    unhealthy_classes = [c for c in classes if c != 'Healthy']
+                    if unhealthy_classes and hash_int % 10 < 8:  # 80% chance unhealthy
+                        class_index = hash_int % len(unhealthy_classes)
+                        result_class = unhealthy_classes[class_index]
+                        confidence = 0.75 + ((hash_int % 23) / 100.0)  # 75-98%
+                    else:
+                        class_index = hash_int % len(classes)
+                        result_class = classes[class_index]
+                        confidence = 0.70 + ((hash_int % 25) / 100.0)  # 70-95%
+                        
+            except Exception as img_error:
+                # Fallback to hash-based selection
+                hash_int = int(image_hash[:8], 16)
+                class_index = hash_int % len(classes)
+                result_class = classes[class_index]
+                confidence = 0.75 + ((hash_int % 23) / 100.0)
+                
         except Exception as e:
             # Fallback to random
             result_class = random.choice(classes)
@@ -2050,15 +2096,16 @@ def deduct_stock_for_order(order_data):
         pass  # Error deducting stock
 
 def send_status_change_email(order_data, new_status):
-    """Send email notification when order status changes"""
+    """Send email notification and in-app notification when order status changes"""
     try:
         from django.core.mail import send_mail
         from django.conf import settings
         
-        # Get customer email
+        # Get customer details
         customer_email = order_data.get('customer_email') or order_data.get('user_email')
         order_id = order_data.get('order_id', 'N/A')
         customer_name = order_data.get('customer_first_name', 'Customer')
+        user_id = order_data.get('firebase_uid') or order_data.get('user_id')
         
         if not customer_email:
             return
@@ -2066,39 +2113,75 @@ def send_status_change_email(order_data, new_status):
         # Email content based on status
         status_messages = {
             'confirmed': {
-                'subject': f'Order #{order_id} Confirmed',
-                'message': f'Hi {customer_name},\n\nYour order #{order_id} has been confirmed and is being prepared for processing.\n\nThank you for your purchase!'
+                'subject': f'✅ Order #{order_id} Confirmed',
+                'message': f'Hi {customer_name},\n\nYour order #{order_id} has been confirmed and is being prepared for processing.\n\nTotal Amount: ₱{order_data.get("total_amount", 0):.2f}\nPayment Method: {order_data.get("payment_method", "COD").upper()}\n\nThank you for your purchase!\n\nCacaoGuard Team',
+                'notif_title': 'Order Confirmed',
+                'notif_message': f'Your order #{order_id} has been confirmed!',
+                'notif_type': 'success'
             },
             'processing': {
-                'subject': f'Order #{order_id} Being Processed',
-                'message': f'Hi {customer_name},\n\nYour order #{order_id} is now being processed and will be shipped soon.\n\nThank you for your patience!'
+                'subject': f'📦 Order #{order_id} Being Processed',
+                'message': f'Hi {customer_name},\n\nYour order #{order_id} is now being processed and will be shipped soon.\n\nWe\'ll notify you once it\'s on the way!\n\nThank you for your patience!\n\nCacaoGuard Team',
+                'notif_title': 'Order Processing',
+                'notif_message': f'Your order #{order_id} is being processed',
+                'notif_type': 'info'
             },
             'shipped': {
-                'subject': f'Order #{order_id} Shipped',
-                'message': f'Hi {customer_name},\n\nGreat news! Your order #{order_id} has been shipped and is on its way to you.\n\nThank you for your purchase!'
+                'subject': f'🚚 Order #{order_id} Shipped',
+                'message': f'Hi {customer_name},\n\nGreat news! Your order #{order_id} has been shipped and is on its way to you.\n\nShipping Address: {order_data.get("shipping_address", "N/A")}\n\nThank you for your purchase!\n\nCacaoGuard Team',
+                'notif_title': 'Order Shipped',
+                'notif_message': f'Your order #{order_id} is on the way!',
+                'notif_type': 'success'
             },
             'delivered': {
-                'subject': f'Order #{order_id} Delivered',
-                'message': f'Hi {customer_name},\n\nYour order #{order_id} has been successfully delivered!\n\nWe hope you enjoy your cacao products. Thank you for choosing us!'
+                'subject': f'✨ Order #{order_id} Delivered',
+                'message': f'Hi {customer_name},\n\nYour order #{order_id} has been successfully delivered!\n\nWe hope you enjoy your cacao products. Thank you for choosing us!\n\nCacaoGuard Team',
+                'notif_title': 'Order Delivered',
+                'notif_message': f'Your order #{order_id} has been delivered!',
+                'notif_type': 'success'
+            },
+            'cancelled': {
+                'subject': f'❌ Order #{order_id} Cancelled',
+                'message': f'Hi {customer_name},\n\nYour order #{order_id} has been cancelled.\n\nIf you have any questions, please contact our support team.\n\nCacaoGuard Team',
+                'notif_title': 'Order Cancelled',
+                'notif_message': f'Your order #{order_id} has been cancelled',
+                'notif_type': 'warning'
             }
         }
         
         if new_status in status_messages:
             email_data = status_messages[new_status]
             
-            send_mail(
-                subject=email_data['subject'],
-                message=email_data['message'],
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@cacaomarketplace.com'),
-                recipient_list=[customer_email],
-                fail_silently=True,
-            )
+            # Send email
+            try:
+                send_mail(
+                    subject=email_data['subject'],
+                    message=email_data['message'],
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'jardinesjohnlloyd@gmail.com'),
+                    recipient_list=[customer_email],
+                    fail_silently=False,
+                )
+            except Exception as email_error:
+                logger = logging.getLogger(__name__)
+                logger.error(f"Email send failed: {email_error}")
             
-        else:
-            pass  # Customer email not available
+            # Send in-app notification
+            if user_id:
+                try:
+                    create_notification(
+                        user_id=user_id,
+                        title=email_data['notif_title'],
+                        message=email_data['notif_message'],
+                        notification_type=email_data['notif_type'],
+                        order_id=order_id
+                    )
+                except Exception as notif_error:
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Notification failed: {notif_error}")
             
     except Exception as e:
-        pass  # Error sending email
+        logger = logging.getLogger(__name__)
+        logger.error(f"Status change notification error: {e}")
 from django.shortcuts import render
 from django.http import JsonResponse
 from firebase_admin import firestore
@@ -5433,6 +5516,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 # USER ORDERS
 # ===============================
 
+@user_required
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""
     try:
@@ -5446,10 +5530,6 @@ def user_orders(request):
         if role == 'guest':
             messages.error(request, 'Please create an account to place and view orders.')
             return redirect('signup')
-        
-        if role not in ['user', 'admin']:
-            messages.error(request, 'Please log in with a user account to view orders.')
-            return redirect('login')
 
         # Get all orders for this user first
         orders_ref = db.collection('orders')

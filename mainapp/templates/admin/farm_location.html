@@ -877,7 +877,30 @@ function updateMapMarkers() {
 
     farmsData.forEach(farm => {
         if (farm.lat && farm.lng) {
-            const marker = L.marker([farm.lat, farm.lng]).addTo(adminMap);
+            // Different colored markers based on status and pending state
+            let markerColor = '#10b981'; // Default green
+            if (farm.is_pending) {
+                markerColor = '#f59e0b'; // Orange for pending
+            } else if (farm.status === 'Active') {
+                markerColor = '#22c55e'; // Bright green
+            } else if (farm.status === 'Inactive') {
+                markerColor = '#ef4444'; // Red
+            } else if (farm.status === 'Maintenance') {
+                markerColor = '#eab308'; // Yellow
+            }
+            
+            // Create custom icon with different colors
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                        <div style="transform: rotate(45deg); margin-top: 5px; margin-left: 8px; color: white; font-size: 14px;">📍</div>
+                       </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
+            
+            const marker = L.marker([farm.lat, farm.lng], { icon: customIcon }).addTo(adminMap);
 
             const mainImage = farm.images && farm.images.length > 0 ? farm.images[0] : '/static/images/default-farm.jpg';
 
