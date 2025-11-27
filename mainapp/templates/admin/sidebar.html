@@ -210,33 +210,6 @@
         closeSidebar();
       }
     });
-
-    // SPEED OPTIMIZATION: Aggressive prefetching
-    navLinks.forEach(link => {
-      // Prefetch on hover
-      link.addEventListener('mouseenter', () => {
-        const href = link.getAttribute('href');
-        if (href && !link.dataset.preloaded) {
-          const preloadLink = document.createElement('link');
-          preloadLink.rel = 'prefetch';
-          preloadLink.href = href;
-          document.head.appendChild(preloadLink);
-          link.dataset.preloaded = 'true';
-        }
-      });
-      
-      // AGGRESSIVE: Prefetch all pages on page load (after 1 second)
-      setTimeout(() => {
-        const href = link.getAttribute('href');
-        if (href && !link.dataset.preloaded) {
-          const preloadLink = document.createElement('link');
-          preloadLink.rel = 'prefetch';
-          preloadLink.href = href;
-          document.head.appendChild(preloadLink);
-          link.dataset.preloaded = 'true';
-        }
-      }, 1000);
-    });
     
     // Loading overlay function
     function showLoadingOverlay() {

@@ -13,7 +13,10 @@ def _normalized_role(request):
 
 
 def _is_logged_in(request):
-    return bool(request.session.get('uid') and request.session.get('user_email'))
+    """Check if user is authenticated - supports both 'user_email' and 'email' keys"""
+    uid = request.session.get('uid')
+    email = request.session.get('user_email') or request.session.get('email')
+    return bool(uid and email)
 
 
 # --- Generic login-required ---
@@ -38,9 +41,12 @@ def _admin_required(view_func):
         if not _is_logged_in(request):
             messages.error(request, 'Please log in to continue.')
             return redirect('login')
-        if _normalized_role(request) != 'admin':
+        
+        normalized_role = _normalized_role(request)
+        if normalized_role != 'admin':
             messages.error(request, 'Access denied. Admin privileges required.')
             return redirect('unauthorized')
+        
         return view_func(request, *args, **kwargs)
     return wrapper
 

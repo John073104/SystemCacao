@@ -72,8 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'mainapp.middleware.SessionSecurityMiddleware',  # Role-based access control
-    'mainapp.middleware.SessionValidationMiddleware',  # Session integrity validation
+    # Custom middleware DISABLED - they were causing session interruption errors
 ]
 
 
@@ -227,7 +226,9 @@ SESSION_COOKIE_AGE = 1209600
 SESSION_COOKIE_SECURE = False 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_SAVE_EVERY_REQUEST = True
+# DISABLED: Causes race conditions with multiple concurrent requests
+# This was causing SessionInterrupted errors when clicking sidebar links
+SESSION_SAVE_EVERY_REQUEST = False
 
 # Message settings
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'

@@ -120,12 +120,14 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         # Get session data
         uid = request.session.get('uid')
         user_email = request.session.get('user_email') or request.session.get('email')
-        user_role = request.session.get('role')
+        user_role = request.session.get('role') or request.session.get('user_role')
         
         # Allow access if user is not yet authenticated (login in progress)
         # Only enforce RBAC after successful authentication
-        if not uid or not user_email or not user_role:
+        # CRITICAL: Must have UID and ROLE to enforce RBAC
+        if not uid or not user_role:
             # User not authenticated yet - allow them to reach login
+            # Let decorator handle the authentication check
             return None
         
         # Normalize role to lowercase for comparison
@@ -188,22 +190,19 @@ class SessionValidationMiddleware(MiddlewareMixin):
             return None
         
         uid = request.session.get('uid')
+        # Check both possible email keys
         user_email = request.session.get('user_email') or request.session.get('email')
-        user_role = request.session.get('role')
+        user_role = request.session.get('role') or request.session.get('user_role')
         
         # Only validate if user claims to be authenticated
         # Don't block unauthenticated users trying to reach login
         if not uid:
             return None
         
-        # If session claims to be authenticated but missing critical data
-        if uid and (not user_email or not user_role):
-            # Clear corrupted session
-            request.session.flush()
-            messages.error(request, '⚠️ Session corrupted or expired. Please log in again.')
-            return redirect('login')
+        # REMOVED: Don't flush session if email is missing - decorator will handle redirect
+        # This was causing admins to be logged out when clicking features
         
-        # Validate role value
+        # Validate role value only if role exists
         if user_role and user_role.lower() not in ['admin', 'user', 'guest']:
             # Invalid role detected - possible session tampering
             request.session.flush()

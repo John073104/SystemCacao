@@ -443,11 +443,6 @@ def user_dashboard(request):
 @admin_required
 def admin_dashboard(request):
     """Admin dashboard view"""
-    # Check if user is actually admin (normalized lowercase)
-    if request.session.get('role') != 'admin':
-        messages.error(request, 'Access denied. Admin privileges required.')
-        return redirect('userdashboard')
-    
     context = {
         'user_name': request.session.get('name'),
         'user_email': request.session.get('user_email')
