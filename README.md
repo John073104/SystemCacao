@@ -12,7 +12,7 @@ Farm Management: Map and track farm locations
 Role-based Access: Three user types with different capabilities
 
 User Roles
-👨‍🌾 Farmer/User
+Farmer/User
 Unlimited disease scans
 
 Purchase products from marketplace
@@ -23,7 +23,7 @@ Manage farm locations
 
 Personal dashboard
 
-🛍️ Guest
+Guest
 5 scans per day (limited)
 
 Browse marketplace (view only)
@@ -32,7 +32,7 @@ No purchase capability
 
 Basic system exploration
 
-👨‍💼 Admin
+Admin
 Full product management (add/edit/delete)
 
 Process and track orders
@@ -90,3 +90,4 @@ Market Access: Direct marketplace for cacao products
 Data Tracking: Monitor farm health over time
 
 User-Friendly: Simple interface for all technical levels
+
