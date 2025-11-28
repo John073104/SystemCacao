@@ -2914,9 +2914,25 @@ from django.contrib.auth import logout as auth_logout
 
 def logout_view(request):
     """Custom logout view"""
+    # Clear all messages before logout to prevent stale messages
+    storage = messages.get_messages(request)
+    storage.used = True
+    
     auth_logout(request)
     messages.success(request, 'You have been successfully logged out.')
     return redirect('login')
+
+
+def debug_session(request):
+    """Debug endpoint to check session data"""
+    session_data = {
+        'uid': request.session.get('uid'),
+        'user_email': request.session.get('user_email'),
+        'name': request.session.get('name'),
+        'role': request.session.get('role'),
+        'all_keys': list(request.session.keys())
+    }
+    return JsonResponse(session_data)
 
 
 #June
@@ -5704,6 +5720,13 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 @user_required
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""
+    # Clear any stale error messages
+    storage = messages.get_messages(request)
+    for msg in storage:
+        if 'admin' in msg.message.lower():
+            storage.used = True
+            break
+    
     try:
         uid = request.session.get('uid')
         if not uid:
@@ -8767,6 +8790,13 @@ def simulate_prediction(scan_type):
 
 def scan_diagnose(request):
     """Scan and Diagnose view"""
+    # Clear any stale error messages that might be showing incorrectly
+    storage = messages.get_messages(request)
+    for msg in storage:
+        if 'admin' in msg.message.lower():
+            storage.used = True
+            break
+    
     context = {
         'page_title': 'Scan and Diagnose',
         'description': 'Upload crop images for disease detection and analysis'

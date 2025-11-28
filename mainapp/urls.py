@@ -21,6 +21,9 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
     path('firebase-login/', views.firebase_login, name='firebase_login'),
     path('send-welcome-email/', views.send_welcome_email, name='send_welcome_email'),
+    
+    # Debug endpoint
+    path('debug/session/', views.debug_session, name='debug_session'),
 
     # ===== ADMIN URLS =====
     # Admin Dashboard
