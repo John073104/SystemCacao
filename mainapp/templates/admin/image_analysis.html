@@ -248,7 +248,7 @@
                       {% endif %}
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ scan.timestamp|date:"M d, Y g:i A" }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ scan.timestamp_display }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button onclick="viewImage('{{ scan.image_path|escapejs }}')" class="text-green-600 hover:text-green-900 mr-3" title="View Image">
                       <i class="fas fa-image"></i>

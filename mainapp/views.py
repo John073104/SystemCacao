@@ -8247,6 +8247,9 @@ def image_analysis(request):
         pest_count = 0
         today_count = 0
         
+        # Cache for user lookups to avoid repeated queries
+        user_cache = {}
+        
         # Chart data for last 7 days
         chart_data = []
         daily_counts = {}
@@ -8269,33 +8272,39 @@ def image_analysis(request):
                         break
                 
                 scan_timestamp = scan_data.get(timestamp_field) if timestamp_field else None
-                
-                # Format timestamp - handle both old UTC timestamps and new Manila timestamps
-                if scan_timestamp:
-                    if hasattr(scan_timestamp, 'seconds'):
-                        # Firestore timestamp object - check if it's already Manila time or UTC
-                        dt = datetime.fromtimestamp(scan_timestamp.seconds, tz=pytz.UTC)
-                        # If timestamp looks like it's from old system (before fix), it's UTC - convert to Manila
-                        # If it's from new system (after fix), it's already Manila time
-                        # We can detect by checking if the timestamp is timezone-aware in Manila
-                        try:
-                            # Try to get timezone info from the timestamp
-                            formatted_timestamp = dt.astimezone(tz)
-                        except:
-                            formatted_timestamp = dt.replace(tzinfo=tz)
-                    elif isinstance(scan_timestamp, str):
-                        try:
-                            formatted_timestamp = datetime.fromisoformat(scan_timestamp.replace('Z', '+00:00'))
-                            formatted_timestamp = formatted_timestamp.astimezone(tz)
-                        except:
-                            formatted_timestamp = today
-                    elif hasattr(scan_timestamp, 'tzinfo') and scan_timestamp.tzinfo:
-                        # Already timezone-aware datetime (new Manila timestamps)
-                        formatted_timestamp = scan_timestamp.astimezone(tz)
-                    else:
-                        formatted_timestamp = scan_timestamp if hasattr(scan_timestamp, 'strftime') else today
+
+                # If document already contains a backfilled Manila ISO timestamp, prefer it (force fix)
+                manila_iso = scan_data.get('timestamp_manila_iso')
+                if manila_iso:
+                    try:
+                        formatted_timestamp = datetime.fromisoformat(manila_iso)
+                        formatted_timestamp = formatted_timestamp.astimezone(tz)
+                        print(f"DEBUG: Using backfilled Manila ISO for doc {scan_doc.id}: {formatted_timestamp}")
+                    except Exception:
+                        formatted_timestamp = None
                 else:
-                    formatted_timestamp = today
+                    # Format timestamp - Firestore ALWAYS stores in UTC, we must convert to Manila
+                    print(f"DEBUG: Processing scan with timestamp field: {timestamp_field}, value: {scan_timestamp}, type: {type(scan_timestamp)}")
+                    if scan_timestamp:
+                        if hasattr(scan_timestamp, 'seconds'):
+                            # Firestore timestamp is ALWAYS UTC - create UTC datetime then convert to Manila
+                            print(f"DEBUG: Has seconds attribute: {scan_timestamp.seconds}")
+                            utc_time = datetime.fromtimestamp(scan_timestamp.seconds, tz=pytz.UTC)
+                            formatted_timestamp = utc_time.astimezone(tz)  # This adds 8 hours
+                            # DEBUG: Print to console
+                            print(f"DEBUG: UTC time: {utc_time}, Manila time: {formatted_timestamp}")
+                        elif isinstance(scan_timestamp, str):
+                            try:
+                                dt = datetime.fromisoformat(scan_timestamp.replace('Z', '+00:00'))
+                                formatted_timestamp = dt.astimezone(tz)
+                            except:
+                                formatted_timestamp = today
+                        elif hasattr(scan_timestamp, 'tzinfo') and scan_timestamp.tzinfo:
+                            formatted_timestamp = scan_timestamp.astimezone(tz)
+                        else:
+                            formatted_timestamp = scan_timestamp if hasattr(scan_timestamp, 'strftime') else today
+                    else:
+                        formatted_timestamp = today
                 
                 # Handle different field names for scan type
                 scan_type = scan_data.get('scan_type') or scan_data.get('type') or 'disease'
@@ -8328,21 +8337,33 @@ def image_analysis(request):
                 user_email = (scan_data.get('user_email') or 
                              scan_data.get('email') or '')
                 
-                # If user name not stored, try to fetch from users collection using user_id
+                # If user name not stored, try to fetch from cache or users collection
                 if not user_name:
                     user_id = scan_data.get('user_id')
                     if user_id:
-                        try:
-                            user_doc = db.collection('users').document(user_id).get()
-                            if user_doc.exists:
-                                user_data = user_doc.to_dict()
-                                user_name = user_data.get('name') or user_data.get('display_name') or 'Unknown User'
-                                if not user_email:
-                                    user_email = user_data.get('email', '')
-                            else:
+                        # Check cache first
+                        if user_id in user_cache:
+                            user_name = user_cache[user_id]['name']
+                            if not user_email:
+                                user_email = user_cache[user_id]['email']
+                        else:
+                            # Fetch from database and cache
+                            try:
+                                user_doc = db.collection('users').document(user_id).get()
+                                if user_doc.exists:
+                                    user_data = user_doc.to_dict()
+                                    user_name = user_data.get('name') or user_data.get('display_name') or 'Unknown User'
+                                    user_email_fetched = user_data.get('email', '')
+                                    # Cache the result
+                                    user_cache[user_id] = {'name': user_name, 'email': user_email_fetched}
+                                    if not user_email:
+                                        user_email = user_email_fetched
+                                else:
+                                    user_name = 'Unknown User'
+                                    user_cache[user_id] = {'name': 'Unknown User', 'email': ''}
+                            except:
                                 user_name = 'Unknown User'
-                        except:
-                            user_name = 'Unknown User'
+                                user_cache[user_id] = {'name': 'Unknown User', 'email': ''}
                     else:
                         user_name = 'Unknown User'
                 
@@ -8371,6 +8392,12 @@ def image_analysis(request):
                 image_path = scan_data.get('image_path', '')
                 
                 # Add to scans list
+                # Create a pre-formatted display timestamp (string) to avoid template timezone issues
+                try:
+                    timestamp_display = formatted_timestamp.strftime('%b %d, %Y %I:%M %p')
+                except Exception:
+                    timestamp_display = str(formatted_timestamp)
+
                 scans_list.append({
                     'id': scan_doc.id,
                     'type': scan_type,
@@ -8380,6 +8407,7 @@ def image_analysis(request):
                     'primary_confidence': confidence,
                     'image_name': image_name,
                     'image_path': image_path,
+                    'timestamp_display': timestamp_display,
                     'user': user_name,
                     'username': user_name,
                     'user_email': user_email,
@@ -8479,13 +8507,68 @@ def image_analysis(request):
             'chart_data': json.dumps(fallback_chart_data),
         })
     
-    return render(request, 'admin/image_analysis.html', context)
+    print("DEBUG: About to render image_analysis with", len(context.get('scans', [])), "scans")
+    response = render(request, 'admin/image_analysis.html', context)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 @admin_required
 def debug_firestore_collections(request):
     """Debug endpoint to see what collections and data exist in Firestore"""
     if not request.user.is_superuser and request.session.get('role') != 'Admin':
         return JsonResponse({'error': 'Access denied'})
+
+
+@admin_required
+def admin_fix_scan_timestamps(request):
+    """Admin utility: iterate through Firestore 'scans' collection and add a Manila ISO timestamp field.
+    This will add/update 'timestamp_manila_iso' for each document so displays can use it directly.
+    """
+    if not request.user.is_superuser and request.session.get('role') != 'Admin':
+        return JsonResponse({'error': 'Access denied'})
+
+    manila_tz = pytz.timezone('Asia/Manila')
+    updated = 0
+    try:
+        scans_ref = db.collection('scans')
+        for doc in scans_ref.stream():
+            data = doc.to_dict()
+            ts = data.get('timestamp')
+            if not ts:
+                continue
+
+            # If Firestore timestamp object
+            try:
+                if hasattr(ts, 'seconds'):
+                    utc_time = datetime.fromtimestamp(ts.seconds, tz=pytz.UTC)
+                    manila_time = utc_time.astimezone(manila_tz)
+                    iso = manila_time.isoformat()
+                elif isinstance(ts, str):
+                    try:
+                        dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                        manila_time = dt.astimezone(manila_tz)
+                        iso = manila_time.isoformat()
+                    except:
+                        continue
+                elif hasattr(ts, 'tzinfo') and ts.tzinfo:
+                    manila_time = ts.astimezone(manila_tz)
+                    iso = manila_time.isoformat()
+                else:
+                    continue
+
+                # Update document only if field missing or different
+                if data.get('timestamp_manila_iso') != iso:
+                    db.collection('scans').document(doc.id).update({'timestamp_manila_iso': iso})
+                    updated += 1
+            except Exception:
+                continue
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': True, 'updated_documents': updated})
     
     try:
         # List all collections
@@ -8967,7 +9050,12 @@ def image_analysis_v3_legacy(request):
         }
         messages.error(request, f"Error loading scan data: {str(e)}")
     
-    return render(request, 'admin/image_analysis.html', context)
+    print("DEBUG: Rendering image_analysis (alt path) with", len(context.get('scans', [])), "scans")
+    response = render(request, 'admin/image_analysis.html', context)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 @admin_required
 @csrf_exempt
@@ -9668,18 +9756,29 @@ def image_analysis_dashboard(request):
             'chart_data': json.dumps(chart_data)
         }
         
-        return render(request, 'admin/image_analysis.html', context)
+        print("DEBUG: Rendering image_analysis (third path) with", len(scans), "scans")
+        response = render(request, 'admin/image_analysis.html', context)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
         
     except Exception as e:
         messages.error(request, f'Error loading scan data: {str(e)}')
-        return render(request, 'admin/image_analysis.html', {
+        print("DEBUG: Rendering image_analysis (exception fallback) with 0 scans")
+        context_fallback = {
             'scans': [],
             'total_scans': 0,
             'disease_scans': 0,
             'pest_scans': 0,
             'today_scans': 0,
             'chart_data': json.dumps([])
-        })
+        }
+        response = render(request, 'admin/image_analysis.html', context_fallback)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
 
 @admin_required
 def toggle_scan_visibility(request, scan_id):
@@ -10549,11 +10648,7 @@ def scan_image(request):
             user_name = request.session.get('name', 'Unknown User')
             user_email = request.session.get('user_email') or request.session.get('email', '')
             
-            # Create Manila timezone timestamp
-            manila_tz = pytz.timezone('Asia/Manila')
-            manila_time = datetime.now(manila_tz)
-            
-            # Save scan to Firestore
+            # Save scan to Firestore with server timestamp (always UTC)
             scan_data = {
                 'user_id': uid,
                 'user_name': user_name,
@@ -10562,7 +10657,7 @@ def scan_image(request):
                 'result': predicted_class,
                 'confidence': confidence_decimal,  # Store as decimal
                 'recommendations': recommendations,
-                'timestamp': manila_time,
+                'timestamp': firestore.SERVER_TIMESTAMP,  # Firestore will set this as UTC
                 'image_path': image_url
             }
             

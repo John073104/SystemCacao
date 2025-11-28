@@ -57,6 +57,7 @@ urlpatterns = [
 
     # Admin Debug & Utilities
     path('admin/debug-firestore/', views.debug_firestore_collections, name='debug_firestore_collections'),
+    path('admin/fix-scan-timestamps/', views.admin_fix_scan_timestamps, name='admin_fix_scan_timestamps'),
     path('admin/user-management/', views.admin_user_management, name='admin_user_management'),
     path('admin/user-management/hide/<str:user_id>/', views.hide_user, name='hide_user'),
     path('admin/user-management/unhide/<str:user_id>/', views.unhide_user, name='unhide_user'),
