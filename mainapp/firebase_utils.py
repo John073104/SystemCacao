@@ -253,18 +253,21 @@ def upload_profile_image(uid, image_file):
         mime_type = image_file.content_type
         data_url = f"data:{mime_type};base64,{base64_image}"
         
-        # Store in Firestore under user's profile
+        # Store in Firestore under user's profile (use set with merge to create if not exists)
         profile_ref = db.collection('user_profiles').document(uid)
-        profile_ref.update({
+        profile_ref.set({
             'profile_image': data_url,
             'profile_image_mime_type': mime_type,
-            'profile_image_size': len(image_data)
-        })
+            'profile_image_size': len(image_data),
+            'updated_at': firestore.SERVER_TIMESTAMP
+        }, merge=True)
         
         return data_url
         
     except Exception as e:
         print(f"Error uploading profile image to Firestore: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def delete_profile_image(image_url):

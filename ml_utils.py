@@ -6,6 +6,17 @@ from PIL import Image
 import io
 import os
 from django.conf import settings
+import random
+
+# SET DETERMINISTIC MODE FOR REPRODUCIBLE PREDICTIONS
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)
+np.random.seed(42)
+random.seed(42)
+
+# Enable deterministic algorithms
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 # Set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -86,16 +97,24 @@ data_transforms = transforms.Compose([
 ])
 
 def preprocess_image(image_file):
-    """Preprocess image for PyTorch model prediction"""
+    """
+    Preprocess image for PyTorch model prediction
+    DETERMINISTIC: Uses fixed resize method (BILINEAR) for consistency
+    """
     try:
         # Read image
         image = Image.open(image_file)
         
-        # Convert to RGB if necessary
+        # Convert to RGB if necessary (ensures consistent format)
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
         # Apply transforms (resize, crop, normalize)
+        # All operations are deterministic:
+        # - Resize: uses BILINEAR interpolation (default, deterministic)
+        # - CenterCrop: crops from center (deterministic)
+        # - ToTensor: direct conversion (deterministic)
+        # - Normalize: fixed mean/std (deterministic)
         image_tensor = data_transforms(image)
         
         # Add batch dimension
@@ -109,6 +128,7 @@ def preprocess_image(image_file):
 def predict_image(image_file, scan_type='disease'):
     """
     Predict disease or pest classification with confidence
+    DETERMINISTIC: Same image will ALWAYS produce same result
     
     Args:
         image_file: Image file to analyze
@@ -121,6 +141,11 @@ def predict_image(image_file, scan_type='disease'):
         raise Exception("ML models not loaded properly. Please check model files in CacaoTrain folder.")
     
     try:
+        # Reset random seeds for deterministic preprocessing
+        torch.manual_seed(42)
+        np.random.seed(42)
+        random.seed(42)
+        
         # Preprocess image
         processed_image = preprocess_image(image_file)
         processed_image = processed_image.to(device)
@@ -135,8 +160,12 @@ def predict_image(image_file, scan_type='disease'):
             classes = PEST_CLASSES
             recommendations = PEST_RECOMMENDATIONS
         
-        # Get prediction
+        # Ensure model is in eval mode (no randomness from dropout/batchnorm)
+        model.eval()
+        
+        # Get prediction with deterministic behavior
         with torch.no_grad():
+            torch.use_deterministic_algorithms(True, warn_only=True)
             outputs = model(processed_image)
             probabilities = torch.nn.functional.softmax(outputs, dim=1)[0]
             confidence_score, predicted_idx = torch.max(probabilities, 0)

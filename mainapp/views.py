@@ -878,6 +878,7 @@ PEST_CLASSES = [
     'Aphids',
     'Mealybug',
     'Pod Borer',
+    'Mirids',
     'Healthy',
     'Unknown'
 ]
@@ -954,6 +955,12 @@ PEST_RECOMMENDATIONS = {
         'Install pheromone traps to monitor population',
         'Apply biological control agents such as Trichogramma'
     ],
+    'Mirids': [
+        'Prune and destroy infested shoots and branches',
+        'Apply recommended insecticide if population is high',
+        'Encourage natural predators like wasps and spiders',
+        'Regular monitoring and early intervention crucial'
+    ],
     'Healthy': [
         'Continue integrated pest management',
         'Regular monitoring for early detection',
@@ -966,6 +973,29 @@ PEST_RECOMMENDATIONS = {
         'Monitor population levels over several days',
         'Seek expert assistance if pest persists'
     ]
+}
+
+# Disease and Pest Descriptions
+DISEASE_DESCRIPTIONS = {
+    'Black Pod Rot': 'Black Pod Rot is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
+    'Fito Disease': 'Fito Disease, also known as Phytophthora root rot or trunk canker, is a serious soil-borne fungal disease affecting cacao trees. It attacks the root system and lower trunk, causing wilting of leaves, yellowing foliage, and eventual death of the entire tree. The pathogen thrives in waterlogged soils with poor drainage conditions. Early symptoms include bark lesions that ooze dark fluid and gradually girdle the trunk. Without proper soil management and drainage improvement, entire plantations can be devastated by this disease.',
+    'Monilia Disease': 'Monilia Disease is caused by the fungus Moniliophthora roreri and primarily affects cacao pods at all stages of development. Infected pods show irregular swellings or lumps on the surface, followed by rapid internal rot that destroys the beans. The fungus produces millions of spores that appear as a cream-colored powdery mass on infected pods. It spreads rapidly during humid, rainy weather through wind and rain splash. This disease can cause yield losses of 40-80% in severely affected areas and requires strict sanitation practices.',
+    'Frosty Pod Rot': 'Frosty Pod Rot is caused by the fungus Moniliophthora perniciosa and gets its name from the distinctive white, frost-like fungal growth on infected pods. The disease causes pods to develop brown spots that gradually expand and become covered with white spores. Infected beans become brown, shriveled, and worthless for chocolate production. The pathogen spreads through airborne spores during wet and humid conditions. It can devastate cacao production, causing losses of 30-100% if not controlled through regular harvesting and removal of infected pods.',
+    'Witches Broom': 'Witches Broom is a devastating fungal disease caused by Moniliophthora perniciosa that affects all growing parts of the cacao tree. The disease causes abnormal proliferation of shoots, creating dense clusters of branches that resemble brooms or bird nests. Infected tissues eventually die and become sources of spores that spread during rainy periods. The disease significantly reduces pod production and can kill young trees if left untreated. Control requires aggressive pruning of infected tissues and proper disposal to prevent spore spread to healthy trees.',
+    'Healthy': 'Your cacao plant appears healthy with no visible signs of disease infection or stress symptoms. The leaves show normal coloration and the pods display characteristic healthy appearance without lesions or discoloration. Continue maintaining good agricultural practices including proper spacing, regular pruning, and adequate nutrition. Regular monitoring and early detection of any symptoms will help protect your plantation. Keep the farm clean by removing fallen leaves and plant debris to prevent disease establishment.',
+    'Unknown': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
+    'Unknown Data': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
+}
+
+PEST_DESCRIPTIONS = {
+    'Ant Weaver': 'Weaver Ants are aggressive ants that construct nests by binding leaves together using silk produced by their larvae. While not directly damaging cacao, they protect and actively farm sap-sucking pests like aphids, mealybugs, and scale insects for their honeydew secretions. This mutualistic relationship allows pest populations to explode and cause severe damage to cacao trees. The ants attack and drive away natural predators and parasitoids that would normally control these pests. Managing ant populations is crucial for effective integrated pest management in cacao plantations.',
+    'Aphids': 'Aphids are tiny soft-bodied insects that feed by piercing plant tissues and sucking sap from young shoots, leaves, and developing pods. Their feeding causes leaves to curl, distort, and turn yellow, severely stunting plant growth and development. Aphids reproduce rapidly, with populations exploding within days under favorable conditions. They excrete sticky honeydew that covers leaves and promotes growth of black sooty mold fungus, further reducing photosynthesis. Heavy infestations can significantly reduce cacao yield and tree vigor if not controlled early.',
+    'Mealybug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
+    'Pod Borer': 'Cacao Pod Borer (Conopomorpha cramerella) is one of the most destructive pests of cacao, causing severe economic losses throughout Southeast Asia. Adult moths lay eggs on young pods, and the emerging caterpillars bore directly into the pods to feed on the beans inside. Infested pods show external holes with frass (insect droppings) and internally damaged beans that are unmarketable. A single larva can destroy multiple beans, and heavy infestations can result in 30-70% crop loss. Control requires frequent harvesting, pod sanitation, and proper disposal of infested pods.',
+    'Mirids': 'Mirids (also called capsids) are small true bugs that feed by piercing plant tissue with their needle-like mouthparts and injecting toxic saliva. They attack young shoots, causing lesions, dieback, and death of growing tips which severely affects tree development. Feeding on pods creates brown lesions and scars that can lead to pod rot and bean damage. Heavy mirid infestations can reduce cacao yields by 30-75% and cause tree deformities. These pests are most active during wet seasons and require regular monitoring and timely intervention for effective management.',
+    'Healthy': 'Your cacao plant shows no signs of pest infestation and appears to be thriving with healthy foliage and pods. The leaves are intact without feeding damage, discoloration, or presence of insects or their eggs. This indicates that your current pest management practices are effective in protecting the crop. Continue regular scouting and monitoring to detect any pest problems early before they become severe. Maintain beneficial insect populations by avoiding broad-spectrum pesticides and preserving natural habitats around your plantation.',
+    'Unknown': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
+    'Unknown Data': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
 }
 
 
@@ -1071,36 +1101,42 @@ def simulate_analysis(scan_type, image_file=None):
                 # Reset file pointer
                 image_file.seek(0)
                 
-                # If image is predominantly green, higher chance of healthy
+                # Calculate color ratios for better disease detection
                 green_dominance = avg_g > avg_r and avg_g > avg_b
                 brightness = (avg_r + avg_g + avg_b) / 3
                 
+                # Brown/dark spots indicate disease - check for brown/black colors
+                has_dark_spots = avg_r < 80 or brightness < 90
+                has_brown = avg_r > avg_g and avg_r > avg_b and avg_r < 150
+                
                 # Weighted selection based on image characteristics
-                if green_dominance and brightness > 100:
-                    # 70% chance healthy for green images
-                    hash_int = int(image_hash[:8], 16)
-                    if hash_int % 10 < 7:  # 70% chance
+                hash_int = int(image_hash[:8], 16)
+                
+                if has_dark_spots or has_brown:
+                    # Darker/brown images - likely disease/pest (90% chance)
+                    unhealthy_classes = [c for c in classes if c != 'Healthy']
+                    if unhealthy_classes and hash_int % 10 < 9:  # 90% chance unhealthy
+                        class_index = hash_int % len(unhealthy_classes)
+                        result_class = unhealthy_classes[class_index]
+                        confidence = 0.78 + ((hash_int % 20) / 100.0)  # 78-98%
+                    else:
                         result_class = 'Healthy'
-                        confidence = 0.85 + (random.random() * 0.13)  # 85-98%
+                        confidence = 0.65 + ((hash_int % 15) / 100.0)  # 65-80%
+                elif green_dominance and brightness > 120:
+                    # Bright green images - likely healthy (60% chance)
+                    if hash_int % 10 < 6:  # 60% chance
+                        result_class = 'Healthy'
+                        confidence = 0.82 + ((hash_int % 16) / 100.0)  # 82-98%
                     else:
                         # Still might have issues
-                        hash_int = int(image_hash[:8], 16)
                         class_index = hash_int % len(classes)
                         result_class = classes[class_index]
                         confidence = 0.70 + ((hash_int % 20) / 100.0)  # 70-90%
                 else:
-                    # Darker or less green images - more likely disease/pest
-                    hash_int = int(image_hash[:8], 16)
-                    # Filter out Healthy from choices for problematic images
-                    unhealthy_classes = [c for c in classes if c != 'Healthy']
-                    if unhealthy_classes and hash_int % 10 < 8:  # 80% chance unhealthy
-                        class_index = hash_int % len(unhealthy_classes)
-                        result_class = unhealthy_classes[class_index]
-                        confidence = 0.75 + ((hash_int % 23) / 100.0)  # 75-98%
-                    else:
-                        class_index = hash_int % len(classes)
-                        result_class = classes[class_index]
-                        confidence = 0.70 + ((hash_int % 25) / 100.0)  # 70-95%
+                    # Ambiguous images - use all classes
+                    class_index = hash_int % len(classes)
+                    result_class = classes[class_index]
+                    confidence = 0.72 + ((hash_int % 23) / 100.0)  # 72-95%
                         
             except Exception as img_error:
                 # Fallback to hash-based selection
@@ -8837,13 +8873,23 @@ def scan_image(request):
                     recommendations = PEST_RECOMMENDATIONS.get(predicted_class, [])
                 else:
                     # Fallback to simulation
-                    predicted_class, confidence, recommendations = simulate_prediction(scan_type)
+                    result = simulate_analysis(scan_type, image_file)
+                    predicted_class = result['class']
+                    confidence = result['confidence']
+                    recommendations = result['recommendations']
             else:
                 # Use simulation if models not available
-                predicted_class, confidence, recommendations = simulate_prediction(scan_type)
+                result = simulate_analysis(scan_type, image_file)
+                predicted_class = result['class']
+                confidence = result['confidence']
+                recommendations = result['recommendations']
             
             # Generate scan ID
             scan_id = str(uuid.uuid4())
+            
+            # Get description for the result
+            descriptions = DISEASE_DESCRIPTIONS if scan_type == 'disease' else PEST_DESCRIPTIONS
+            description = descriptions.get(predicted_class, 'No description available.')
             
             # Prepare scan data for Firestore
             scan_data = {
@@ -8855,6 +8901,7 @@ def scan_image(request):
                 'type': scan_type,
                 'result': predicted_class,
                 'confidence': confidence,
+                'description': description,
                 'recommendations': recommendations,
                 'image_name': image_file.name,
                 'timestamp': firestore.SERVER_TIMESTAMP,
@@ -8877,6 +8924,7 @@ def scan_image(request):
                 'type': scan_type,
                 'result': predicted_class,
                 'confidence': round(confidence * 100, 2),
+                'description': description,
                 'recommendations': recommendations
             }
             
@@ -10613,6 +10661,13 @@ def scan_details(request, scan_id):
                 else:
                     scan_data['confidence'] = round(confidence, 1)
         
+        # Add description if not present
+        if 'description' not in scan_data or not scan_data['description']:
+            scan_type = scan_data.get('type', 'disease')
+            result = scan_data.get('result', '')
+            descriptions = DISEASE_DESCRIPTIONS if scan_type == 'disease' else PEST_DESCRIPTIONS
+            scan_data['description'] = descriptions.get(result, 'No description available.')
+        
         # Handle timestamp
         if 'timestamp' in scan_data and scan_data['timestamp']:
             if hasattr(scan_data['timestamp'], 'seconds'):
@@ -10622,7 +10677,10 @@ def scan_details(request, scan_id):
         return JsonResponse({'success': True, 'scan': scan_data})
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        print(f"Error in scan_details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f'Error loading scan details: {str(e)}'})
 
 @csrf_exempt
 def scan_image(request):
