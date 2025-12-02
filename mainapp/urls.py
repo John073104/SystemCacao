@@ -109,6 +109,9 @@ urlpatterns = [
     # User Farm Mapping
     path('farm-mapping/', views.farm_mapping, name='farm_mapping'),
 
+    # User Chatbot
+    path('chat/', views.chat, name='chat'),
+
     # ===== GUEST URLS =====
     # Guest Dashboard
     path('guest/dashboard/', views.guest_dashboard, name='guest_dashboard'),

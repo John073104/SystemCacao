@@ -40,6 +40,30 @@ from django.contrib import messages
 from django.urls import reverse
 from django.utils.deprecation import MiddlewareMixin
 
+class ClearStaleMessagesMiddleware(MiddlewareMixin):
+    """Middleware to clear stale admin error messages for regular users"""
+    
+    def process_request(self, request):
+        # Get user role
+        user_role = (request.session.get('role') or request.session.get('user_role') or '').lower()
+        
+        # If user is NOT admin, clear any admin-related error messages
+        if user_role in ['user', 'guest']:
+            storage = messages.get_messages(request)
+            filtered_messages = []
+            
+            for message in storage:
+                # Skip admin privilege messages for regular users
+                if 'admin' not in message.message.lower() or 'privileges' not in message.message.lower():
+                    filtered_messages.append(message)
+            
+            # Clear all messages and re-add only the non-admin ones
+            storage.used = True
+            for msg in filtered_messages:
+                messages.add_message(request, msg.level, msg.message, extra_tags=msg.tags)
+        
+        return None
+
 class SessionSecurityMiddleware(MiddlewareMixin):
     """Middleware to enforce role-based access control (RBAC) and prevent unauthorized URL access"""
     

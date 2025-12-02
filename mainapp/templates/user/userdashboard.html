@@ -79,7 +79,7 @@
                     </div>
                     <div class="flex items-center space-x-4">
                         <!-- Notification Bell -->
-                        <div x-data="notificationDropdown()" class="relative">
+                        <div x-data="notificationDropdown()" x-init="init()" class="relative">
                             <button @click="toggleDropdown()" class="relative p-2 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/30 transition">
                                 <i class="fas fa-bell text-xl"></i>
                                 <span x-show="unreadCount > 0" x-text="unreadCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
@@ -371,6 +371,26 @@
                 open: false,
                 notifications: [],
                 unreadCount: 0,
+                pollingInterval: null,
+                
+                init() {
+                    // Fetch notifications on load
+                    this.fetchNotifications();
+                    // Start polling every 15 seconds for new notifications
+                    this.startPolling();
+                },
+                
+                startPolling() {
+                    this.pollingInterval = setInterval(() => {
+                        this.fetchNotifications();
+                    }, 15000); // Check every 15 seconds
+                },
+                
+                stopPolling() {
+                    if (this.pollingInterval) {
+                        clearInterval(this.pollingInterval);
+                    }
+                },
                 
                 toggleDropdown() {
                     this.open = !this.open;
@@ -384,11 +404,26 @@
                         const response = await fetch('/api/notifications/?limit=10');
                         const data = await response.json();
                         if (data.success) {
+                            const oldCount = this.unreadCount;
                             this.notifications = data.notifications;
                             this.unreadCount = data.unread_count;
+                            
+                            // Show browser notification if new order status update
+                            if (this.unreadCount > oldCount && oldCount !== 0) {
+                                this.showBrowserNotification(data.notifications[0]);
+                            }
                         }
                     } catch (error) {
                         console.error('Error fetching notifications:', error);
+                    }
+                },
+                
+                showBrowserNotification(notification) {
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('CacaoGuard - ' + notification.title, {
+                            body: notification.message,
+                            icon: '/static/images/NOBGHERO.png'
+                        });
                     }
                 },
                 
@@ -481,5 +516,16 @@
     </div>
         </div>
     </div>
+
+    <!-- Chatbot -->
+    {% include 'user/chatbot.html' %}
+
+    <!-- Request Notification Permission -->
+    <script>
+        // Request browser notification permission on page load
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    </script>
 </body>
 </html>

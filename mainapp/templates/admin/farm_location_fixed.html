@@ -223,7 +223,12 @@
 
     .file-input-wrapper input[type=file] {
         position: absolute;
-        left: -9999px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
     }
 </style>
 {% endblock %}
@@ -557,10 +562,10 @@
                         <div class="text-center">
                             <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
                             <p class="text-gray-600 mb-2">Drag and drop images here or</p>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="farm-images" name="images" multiple accept="image/*">
-                                <span><i class="fas fa-plus mr-2"></i>Choose Images</span>
-                            </div>
+                            <input type="file" id="farm-images" name="images" multiple accept="image/*" style="display: none;">
+                            <button type="button" id="choose-images-btn" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Choose Images
+                            </button>
                             <p class="text-xs text-gray-500 mt-2">Supports: JPG, PNG, GIF (Max 5MB each)</p>
                         </div>
                     </div>
@@ -696,8 +701,27 @@ function initializeMap() {
 }
 
 function initializeImageUpload() {
+    console.log('🔧 Initializing image upload...');
+    
     const uploadArea = document.getElementById('image-upload-area');
     const fileInput = document.getElementById('farm-images');
+    const chooseBtn = document.getElementById('choose-images-btn');
+    
+    console.log('Upload area:', uploadArea);
+    console.log('File input:', fileInput);
+    console.log('Choose button:', chooseBtn);
+    
+    // Button click to open file picker
+    if (chooseBtn && fileInput) {
+        chooseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('📸 Choose Images button clicked!');
+            fileInput.click();
+        });
+        console.log('✅ Click handler attached to button');
+    } else {
+        console.error('❌ Button or file input not found!');
+    }
     
     // Drag and drop functionality
     uploadArea.addEventListener('dragover', function(e) {

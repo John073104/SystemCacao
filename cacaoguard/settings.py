@@ -72,7 +72,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Custom middleware DISABLED - they were causing session interruption errors
+    'mainapp.middleware.ClearStaleMessagesMiddleware',  # Clear admin error messages for regular users
+    # SessionSecurityMiddleware and SessionValidationMiddleware DISABLED - they were causing session interruption errors
 ]
 
 

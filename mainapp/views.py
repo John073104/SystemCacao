@@ -978,6 +978,7 @@ PEST_RECOMMENDATIONS = {
 # Disease and Pest Descriptions
 DISEASE_DESCRIPTIONS = {
     'Black Pod Rot': 'Black Pod Rot is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
+    'Black Pod Disease': 'Black Pod Disease is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
     'Fito Disease': 'Fito Disease, also known as Phytophthora root rot or trunk canker, is a serious soil-borne fungal disease affecting cacao trees. It attacks the root system and lower trunk, causing wilting of leaves, yellowing foliage, and eventual death of the entire tree. The pathogen thrives in waterlogged soils with poor drainage conditions. Early symptoms include bark lesions that ooze dark fluid and gradually girdle the trunk. Without proper soil management and drainage improvement, entire plantations can be devastated by this disease.',
     'Monilia Disease': 'Monilia Disease is caused by the fungus Moniliophthora roreri and primarily affects cacao pods at all stages of development. Infected pods show irregular swellings or lumps on the surface, followed by rapid internal rot that destroys the beans. The fungus produces millions of spores that appear as a cream-colored powdery mass on infected pods. It spreads rapidly during humid, rainy weather through wind and rain splash. This disease can cause yield losses of 40-80% in severely affected areas and requires strict sanitation practices.',
     'Frosty Pod Rot': 'Frosty Pod Rot is caused by the fungus Moniliophthora perniciosa and gets its name from the distinctive white, frost-like fungal growth on infected pods. The disease causes pods to develop brown spots that gradually expand and become covered with white spores. Infected beans become brown, shriveled, and worthless for chocolate production. The pathogen spreads through airborne spores during wet and humid conditions. It can devastate cacao production, causing losses of 30-100% if not controlled through regular harvesting and removal of infected pods.',
@@ -985,13 +986,46 @@ DISEASE_DESCRIPTIONS = {
     'Healthy': 'Your cacao plant appears healthy with no visible signs of disease infection or stress symptoms. The leaves show normal coloration and the pods display characteristic healthy appearance without lesions or discoloration. Continue maintaining good agricultural practices including proper spacing, regular pruning, and adequate nutrition. Regular monitoring and early detection of any symptoms will help protect your plantation. Keep the farm clean by removing fallen leaves and plant debris to prevent disease establishment.',
     'Unknown': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
     'Unknown Data': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
+    'Mirids': 'NOTE: Mirids is actually a PEST, not a disease. Mirids (also called capsids) are small true bugs that feed by piercing plant tissue with their needle-like mouthparts and injecting toxic saliva. They attack young shoots, causing lesions, dieback, and death of growing tips which severely affects tree development. Feeding on pods creates brown lesions and scars that can lead to pod rot and bean damage. Heavy mirid infestations can reduce cacao yields by 30-75% and cause tree deformities. These pests are most active during wet seasons and require regular monitoring and timely intervention for effective management.',
+}
+
+# Tagalog Descriptions (4 sentences each)
+DISEASE_DESCRIPTIONS_TAGALOG = {
+    'Black Pod Rot': 'Ang Black Pod Rot ay dulot ng Phytophthora fungi at isa sa pinakamasamang sakit ng cacao sa buong mundo. Nagsisimula ito bilang maliliit na dark brown spots sa balat ng bunga na mabilis na lumalaki at nagiging itim. Ang loob ng bunga ay nabulok na, sinisira ang mga beans at hindi na magagamit. Maaaring mawala ang 30-90% ng ani kung hindi ito maayos na pinangangasiwaan.',
+    'Black Pod Disease': 'Ang Black Pod Disease ay dulot ng Phytophthora fungi at isa sa pinakamasamang sakit ng cacao sa buong mundo. Nagsisimula ito bilang maliliit na dark brown spots sa balat ng bunga na mabilis na lumalaki at nagiging itim. Ang loob ng bunga ay nabulok na, sinisira ang mga beans at hindi na magagamit. Maaaring mawala ang 30-90% ng ani kung hindi ito maayos na pinangangasiwaan.',
+    'Fito Disease': 'Ang Fito Disease ay isang malubhang sakit na umaatake sa ugat at puno ng cacao. Nagsisimula sa pagkalanta ng dahon, paninilaw, at sa huli ay pagkamatay ng buong puno. Lumalaki ang sakit sa mababang lugar na baha-baha at mahinang drainage. Kailangan ng maayos na pag-aayos ng lupa at drainage para maiwasan ang pagkalat nito.',
+    'Monilia Disease': 'Ang Monilia Disease ay dulot ng Moniliophthora roreri fungus na umaatake sa lahat ng yugto ng cacao pods. Ang mga apektadong bunga ay may mga bukol at mabilis na nabulok ang loob. Kumakalat ito sa panahon ng tag-ulan sa pamamagitan ng hangin at ulan. Maaaring mawala ang 40-80% ng ani kung malala ang impeksyon.',
+    'Frosty Pod Rot': 'Ang Frosty Pod Rot ay dulot ng Moniliophthora perniciosa fungus na may puting halamang parang yelo sa bunga. Lumalabas ang brown spots na nagiging puti at tumutubo ang fungus. Ang mga beans ay nagiging kayumanggi at hindi na maganda para sa chocolate. Kumakalat ito sa basang panahon kaya kailangan regular na pag-aani.',
+    'Witches Broom': 'Ang Witches Broom ay nakakasira na sakit na dulot ng Moniliophthora perniciosa na umaatake sa lahat ng lumalaking bahagi ng puno. Lumilikha ng mga abnormal na sanga na parang walis o pugad ng ibon. Ang mga apektadong bahagi ay namamatay at nagiging pinagmulan ng kumalat na sakit. Kinakailangan ang matinding pagputol ng mga apektadong sanga para mapigilan.',
+    'Healthy': 'Ang inyong tanim na cacao ay mukhang malusog at walang palatandaan ng sakit o stress. Ang mga dahon ay normal ang kulay at ang bunga ay walang sugat o pagbabago ng kulay. Magpatuloy sa mabuting pamamaraan ng pagtatanim tulad ng wastong pagitan, regular na pagputol, at sapat na nutrisyon. Manatiling malinis ang bukid upang maiwasan ang paglaganap ng sakit.',
+    'Unknown': 'Ang mga sintomas sa larawan ay hindi tumutugma sa kilalang sakit ng cacao sa database. Maaaring dahil sa hindi malinaw na kalidad ng larawan o hindi pa gaanong halata ang sakit. Maaari rin itong dahil sa kakulangan sa nutrisyon o environmental stress. Mangyaring kumunsulta sa lokal na agricultural expert para sa wastong diagnosis.',
+    'Unknown Data': 'Ang mga sintomas sa larawan ay hindi tumutugma sa kilalang sakit ng cacao sa database. Maaaring dahil sa hindi malinaw na kalidad ng larawan o hindi pa gaanong halata ang sakit. Maaari rin itong dahil sa kakulangan sa nutrisyon o environmental stress. Mangyaring kumunsulta sa lokal na agricultural expert para sa wastong diagnosis.',
+    'Mirids': 'Ang Mirids ay maliliit na insekto na sumisipsip ng katas ng halaman gamit ang kanilang tusok na bibig. Umaatake sila sa mga batang sanga na nagiging sanhi ng sugat at pagkamatay ng tumutubo. Ang pagkain nila sa bunga ay lumilikha ng brown spots na maaaring maging sanhi ng bulok. Maaaring mawala ang 30-75% ng ani kung malala ang impeksyon ng mirids.',
+    'Healthy': 'Ang inyong tanim na cacao ay mukhang malusog at walang palatandaan ng peste o impeksyon. Ang mga dahon ay buo at walang sira, pagbabago ng kulay, o presensya ng insekto. Ito ay nagpapakita na ang inyong kasalukuyang paraan ng pest management ay epektibo. Magpatuloy sa regular na pag-monitor upang makita agad ang anumang problema bago lumala.',
+    'Unknown': 'Ang peste o pattern ng pinsala sa larawan ay hindi makilala sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi pa kilalang uri ng peste, o pinsala mula sa maraming peste. Mangolekta ng physical specimens kung posible at kumunsulta sa lokal na agricultural extension o entomology expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste mismo para sa tamang pagkilala.',
+    'Unknown Data': 'Ang peste o pattern ng pinsala sa larawan ay hindi makilala sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi pa kilalang uri ng peste, o pinsala mula sa maraming peste. Mangolekta ng physical specimens kung posible at kumunsulta sa lokal na agricultural extension o entomology expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste mismo para sa tamang pagkilala.',
+}
+
+PEST_DESCRIPTIONS_TAGALOG = {
+    'Ant Weaver': 'Ang Weaver Ants ay mga agresibong langgam na gumagawa ng pugad gamit ang mga dahon. Hindi direktang sinisira ang cacao ngunit pinoproprotektahan nila ang iba pang peste tulad ng aphids at mealybugs. Ang ganitong relasyon ay nagiging sanhi ng pagsabog ng populasyon ng peste. Mahalaga ang pag-kontrol sa langgam para sa epektibong integrated pest management.',
+    'Aphids': 'Ang Aphids ay maliliit na insekto na sumisipsip ng katas ng halaman mula sa mga batang sanga at dahon. Ang kanilang pagkain ay nagiging sanhi ng pagkulot ng dahon, pagputi, at pagkabansot ng paglaki. Mabilis silang dumami at ang populasyon ay sumasabog sa loob lamang ng ilang araw. Ang mabigat na impeksyon ay lubhang nakakababa ng ani at kalusugan ng puno.',
+    'Mealybug': 'Ang Mealybugs ay maliliit na insekto na balot ng puting waxy powder na parang bulak. Sumisipsip sila ng katas ng halaman mula sa dahon, sanga, at bunga na nagiging sanhi ng pagputi at pagkalanta. Ang malalaki nilang impeksyon ay lubhang nakakahina sa puno at maaaring mawala ang 50% ng ani. Mahirap silang kontrolin dahil sa kanilang waxy coating kaya kailangan ng systemic treatment.',
+    'Mealy Bug': 'Ang Mealybugs ay maliliit na insekto na balot ng puting waxy powder na parang bulak. Sumisipsip sila ng katas ng halaman mula sa dahon, sanga, at bunga na nagiging sanhi ng pagputi at pagkalanta. Ang malalaki nilang impeksyon ay lubhang nakakahina sa puno at maaaring mawala ang 50% ng ani. Mahirap silang kontrolin dahil sa kanilang waxy coating kaya kailangan ng systemic treatment.',
+    'Pod Borer': 'Ang Cacao Pod Borer ay isa sa pinakanakakasira ng peste ng cacao sa Southeast Asia. Ang mga inapo ng gamu-gamo ay pumapasok sa loob ng bunga at kumakain ng mga beans. Ang mga bungang may Pod Borer ay may butas at sira ang loob na hindi na maaaring ibenta. Maaaring mawala ang 30-70% ng ani kung malala ang impeksyon kaya kailangan ng regular na pag-aani.',
+    'Cocoa Pod Borer': 'Ang Cocoa Pod Borer ay isa sa pinakanakakasira ng peste ng cacao sa Southeast Asia. Ang mga inapo ng gamu-gamo ay pumapasok sa loob ng bunga at kumakain ng mga beans. Ang mga bungang may Pod Borer ay may butas at sira ang loob na hindi na maaaring ibenta. Maaaring mawala ang 30-70% ng ani kung malala ang impeksyon kaya kailangan ng regular na pag-aani.',
+    'Mirids': 'Ang Mirids ay maliliit na insekto na sumisipsip ng katas ng halaman gamit ang kanilang tusok na bibig. Umaatake sila sa mga batang sanga na nagiging sanhi ng sugat at pagkamatay ng tumutubo. Ang pagkain nila sa bunga ay lumilikha ng brown spots na maaaring maging sanhi ng bulok. Maaaring mawala ang 30-75% ng ani kung malala ang impeksyon ng mirids.',
+    'Healthy': 'Ang inyong tanim na cacao ay walang palatandaan ng peste at mukhang malusog na malusog. Ang mga dahon ay buo at walang pinsala, pagbabago ng kulay, o presensya ng insekto. Nagpapakita ito na epektibo ang inyong kasalukuyang pest management practices. Magpatuloy sa regular na pag-monitor upang maagapan ang anumang problema bago lumala.',
+    'Unknown': 'Ang peste o pinsala sa larawan ay hindi matukoy mula sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi karaniwang peste, o maraming peste ang sanhi. Magsaliksik ng physical specimens kung posible at kumunsulta sa lokal na agricultural expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste at pinsala para sa wastong pagkilala.',
+    'Unknown Data': 'Ang peste o pinsala sa larawan ay hindi matukoy mula sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi karaniwang peste, o maraming peste ang sanhi. Magsaliksik ng physical specimens kung posible at kumunsulta sa lokal na agricultural expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste at pinsala para sa wastong pagkilala.',
 }
 
 PEST_DESCRIPTIONS = {
     'Ant Weaver': 'Weaver Ants are aggressive ants that construct nests by binding leaves together using silk produced by their larvae. While not directly damaging cacao, they protect and actively farm sap-sucking pests like aphids, mealybugs, and scale insects for their honeydew secretions. This mutualistic relationship allows pest populations to explode and cause severe damage to cacao trees. The ants attack and drive away natural predators and parasitoids that would normally control these pests. Managing ant populations is crucial for effective integrated pest management in cacao plantations.',
     'Aphids': 'Aphids are tiny soft-bodied insects that feed by piercing plant tissues and sucking sap from young shoots, leaves, and developing pods. Their feeding causes leaves to curl, distort, and turn yellow, severely stunting plant growth and development. Aphids reproduce rapidly, with populations exploding within days under favorable conditions. They excrete sticky honeydew that covers leaves and promotes growth of black sooty mold fungus, further reducing photosynthesis. Heavy infestations can significantly reduce cacao yield and tree vigor if not controlled early.',
     'Mealybug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
+    'Mealy Bug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
     'Pod Borer': 'Cacao Pod Borer (Conopomorpha cramerella) is one of the most destructive pests of cacao, causing severe economic losses throughout Southeast Asia. Adult moths lay eggs on young pods, and the emerging caterpillars bore directly into the pods to feed on the beans inside. Infested pods show external holes with frass (insect droppings) and internally damaged beans that are unmarketable. A single larva can destroy multiple beans, and heavy infestations can result in 30-70% crop loss. Control requires frequent harvesting, pod sanitation, and proper disposal of infested pods.',
+    'Cocoa Pod Borer': 'Cacao Pod Borer (Conopomorpha cramerella) is one of the most destructive pests of cacao, causing severe economic losses throughout Southeast Asia. Adult moths lay eggs on young pods, and the emerging caterpillars bore directly into the pods to feed on the beans inside. Infested pods show external holes with frass (insect droppings) and internally damaged beans that are unmarketable. A single larva can destroy multiple beans, and heavy infestations can result in 30-70% crop loss. Control requires frequent harvesting, pod sanitation, and proper disposal of infested pods.',
     'Mirids': 'Mirids (also called capsids) are small true bugs that feed by piercing plant tissue with their needle-like mouthparts and injecting toxic saliva. They attack young shoots, causing lesions, dieback, and death of growing tips which severely affects tree development. Feeding on pods creates brown lesions and scars that can lead to pod rot and bean damage. Heavy mirid infestations can reduce cacao yields by 30-75% and cause tree deformities. These pests are most active during wet seasons and require regular monitoring and timely intervention for effective management.',
     'Healthy': 'Your cacao plant shows no signs of pest infestation and appears to be thriving with healthy foliage and pods. The leaves are intact without feeding damage, discoloration, or presence of insects or their eggs. This indicates that your current pest management practices are effective in protecting the crop. Continue regular scouting and monitoring to detect any pest problems early before they become severe. Maintain beneficial insect populations by avoiding broad-spectrum pesticides and preserving natural habitats around your plantation.',
     'Unknown': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
@@ -1069,8 +1103,9 @@ def _is_duplicate_scan(user_id, image_hash):
     except Exception:
         return False
 
-def simulate_analysis(scan_type, image_file=None):
-    """Improved ML simulation with more realistic healthy detection"""
+def simulate_analysis(scan_type, image_file=None, user_id=None):
+    """Improved ML simulation with deterministic results based on image content
+    Same image will ALWAYS produce the same result, even if uploaded multiple times"""
     classes, recommendations = (
         (DISEASE_CLASSES, DISEASE_RECOMMENDATIONS) if scan_type == 'disease' 
         else (PEST_CLASSES, PEST_RECOMMENDATIONS)
@@ -1081,10 +1116,25 @@ def simulate_analysis(scan_type, image_file=None):
         try:
             # Reset file pointer to beginning
             image_file.seek(0)
-            # Create hash of image content
+            # Create hash of image content for consistency
             image_hash = hashlib.md5(image_file.read()).hexdigest()
             # Reset file pointer again for later use
             image_file.seek(0)
+            
+            # Check if this exact image was scanned before (by any user)
+            try:
+                previous_scans = db.collection('scans').where('image_hash', '==', image_hash).where('type', '==', scan_type).limit(1).stream()
+                for scan_doc in previous_scans:
+                    # Found previous scan with same image - return same result!
+                    previous_data = scan_doc.to_dict()
+                    return {
+                        'class': previous_data.get('result', 'Unknown'),
+                        'confidence': previous_data.get('confidence', 0.85),
+                        'recommendations': previous_data.get('recommendations', []),
+                        'is_duplicate': True
+                    }
+            except Exception as db_error:
+                pass  # Continue with new analysis if DB check fails
             
             # Analyze image brightness/color (simple heuristic for healthy detection)
             from PIL import Image
@@ -2389,16 +2439,30 @@ def send_status_change_email(order_data, new_status):
             # Send in-app notification
             if user_id:
                 try:
-                    create_notification(
+                    print(f"\n[NOTIFICATION] Creating notification for user: {user_id}")
+                    print(f"[NOTIFICATION] Title: {email_data['notif_title']}")
+                    print(f"[NOTIFICATION] Message: {email_data['notif_message']}")
+                    print(f"[NOTIFICATION] Type: {email_data['notif_type']}")
+                    
+                    result = create_notification(
                         user_id=user_id,
                         title=email_data['notif_title'],
                         message=email_data['notif_message'],
-                        notification_type=email_data['notif_type'],
+                        notification_type='order_status',
                         order_id=order_id
                     )
+                    
+                    if result:
+                        print(f"[NOTIFICATION] ✅ Notification created successfully!")
+                    else:
+                        print(f"[NOTIFICATION] ❌ Failed to create notification")
+                        
                 except Exception as notif_error:
                     logger = logging.getLogger(__name__)
                     logger.error(f"Notification failed: {notif_error}")
+                    print(f"[NOTIFICATION] ❌ Exception: {notif_error}")
+            else:
+                print(f"[NOTIFICATION] ⚠️ No user_id found in order data!")
             
     except Exception as e:
         logger = logging.getLogger(__name__)
@@ -4572,13 +4636,9 @@ DISEASE_RECOMMENDATIONS = {
         'Avoid unnecessary chemical applications',
         'Document and report unusual symptoms for research'
     ],
-    'Mirids': [
-        'Prune and destroy infested shoots',
-        'Apply recommended insecticide if population is high',
-        'Encourage natural predators like wasps and ants',
-        'Regular monitoring and early intervention'
-    ]
 }
+
+# Note: Mirids is a PEST, not a disease. See PEST_RECOMMENDATIONS below.
 
 PEST_RECOMMENDATIONS = {
     'Ant Weaver': [
@@ -5756,12 +5816,9 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 @user_required
 def user_orders(request):
     """Display user's orders from Firestore (excluding hidden orders)"""
-    # Clear any stale error messages
+    # Clear ALL messages (including stale admin privilege errors)
     storage = messages.get_messages(request)
-    for msg in storage:
-        if 'admin' in msg.message.lower():
-            storage.used = True
-            break
+    storage.used = True
     
     try:
         uid = request.session.get('uid')
@@ -5795,6 +5852,38 @@ def user_orders(request):
             
             # Calculate total items
             order_data['total_items'] = len(order_data.get('items', []))
+            
+            # Fetch product images for each item
+            items = order_data.get('items', [])
+            for item in items:
+                product_id = item.get('product_id')
+                product_name = item.get('product_name', '')
+                
+                # Try by product_id first
+                if product_id:
+                    try:
+                        product_doc = db.collection('products').document(product_id).get()
+                        if product_doc.exists:
+                            product_data = product_doc.to_dict()
+                            item['image_url'] = product_data.get('cloudinary_url') or product_data.get('image') or ''
+                            continue
+                    except:
+                        pass
+                
+                # If no product_id or not found, try matching by name
+                if product_name:
+                    try:
+                        products = db.collection('products').where('name', '==', product_name).limit(1).stream()
+                        for product_doc in products:
+                            product_data = product_doc.to_dict()
+                            item['image_url'] = product_data.get('cloudinary_url') or product_data.get('image') or ''
+                            break
+                        else:
+                            item['image_url'] = ''
+                    except:
+                        item['image_url'] = ''
+                else:
+                    item['image_url'] = ''
             
             orders_data.append(order_data)
 
@@ -5874,6 +5963,38 @@ def order_detail(request, order_id):
         if 'total_amount' not in order_data and order_data.get('items'):
             order_data['total_amount'] = sum(float(item.get('total_price', 0)) for item in order_data['items'])
 
+        # Fetch product images for each item
+        items = order_data.get('items', [])
+        for item in items:
+            product_id = item.get('product_id')
+            product_name = item.get('product_name', '')
+            
+            # Try by product_id first
+            if product_id:
+                try:
+                    product_doc = db.collection('products').document(product_id).get()
+                    if product_doc.exists:
+                        product_data = product_doc.to_dict()
+                        item['image_url'] = product_data.get('cloudinary_url') or product_data.get('image') or ''
+                        continue
+                except:
+                    pass
+            
+            # If no product_id or not found, try matching by name
+            if product_name:
+                try:
+                    products = db.collection('products').where('name', '==', product_name).limit(1).stream()
+                    for product_doc in products:
+                        product_data = product_doc.to_dict()
+                        item['image_url'] = product_data.get('cloudinary_url') or product_data.get('image') or ''
+                        break
+                    else:
+                        item['image_url'] = ''
+                except:
+                    item['image_url'] = ''
+            else:
+                item['image_url'] = ''
+
         context = {
             'order': order_data,
             'user_name': request.session.get('name'),
@@ -5904,23 +6025,35 @@ def order_detail(request, order_id):
 @user_required
 def order_receipt(request, order_id):
     """View and print receipt for an order"""
+    # Clear ALL messages (including stale admin privilege errors)
+    storage = messages.get_messages(request)
+    storage.used = True
+    
     try:
+        print(f"\n=== RECEIPT DEBUG ===")
+        print(f"Order ID: {order_id}")
+        
         uid = request.session.get('uid')
         user_email = request.session.get('user_email') or request.session.get('email')
+        print(f"User UID: {uid}")
+        print(f"User Email: {user_email}")
         
         if not uid:
             messages.error(request, 'Please log in to view receipt.')
             return redirect('login')
 
         # Get specific order from Firestore
+        print(f"Fetching order from Firestore...")
         order_ref = db.collection('orders').document(order_id)
         order_doc = order_ref.get()
 
         if not order_doc.exists:
+            print(f"ERROR: Order not found in Firestore")
             messages.error(request, 'Order not found.')
             return redirect('user_orders')
 
         order_data = order_doc.to_dict()
+        print(f"Order data keys: {list(order_data.keys())}")
         
         # Check if order belongs to current user
         owner_uid = order_data.get('firebase_uid') or order_data.get('user_id')
@@ -5960,13 +6093,23 @@ def order_receipt(request, order_id):
             'current_date': datetime.now(pytz.timezone('Asia/Manila')),
         }
 
+        print(f"Rendering receipt with context keys: {list(context.keys())}")
+        print(f"Order total: {order_data.get('total_amount')}")
+        print(f"Order items count: {len(order_data.get('items', []))}")
+        print(f"===================\n")
+        
         return render(request, 'user/receipt.html', context)
 
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Receipt view error")
-        messages.error(request, 'Error loading receipt.')
+        print(f"\n=== RECEIPT ERROR ===")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        import traceback
+        print(f"Full traceback:")
+        traceback.print_exc()
+        print(f"====================\n")
+        
+        messages.error(request, f'Error loading receipt: {str(e)}')
         return redirect('user_orders')
 
 # ===============================
@@ -6946,12 +7089,18 @@ def userdashboard(request):
 # End userdashboard
 
 
-@user_required
 @csrf_exempt
 def dashboard_api(request):
     """API endpoint for real-time dashboard updates"""
     if request.method == 'GET':
         uid = request.session.get('uid')
+        
+        # Check if user is authenticated
+        if not uid:
+            return JsonResponse({
+                'success': False,
+                'error': 'Not authenticated'
+            }, status=401)
         
         try:
             # Get latest counts
@@ -7127,24 +7276,7 @@ def predict_with_model(model, image_tensor, classes):
 # ===============================
 # CLASSES
 # ===============================
-DISEASE_CLASSES = [
-    'Black Pod Rot',
-    'Fito Disease',
-    'Healthy',
-    'Monilia Disease',
-    'Unknown',
-    'Mirids'
-]
-
-PEST_CLASSES = [
-    'Ant Weaver',
-    'Aphids',
-    'Healthy',
-    'Mealy Bug',
-    'Unknown Data',
-    'Cocoa Pod Borer'
-]
-
+# NOTE: These are old duplicate class definitions - using main definitions from line 866
 # ===============================
 # RECOMMENDATIONS
 # ===============================
@@ -8873,13 +9005,13 @@ def scan_image(request):
                     recommendations = PEST_RECOMMENDATIONS.get(predicted_class, [])
                 else:
                     # Fallback to simulation
-                    result = simulate_analysis(scan_type, image_file)
+                    result = simulate_analysis(scan_type, image_file, uid)
                     predicted_class = result['class']
                     confidence = result['confidence']
                     recommendations = result['recommendations']
             else:
                 # Use simulation if models not available
-                result = simulate_analysis(scan_type, image_file)
+                result = simulate_analysis(scan_type, image_file, uid)
                 predicted_class = result['class']
                 confidence = result['confidence']
                 recommendations = result['recommendations']
@@ -8887,9 +9019,27 @@ def scan_image(request):
             # Generate scan ID
             scan_id = str(uuid.uuid4())
             
+            # Calculate image hash for duplicate detection
+            image_file.seek(0)
+            image_hash = hashlib.md5(image_file.read()).hexdigest()
+            image_file.seek(0)
+            
             # Get description for the result
             descriptions = DISEASE_DESCRIPTIONS if scan_type == 'disease' else PEST_DESCRIPTIONS
-            description = descriptions.get(predicted_class, 'No description available.')
+            descriptions_tagalog = DISEASE_DESCRIPTIONS_TAGALOG if scan_type == 'disease' else PEST_DESCRIPTIONS_TAGALOG
+            
+            print(f"\n=== DESCRIPTION LOOKUP DEBUG ===")
+            print(f"Predicted class: '{predicted_class}'")
+            print(f"Scan type: {scan_type}")
+            print(f"Available keys in dictionary: {list(descriptions.keys())}")
+            print(f"Class in dictionary? {predicted_class in descriptions}")
+            
+            description = descriptions.get(predicted_class, f'FALLBACK: No description for {predicted_class}')
+            description_tagalog = descriptions_tagalog.get(predicted_class, f'FALLBACK: Walang deskripsyon para sa {predicted_class}')
+            
+            print(f"Description value: {description[:80] if description else 'NONE'}")
+            print(f"Tagalog value: {description_tagalog[:80] if description_tagalog else 'NONE'}")
+            print(f"==================================\n")
             
             # Prepare scan data for Firestore
             scan_data = {
@@ -8904,6 +9054,7 @@ def scan_image(request):
                 'description': description,
                 'recommendations': recommendations,
                 'image_name': image_file.name,
+                'image_hash': image_hash,  # Store hash for duplicate detection
                 'timestamp': firestore.SERVER_TIMESTAMP,
                 'hidden': False,  # Default to visible
                 'created_at': datetime.now(pytz.timezone('Asia/Manila')).isoformat()
@@ -8925,8 +9076,18 @@ def scan_image(request):
                 'result': predicted_class,
                 'confidence': round(confidence * 100, 2),
                 'description': description,
+                'description_tagalog': description_tagalog,
                 'recommendations': recommendations
             }
+            
+            # Debug log - DETAILED!
+            print(f"\n=== FINAL RESPONSE DATA ===")
+            print(f"Keys in response: {list(response_data.keys())}")
+            print(f"'description' exists: {'description' in response_data}")
+            print(f"'description' value type: {type(response_data.get('description'))}")
+            print(f"'description' value: {response_data.get('description', 'NOT FOUND')[:150] if response_data.get('description') else 'EMPTY'}")
+            print(f"'description_tagalog' value: {response_data.get('description_tagalog', 'NOT FOUND')[:150] if response_data.get('description_tagalog') else 'EMPTY'}")
+            print(f"===========================\n")
             
             return JsonResponse(response_data)
             
@@ -11118,10 +11279,12 @@ def admin_dashboard(request):
     }
     
     try:
-        # ===== FETCH SCANS DATA =====
+        # ===== FETCH SCANS DATA FROM ALL USERS =====
+        print(f"\n[ADMIN DASHBOARD] Fetching ALL user scans...")
         scans_ref = db.collection('scans')
         all_scans = list(scans_ref.stream())
         total_scan_count = len(all_scans)
+        print(f"[ADMIN DASHBOARD] Total scans from ALL users: {total_scan_count}")
         
         
         # Get recent scans for activity
@@ -11511,5 +11674,167 @@ def unhide_user(request, user_id):
             'success': False,
             'message': f'Error unhiding user: {str(e)}'
         }, status=500)
+
+
+# ===============================
+# CHATBOT
+# ===============================
+
+@csrf_exempt
+@user_required
+def chat(request):
+    """Handle chatbot messages"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            user_message = data.get('message', '').lower().strip()
+            
+            # Simple rule-based responses
+            response = get_chat_response(user_message)
+            
+            return JsonResponse({
+                'success': True,
+                'response': response
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+def get_chat_response(message):
+    """Generate chatbot response based on user message"""
+    
+    # Greetings
+    if any(word in message for word in ['hi', 'hello', 'hey', 'kumusta', 'kamusta']):
+        return "Hello! Kumusta! How can I help you with your cacao farming today? 🌱"
+    
+    # Disease related
+    elif any(word in message for word in ['disease', 'sakit', 'black pod', 'frosty pod', 'witches broom', 'monilia']):
+        return """I can help you with cacao diseases! Here are common ones:
+
+🦠 **Black Pod Disease** - Caused by Phytophthora, appears as dark brown/black spots
+🦠 **Frosty Pod Rot** - White fungal growth on pods
+🦠 **Witches Broom** - Abnormal shoot growth
+🦠 **Monilia Disease** - Brown spots that turn into white mold
+
+💡 **Tip**: Use our Scan & Diagnose feature to identify diseases from photos!"""
+    
+    # Pest related
+    elif any(word in message for word in ['pest', 'insect', 'mirids', 'aphid', 'borer', 'mealybug']):
+        return """Common cacao pests include:
+
+🐛 **Mirids** - Suck sap from pods and shoots
+🐛 **Cocoa Pod Borer** - Larvae bore into pods
+🐛 **Mealybugs** - White cottony insects
+🐛 **Aphids** - Small sap-sucking insects
+
+💡 **Solution**: Regular monitoring and early treatment is key!"""
+    
+    # Orders
+    elif any(word in message for word in ['order', 'delivery', 'shipping', 'track', 'buy', 'purchase']):
+        return """For order-related questions:
+
+📦 Check your order status in the **Orders** page
+🚚 Track delivery progress
+💳 View payment details
+📧 Order confirmation sent to your email
+
+Need help with a specific order? Go to Orders → View Details"""
+    
+    # Scan feature
+    elif any(word in message for word in ['scan', 'diagnose', 'photo', 'picture', 'image', 'detect']):
+        return """Our Scan & Diagnose feature helps you:
+
+📸 Take/upload photos of cacao pods or leaves
+🔍 AI analyzes for diseases and pests
+📊 Get instant results with confidence scores
+💊 Receive treatment recommendations
+
+Try it now: Go to **Scan & Diagnose** page!"""
+    
+    # Marketplace
+    elif any(word in message for word in ['buy', 'product', 'shop', 'marketplace', 'price']):
+        return """Visit our **Marketplace** to:
+
+🛒 Browse cacao products
+🌱 Buy farming supplies
+💰 View prices and details
+🛍️ Add items to cart
+
+Click on Marketplace in the menu to start shopping!"""
+    
+    # Farm mapping
+    elif any(word in message for word in ['farm', 'map', 'location', 'gps']):
+        return """Farm Mapping helps you:
+
+🗺️ Mark your farm location
+📍 Add multiple farm sites
+🌳 Track plantation areas
+📊 Monitor farm data
+
+Access it from the **Farm Mapping** page!"""
+    
+    # Treatment/remedies
+    elif any(word in message for word in ['treat', 'cure', 'remedy', 'solution', 'fix', 'gamot']):
+        return """Treatment depends on the issue:
+
+For **Diseases**:
+• Remove infected pods
+• Apply fungicides
+• Improve drainage
+• Prune for air circulation
+
+For **Pests**:
+• Use organic pesticides
+• Manual removal
+• Natural predators
+• Regular monitoring
+
+💡 Scan your plant first to get specific recommendations!"""
+    
+    # Account/profile
+    elif any(word in message for word in ['account', 'profile', 'password', 'email', 'settings']):
+        return """Account management:
+
+👤 Update profile in **Profile** page
+🔒 Change password
+📧 Update email
+📱 Manage notifications
+
+Click on your profile icon to access settings!"""
+    
+    # Help/Support
+    elif any(word in message for word in ['help', 'support', 'contact', 'tulong']):
+        return """Need help? Here's how to reach us:
+
+📧 Email: support@cacaoguard.com
+📱 Check our User Guide
+💬 Chat with me for quick questions
+🔍 Browse FAQs in the Help section
+
+What specific help do you need?"""
+    
+    # Thanks
+    elif any(word in message for word in ['thank', 'salamat', 'thanks']):
+        return "You're welcome! Happy to help! 😊 Is there anything else you'd like to know?"
+    
+    # Default response
+    else:
+        return """I'm here to help! You can ask me about:
+
+🦠 Cacao diseases and pests
+🛒 Orders and delivery
+📸 How to use Scan & Diagnose
+🌾 Farming tips and treatments
+👤 Account settings
+
+What would you like to know?"""
+
 
 
