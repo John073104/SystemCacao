@@ -138,6 +138,8 @@ urlpatterns = [
 
     # Farm APIs
     path('api/farm-data/', views.get_farm_data_api, name='get_farm_data_api'),
+    path('api/farm-image/upload/', views.upload_farm_image, name='upload_farm_image'),
+    path('api/farm-image/delete/', views.delete_farm_image, name='delete_farm_image'),
     path('api/admin/farms-firebase/', views.api_farms_firebase, name='api_farms_firebase'),
     path('api/user/farm-request-firebase/', views.api_user_farm_request_firebase, name='api_user_farm_request_firebase'),
     path('api/public/farms-firebase/', views.api_public_farms_firebase, name='api_public_farms_firebase'),

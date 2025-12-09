@@ -15,6 +15,7 @@ import json
 import logging
 from datetime import datetime
 import pytz
+from .farm_image_upload import upload_farm_image, delete_farm_image
 
 
 FIREBASE_WEB_API_KEY = 'AIzaSyAs90apE9AG6k4aIg9MpJD750OsvVD70m4'
@@ -863,30 +864,28 @@ pest_model = None
 # )
 
 # Disease and Pest classes
+# FIXED: Match exact training class names and order (5 classes each)
 DISEASE_CLASSES = [
-    'Black Pod Rot',
+    'Black Pod Rot Disease',
     'Fito Disease',
-    'Monilia Disease',
     'Healthy',
-    'Frosty Pod Rot',
-    'Witches Broom',
-    'Unknown'
+    'Monilia Disease',
+    'Unknow Data'
 ]
 
 PEST_CLASSES = [
     'Ant Weaver',
     'Aphids',
-    'Mealybug',
-    'Pod Borer',
-    'Mirids',
     'Healthy',
-    'Unknown'
+    'Mealybug',
+    'Unknow Data'
 ]
 
 
 # Recommendations
+# FIXED: Use exact training class names only
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Rot Disease': [
         'Remove and destroy infected pods immediately',
         'Improve drainage and air circulation',
         'Apply copper-based fungicides',
@@ -898,31 +897,19 @@ DISEASE_RECOMMENDATIONS = {
         'Apply recommended fungicides as preventive measure',
         'Monitor plants regularly for new symptoms'
     ],
-    'Monilia Disease': [
-        'Remove infected pods and plant debris',
-        'Prune to improve air circulation',
-        'Apply protective fungicides during wet season',
-        'Plant resistant varieties when available'
-    ],
-    'Frosty Pod Rot': [
-        'Remove and destroy infected pods promptly',
-        'Sanitize tools after pruning',
-        'Apply copper fungicides during wet seasons',
-        'Maintain proper field sanitation'
-    ],
-    'Witches Broom': [
-        'Prune infected branches 30cm below symptoms',
-        'Remove all brooms and infected tissue',
-        'Apply copper fungicides as preventive treatment',
-        'Maintain good farm hygiene and weed control'
-    ],
     'Healthy': [
         'Continue current management practices',
         'Regular monitoring for early detection',
         'Maintain proper nutrition and irrigation',
         'Keep farm clean and well-maintained'
     ],
-    'Unknown': [
+    'Monilia Disease': [
+        'Remove infected pods and plant debris',
+        'Prune to improve air circulation',
+        'Apply protective fungicides during wet season',
+        'Plant resistant varieties when available'
+    ],
+    'Unknow Data': [
         'Monitor affected plants closely for symptom progression',
         'Consult local agricultural expert for accurate diagnosis',
         'Avoid unnecessary chemical applications',
@@ -943,31 +930,19 @@ PEST_RECOMMENDATIONS = {
         'Apply insecticidal soap or neem oil',
         'Remove heavily infested shoots'
     ],
-    'Mealybug': [
-        'Introduce natural enemies such as parasitoids',
-        'Apply systemic insecticides only if severe',
-        'Maintain ant control to reduce mealybug spread',
-        'Regularly monitor and intervene early'
-    ],
-    'Pod Borer': [
-        'Harvest pods every 7-10 days to break pest cycle',
-        'Remove and destroy infested pods immediately',
-        'Install pheromone traps to monitor population',
-        'Apply biological control agents such as Trichogramma'
-    ],
-    'Mirids': [
-        'Prune and destroy infested shoots and branches',
-        'Apply recommended insecticide if population is high',
-        'Encourage natural predators like wasps and spiders',
-        'Regular monitoring and early intervention crucial'
-    ],
     'Healthy': [
         'Continue integrated pest management',
         'Regular monitoring for early detection',
         'Maintain beneficial insect populations',
         'Keep plantation clean and well-managed'
     ],
-    'Unknown': [
+    'Mealybug': [
+        'Introduce natural enemies such as parasitoids',
+        'Apply systemic insecticides only if severe',
+        'Maintain ant control to reduce mealybug spread',
+        'Regularly monitor and intervene early'
+    ],
+    'Unknow Data': [
         'Collect samples for proper identification',
         'Avoid immediate pesticide application until confirmed',
         'Monitor population levels over several days',
@@ -976,60 +951,40 @@ PEST_RECOMMENDATIONS = {
 }
 
 # Disease and Pest Descriptions
+# FIXED: Only 5 disease classes matching training
 DISEASE_DESCRIPTIONS = {
-    'Black Pod Rot': 'Black Pod Rot is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
-    'Black Pod Disease': 'Black Pod Disease is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
+    'Black Pod Rot Disease': 'Black Pod Rot Disease is caused by Phytophthora species fungi and is one of the most devastating diseases of cacao worldwide. The disease starts as small dark brown spots on the pod surface that rapidly enlarge into black lesions. Internal tissues become completely rotten, destroying the beans inside and making them unusable. The disease thrives in warm, humid conditions with poor drainage and inadequate air circulation. It can cause yield losses of up to 30-90% if not properly managed through sanitation and fungicide applications.',
     'Fito Disease': 'Fito Disease, also known as Phytophthora root rot or trunk canker, is a serious soil-borne fungal disease affecting cacao trees. It attacks the root system and lower trunk, causing wilting of leaves, yellowing foliage, and eventual death of the entire tree. The pathogen thrives in waterlogged soils with poor drainage conditions. Early symptoms include bark lesions that ooze dark fluid and gradually girdle the trunk. Without proper soil management and drainage improvement, entire plantations can be devastated by this disease.',
-    'Monilia Disease': 'Monilia Disease is caused by the fungus Moniliophthora roreri and primarily affects cacao pods at all stages of development. Infected pods show irregular swellings or lumps on the surface, followed by rapid internal rot that destroys the beans. The fungus produces millions of spores that appear as a cream-colored powdery mass on infected pods. It spreads rapidly during humid, rainy weather through wind and rain splash. This disease can cause yield losses of 40-80% in severely affected areas and requires strict sanitation practices.',
-    'Frosty Pod Rot': 'Frosty Pod Rot is caused by the fungus Moniliophthora perniciosa and gets its name from the distinctive white, frost-like fungal growth on infected pods. The disease causes pods to develop brown spots that gradually expand and become covered with white spores. Infected beans become brown, shriveled, and worthless for chocolate production. The pathogen spreads through airborne spores during wet and humid conditions. It can devastate cacao production, causing losses of 30-100% if not controlled through regular harvesting and removal of infected pods.',
-    'Witches Broom': 'Witches Broom is a devastating fungal disease caused by Moniliophthora perniciosa that affects all growing parts of the cacao tree. The disease causes abnormal proliferation of shoots, creating dense clusters of branches that resemble brooms or bird nests. Infected tissues eventually die and become sources of spores that spread during rainy periods. The disease significantly reduces pod production and can kill young trees if left untreated. Control requires aggressive pruning of infected tissues and proper disposal to prevent spore spread to healthy trees.',
     'Healthy': 'Your cacao plant appears healthy with no visible signs of disease infection or stress symptoms. The leaves show normal coloration and the pods display characteristic healthy appearance without lesions or discoloration. Continue maintaining good agricultural practices including proper spacing, regular pruning, and adequate nutrition. Regular monitoring and early detection of any symptoms will help protect your plantation. Keep the farm clean by removing fallen leaves and plant debris to prevent disease establishment.',
-    'Unknown': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
-    'Unknown Data': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
-    'Mirids': 'NOTE: Mirids is actually a PEST, not a disease. Mirids (also called capsids) are small true bugs that feed by piercing plant tissue with their needle-like mouthparts and injecting toxic saliva. They attack young shoots, causing lesions, dieback, and death of growing tips which severely affects tree development. Feeding on pods creates brown lesions and scars that can lead to pod rot and bean damage. Heavy mirid infestations can reduce cacao yields by 30-75% and cause tree deformities. These pests are most active during wet seasons and require regular monitoring and timely intervention for effective management.',
+    'Monilia Disease': 'Monilia Disease is caused by the fungus Moniliophthora roreri and primarily affects cacao pods at all stages of development. Infected pods show irregular swellings or lumps on the surface, followed by rapid internal rot that destroys the beans. The fungus produces millions of spores that appear as a cream-colored powdery mass on infected pods. It spreads rapidly during humid, rainy weather through wind and rain splash. This disease can cause yield losses of 40-80% in severely affected areas and requires strict sanitation practices.',
+    'Unknow Data': 'The symptoms or patterns shown in the image could not be matched to any known cacao disease in the database. This could be due to unclear image quality, unusual symptom presentation, or early-stage infection that is not yet distinctive. It may also indicate a nutrient deficiency, environmental stress, or a rare disease not commonly encountered. Please consult with a local agricultural extension officer or plant pathologist for accurate field diagnosis. Take additional photos from different angles in good lighting conditions for better identification.',
 }
 
-# Tagalog Descriptions (4 sentences each)
+# FIXED: Only 5 disease classes matching training (Tagalog)
 DISEASE_DESCRIPTIONS_TAGALOG = {
-    'Black Pod Rot': 'Ang Black Pod Rot ay dulot ng Phytophthora fungi at isa sa pinakamasamang sakit ng cacao sa buong mundo. Nagsisimula ito bilang maliliit na dark brown spots sa balat ng bunga na mabilis na lumalaki at nagiging itim. Ang loob ng bunga ay nabulok na, sinisira ang mga beans at hindi na magagamit. Maaaring mawala ang 30-90% ng ani kung hindi ito maayos na pinangangasiwaan.',
-    'Black Pod Disease': 'Ang Black Pod Disease ay dulot ng Phytophthora fungi at isa sa pinakamasamang sakit ng cacao sa buong mundo. Nagsisimula ito bilang maliliit na dark brown spots sa balat ng bunga na mabilis na lumalaki at nagiging itim. Ang loob ng bunga ay nabulok na, sinisira ang mga beans at hindi na magagamit. Maaaring mawala ang 30-90% ng ani kung hindi ito maayos na pinangangasiwaan.',
+    'Black Pod Rot Disease': 'Ang Black Pod Rot Disease ay dulot ng Phytophthora fungi at isa sa pinakamasamang sakit ng cacao sa buong mundo. Nagsisimula ito bilang maliliit na dark brown spots sa balat ng bunga na mabilis na lumalaki at nagiging itim. Ang loob ng bunga ay nabulok na, sinisira ang mga beans at hindi na magagamit. Maaaring mawala ang 30-90% ng ani kung hindi ito maayos na pinangangasiwaan.',
     'Fito Disease': 'Ang Fito Disease ay isang malubhang sakit na umaatake sa ugat at puno ng cacao. Nagsisimula sa pagkalanta ng dahon, paninilaw, at sa huli ay pagkamatay ng buong puno. Lumalaki ang sakit sa mababang lugar na baha-baha at mahinang drainage. Kailangan ng maayos na pag-aayos ng lupa at drainage para maiwasan ang pagkalat nito.',
-    'Monilia Disease': 'Ang Monilia Disease ay dulot ng Moniliophthora roreri fungus na umaatake sa lahat ng yugto ng cacao pods. Ang mga apektadong bunga ay may mga bukol at mabilis na nabulok ang loob. Kumakalat ito sa panahon ng tag-ulan sa pamamagitan ng hangin at ulan. Maaaring mawala ang 40-80% ng ani kung malala ang impeksyon.',
-    'Frosty Pod Rot': 'Ang Frosty Pod Rot ay dulot ng Moniliophthora perniciosa fungus na may puting halamang parang yelo sa bunga. Lumalabas ang brown spots na nagiging puti at tumutubo ang fungus. Ang mga beans ay nagiging kayumanggi at hindi na maganda para sa chocolate. Kumakalat ito sa basang panahon kaya kailangan regular na pag-aani.',
-    'Witches Broom': 'Ang Witches Broom ay nakakasira na sakit na dulot ng Moniliophthora perniciosa na umaatake sa lahat ng lumalaking bahagi ng puno. Lumilikha ng mga abnormal na sanga na parang walis o pugad ng ibon. Ang mga apektadong bahagi ay namamatay at nagiging pinagmulan ng kumalat na sakit. Kinakailangan ang matinding pagputol ng mga apektadong sanga para mapigilan.',
     'Healthy': 'Ang inyong tanim na cacao ay mukhang malusog at walang palatandaan ng sakit o stress. Ang mga dahon ay normal ang kulay at ang bunga ay walang sugat o pagbabago ng kulay. Magpatuloy sa mabuting pamamaraan ng pagtatanim tulad ng wastong pagitan, regular na pagputol, at sapat na nutrisyon. Manatiling malinis ang bukid upang maiwasan ang paglaganap ng sakit.',
-    'Unknown': 'Ang mga sintomas sa larawan ay hindi tumutugma sa kilalang sakit ng cacao sa database. Maaaring dahil sa hindi malinaw na kalidad ng larawan o hindi pa gaanong halata ang sakit. Maaari rin itong dahil sa kakulangan sa nutrisyon o environmental stress. Mangyaring kumunsulta sa lokal na agricultural expert para sa wastong diagnosis.',
-    'Unknown Data': 'Ang mga sintomas sa larawan ay hindi tumutugma sa kilalang sakit ng cacao sa database. Maaaring dahil sa hindi malinaw na kalidad ng larawan o hindi pa gaanong halata ang sakit. Maaari rin itong dahil sa kakulangan sa nutrisyon o environmental stress. Mangyaring kumunsulta sa lokal na agricultural expert para sa wastong diagnosis.',
-    'Mirids': 'Ang Mirids ay maliliit na insekto na sumisipsip ng katas ng halaman gamit ang kanilang tusok na bibig. Umaatake sila sa mga batang sanga na nagiging sanhi ng sugat at pagkamatay ng tumutubo. Ang pagkain nila sa bunga ay lumilikha ng brown spots na maaaring maging sanhi ng bulok. Maaaring mawala ang 30-75% ng ani kung malala ang impeksyon ng mirids.',
-    'Healthy': 'Ang inyong tanim na cacao ay mukhang malusog at walang palatandaan ng peste o impeksyon. Ang mga dahon ay buo at walang sira, pagbabago ng kulay, o presensya ng insekto. Ito ay nagpapakita na ang inyong kasalukuyang paraan ng pest management ay epektibo. Magpatuloy sa regular na pag-monitor upang makita agad ang anumang problema bago lumala.',
-    'Unknown': 'Ang peste o pattern ng pinsala sa larawan ay hindi makilala sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi pa kilalang uri ng peste, o pinsala mula sa maraming peste. Mangolekta ng physical specimens kung posible at kumunsulta sa lokal na agricultural extension o entomology expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste mismo para sa tamang pagkilala.',
-    'Unknown Data': 'Ang peste o pattern ng pinsala sa larawan ay hindi makilala sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi pa kilalang uri ng peste, o pinsala mula sa maraming peste. Mangolekta ng physical specimens kung posible at kumunsulta sa lokal na agricultural extension o entomology expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste mismo para sa tamang pagkilala.',
+    'Monilia Disease': 'Ang Monilia Disease ay dulot ng Moniliophthora roreri fungus na umaatake sa lahat ng yugto ng cacao pods. Ang mga apektadong bunga ay may mga bukol at mabilis na nabulok ang loob. Kumakalat ito sa panahon ng tag-ulan sa pamamagitan ng hangin at ulan. Maaaring mawala ang 40-80% ng ani kung malala ang impeksyon.',
+    'Unknow Data': 'Ang mga sintomas sa larawan ay hindi tumutugma sa kilalang sakit ng cacao sa database. Maaaring dahil sa hindi malinaw na kalidad ng larawan o hindi pa gaanong halata ang sakit. Maaari rin itong dahil sa kakulangan sa nutrisyon o environmental stress. Mangyaring kumunsulta sa lokal na agricultural expert para sa wastong diagnosis.',
 }
 
+# FIXED: Only 5 pest classes matching training (Tagalog)
 PEST_DESCRIPTIONS_TAGALOG = {
     'Ant Weaver': 'Ang Weaver Ants ay mga agresibong langgam na gumagawa ng pugad gamit ang mga dahon. Hindi direktang sinisira ang cacao ngunit pinoproprotektahan nila ang iba pang peste tulad ng aphids at mealybugs. Ang ganitong relasyon ay nagiging sanhi ng pagsabog ng populasyon ng peste. Mahalaga ang pag-kontrol sa langgam para sa epektibong integrated pest management.',
     'Aphids': 'Ang Aphids ay maliliit na insekto na sumisipsip ng katas ng halaman mula sa mga batang sanga at dahon. Ang kanilang pagkain ay nagiging sanhi ng pagkulot ng dahon, pagputi, at pagkabansot ng paglaki. Mabilis silang dumami at ang populasyon ay sumasabog sa loob lamang ng ilang araw. Ang mabigat na impeksyon ay lubhang nakakababa ng ani at kalusugan ng puno.',
-    'Mealybug': 'Ang Mealybugs ay maliliit na insekto na balot ng puting waxy powder na parang bulak. Sumisipsip sila ng katas ng halaman mula sa dahon, sanga, at bunga na nagiging sanhi ng pagputi at pagkalanta. Ang malalaki nilang impeksyon ay lubhang nakakahina sa puno at maaaring mawala ang 50% ng ani. Mahirap silang kontrolin dahil sa kanilang waxy coating kaya kailangan ng systemic treatment.',
-    'Mealy Bug': 'Ang Mealybugs ay maliliit na insekto na balot ng puting waxy powder na parang bulak. Sumisipsip sila ng katas ng halaman mula sa dahon, sanga, at bunga na nagiging sanhi ng pagputi at pagkalanta. Ang malalaki nilang impeksyon ay lubhang nakakahina sa puno at maaaring mawala ang 50% ng ani. Mahirap silang kontrolin dahil sa kanilang waxy coating kaya kailangan ng systemic treatment.',
-    'Pod Borer': 'Ang Cacao Pod Borer ay isa sa pinakanakakasira ng peste ng cacao sa Southeast Asia. Ang mga inapo ng gamu-gamo ay pumapasok sa loob ng bunga at kumakain ng mga beans. Ang mga bungang may Pod Borer ay may butas at sira ang loob na hindi na maaaring ibenta. Maaaring mawala ang 30-70% ng ani kung malala ang impeksyon kaya kailangan ng regular na pag-aani.',
-    'Cocoa Pod Borer': 'Ang Cocoa Pod Borer ay isa sa pinakanakakasira ng peste ng cacao sa Southeast Asia. Ang mga inapo ng gamu-gamo ay pumapasok sa loob ng bunga at kumakain ng mga beans. Ang mga bungang may Pod Borer ay may butas at sira ang loob na hindi na maaaring ibenta. Maaaring mawala ang 30-70% ng ani kung malala ang impeksyon kaya kailangan ng regular na pag-aani.',
-    'Mirids': 'Ang Mirids ay maliliit na insekto na sumisipsip ng katas ng halaman gamit ang kanilang tusok na bibig. Umaatake sila sa mga batang sanga na nagiging sanhi ng sugat at pagkamatay ng tumutubo. Ang pagkain nila sa bunga ay lumilikha ng brown spots na maaaring maging sanhi ng bulok. Maaaring mawala ang 30-75% ng ani kung malala ang impeksyon ng mirids.',
     'Healthy': 'Ang inyong tanim na cacao ay walang palatandaan ng peste at mukhang malusog na malusog. Ang mga dahon ay buo at walang pinsala, pagbabago ng kulay, o presensya ng insekto. Nagpapakita ito na epektibo ang inyong kasalukuyang pest management practices. Magpatuloy sa regular na pag-monitor upang maagapan ang anumang problema bago lumala.',
-    'Unknown': 'Ang peste o pinsala sa larawan ay hindi matukoy mula sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi karaniwang peste, o maraming peste ang sanhi. Magsaliksik ng physical specimens kung posible at kumunsulta sa lokal na agricultural expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste at pinsala para sa wastong pagkilala.',
-    'Unknown Data': 'Ang peste o pinsala sa larawan ay hindi matukoy mula sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi karaniwang peste, o maraming peste ang sanhi. Magsaliksik ng physical specimens kung posible at kumunsulta sa lokal na agricultural expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste at pinsala para sa wastong pagkilala.',
+    'Mealybug': 'Ang Mealybugs ay maliliit na insekto na balot ng puting waxy powder na parang bulak. Sumisipsip sila ng katas ng halaman mula sa dahon, sanga, at bunga na nagiging sanhi ng pagputi at pagkalanta. Ang malalaki nilang impeksyon ay lubhang nakakahina sa puno at maaaring mawala ang 50% ng ani. Mahirap silang kontrolin dahil sa kanilang waxy coating kaya kailangan ng systemic treatment.',
+    'Unknow Data': 'Ang peste o pinsala sa larawan ay hindi matukoy mula sa available pest database. Maaaring dahil sa kalidad ng larawan, hindi karaniwang peste, o maraming peste ang sanhi. Magsaliksik ng physical specimens kung posible at kumunsulta sa lokal na agricultural expert. Kumuha ng mas malinaw na larawan na nagpapakita ng peste at pinsala para sa wastong pagkilala.',
 }
 
+# FIXED: Only 5 pest classes matching training (English)
 PEST_DESCRIPTIONS = {
     'Ant Weaver': 'Weaver Ants are aggressive ants that construct nests by binding leaves together using silk produced by their larvae. While not directly damaging cacao, they protect and actively farm sap-sucking pests like aphids, mealybugs, and scale insects for their honeydew secretions. This mutualistic relationship allows pest populations to explode and cause severe damage to cacao trees. The ants attack and drive away natural predators and parasitoids that would normally control these pests. Managing ant populations is crucial for effective integrated pest management in cacao plantations.',
     'Aphids': 'Aphids are tiny soft-bodied insects that feed by piercing plant tissues and sucking sap from young shoots, leaves, and developing pods. Their feeding causes leaves to curl, distort, and turn yellow, severely stunting plant growth and development. Aphids reproduce rapidly, with populations exploding within days under favorable conditions. They excrete sticky honeydew that covers leaves and promotes growth of black sooty mold fungus, further reducing photosynthesis. Heavy infestations can significantly reduce cacao yield and tree vigor if not controlled early.',
-    'Mealybug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
-    'Mealy Bug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
-    'Pod Borer': 'Cacao Pod Borer (Conopomorpha cramerella) is one of the most destructive pests of cacao, causing severe economic losses throughout Southeast Asia. Adult moths lay eggs on young pods, and the emerging caterpillars bore directly into the pods to feed on the beans inside. Infested pods show external holes with frass (insect droppings) and internally damaged beans that are unmarketable. A single larva can destroy multiple beans, and heavy infestations can result in 30-70% crop loss. Control requires frequent harvesting, pod sanitation, and proper disposal of infested pods.',
-    'Cocoa Pod Borer': 'Cacao Pod Borer (Conopomorpha cramerella) is one of the most destructive pests of cacao, causing severe economic losses throughout Southeast Asia. Adult moths lay eggs on young pods, and the emerging caterpillars bore directly into the pods to feed on the beans inside. Infested pods show external holes with frass (insect droppings) and internally damaged beans that are unmarketable. A single larva can destroy multiple beans, and heavy infestations can result in 30-70% crop loss. Control requires frequent harvesting, pod sanitation, and proper disposal of infested pods.',
-    'Mirids': 'Mirids (also called capsids) are small true bugs that feed by piercing plant tissue with their needle-like mouthparts and injecting toxic saliva. They attack young shoots, causing lesions, dieback, and death of growing tips which severely affects tree development. Feeding on pods creates brown lesions and scars that can lead to pod rot and bean damage. Heavy mirid infestations can reduce cacao yields by 30-75% and cause tree deformities. These pests are most active during wet seasons and require regular monitoring and timely intervention for effective management.',
     'Healthy': 'Your cacao plant shows no signs of pest infestation and appears to be thriving with healthy foliage and pods. The leaves are intact without feeding damage, discoloration, or presence of insects or their eggs. This indicates that your current pest management practices are effective in protecting the crop. Continue regular scouting and monitoring to detect any pest problems early before they become severe. Maintain beneficial insect populations by avoiding broad-spectrum pesticides and preserving natural habitats around your plantation.',
-    'Unknown': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
-    'Unknown Data': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
+    'Mealybug': 'Mealybugs are small soft-bodied insects covered with white waxy powder that makes them look like small cotton masses on plants. They feed on plant sap from leaves, shoots, and pods, causing yellowing, wilting, and premature leaf drop. The insects excrete large amounts of sticky honeydew that attracts ants and promotes sooty mold growth. Heavy mealybug infestations can severely weaken cacao trees and reduce pod production by up to 50%. Their waxy coating makes them difficult to control with contact insecticides, requiring systemic treatments or biological control agents.',
+    'Unknow Data': 'The pest or damage pattern shown in the image could not be reliably identified from the available pest database. This may be due to image quality issues, unusual pest species, or damage from multiple pest interactions. It could also represent mechanical damage, environmental stress, or symptoms of nutrient deficiency rather than pest attack. Collect physical specimens if possible and consult with local agricultural extension services or entomology experts. Take clearer photos showing the pest itself, damage patterns, and affected plant parts for accurate identification and management recommendations.',
 }
 
 
@@ -2808,7 +2763,7 @@ def admin_pending_orders(request):
 @admin_required
 @admin_required
 def admin_order_detail(request, order_id):
-    """View detailed order information"""
+    """View detailed order information with status history tracking"""
     try:
         # Check if Firebase is initialized
         if db is None:
@@ -2825,11 +2780,49 @@ def admin_order_detail(request, order_id):
         order_data = order_doc.to_dict()
         order_data['id'] = order_doc.id
         
+        # Handle status update with history tracking
+        if request.method == 'POST':
+            new_status = request.POST.get('status')
+            if new_status and new_status != order_data.get('status'):
+                try:
+                    # Get current timestamp in Manila timezone
+                    manila_now = datetime.now(PHILIPPINES_TZ)
+                    
+                    # Initialize status_history if not exists
+                    status_history = order_data.get('status_history', [])
+                    
+                    # Add new status change to history
+                    status_history.append({
+                        'status': new_status,
+                        'timestamp': manila_now,
+                        'changed_by': request.session.get('email', 'admin')
+                    })
+                    
+                    # Update order in Firestore
+                    order_ref.update({
+                        'status': new_status,
+                        'status_history': status_history,
+                        'updated_at': firestore.SERVER_TIMESTAMP
+                    })
+                    
+                    messages.success(request, f'Order status updated to {new_status}')
+                    return redirect('admin_order_detail', order_id=order_id)
+                except Exception as e:
+                    messages.error(request, f'Error updating status: {str(e)}')
+        
         # Convert timestamp
         if 'created_at' in order_data and order_data['created_at']:
             if hasattr(order_data['created_at'], 'seconds'):
                 utc_time = datetime.fromtimestamp(order_data['created_at'].seconds, tz=pytz.UTC)
                 order_data['created_at'] = utc_time.astimezone(PHILIPPINES_TZ)
+        
+        # Convert status history timestamps
+        if 'status_history' in order_data:
+            for history in order_data['status_history']:
+                if 'timestamp' in history:
+                    if hasattr(history['timestamp'], 'seconds'):
+                        utc_time = datetime.fromtimestamp(history['timestamp'].seconds, tz=pytz.UTC)
+                        history['timestamp'] = utc_time.astimezone(PHILIPPINES_TZ)
         
         # Calculate totals
         total_items = sum(item.get('quantity', 0) for item in order_data.get('items', []))
@@ -2855,7 +2848,7 @@ def admin_order_detail(request, order_id):
         return render(request, 'admin/admin_order_detail.html', context)
         
     except Exception as e:
-        messages.error(request, "Error loading order details.")
+        messages.error(request, f"Error loading order details: {str(e)}")
         return redirect('admin_orders')
 
 @admin_required
@@ -3120,31 +3113,59 @@ def farm_location(request):
 @user_required
 def farm_mapping(request):
     """User farm mapping view with interactive features"""
-    context = {
+    try:
+        # Get farms from Firestore - 12 real farms
+        farms_ref = db.collection('farms')
+        farms_docs = farms_ref.stream()
+        
+        farms_data = []
+        for doc in farms_docs:
+            farm = doc.to_dict()
+            farm['id'] = doc.id
+            farms_data.append(farm)
+    except Exception as e:
+        print(f'Error loading farms: {e}')
+        farms_data = []
         'page_title': 'Farm Mapping',
         'description': 'Explore and interact with farm data',
-        'farms_data': SAMPLE_FARMS,
+        'farms_data': farms_data,
         'user_name': request.session.get('name', 'User'),
         'user_role': request.session.get('role', 'User')
     }
     return render(request, 'user/farm_mapping.html', context)
 
 def guest_farm_mapping(request):
-    """Guest farm mapping view - read-only access"""
+    """Guest farm mapping view - read-only access using Firestore"""
+    try:
+        # Get farms from Firestore
+        farms_ref = db.collection('farms')
+        farms_docs = farms_ref.stream()
+        
+        source_farms = []
+        for doc in farms_docs:
+            farm = doc.to_dict()
+            farm['id'] = doc.id
+            source_farms.append(farm)
+        
+    except Exception as e:
+        print(f'Error loading farms: {e}')
+        source_farms = []
+    
     # Filter data for public viewing (remove sensitive information)
     public_farms = []
-    for farm in SAMPLE_FARMS:
+    for farm in source_farms:
         public_farm = {
-            'id': farm['id'],
-            'name': farm['name'],
-            'municipality': farm['municipality'],
-            'barangay': farm['barangay'],
-            'area': farm['area'],
-            'trees': farm['trees'],
-            'status': farm['status'],
-            'lat': farm['lat'],
-            'lng': farm['lng'],
-            'description': farm['description']
+            'id': farm.get('id'),
+            'name': farm.get('name'),
+            'municipality': farm.get('municipality'),
+            'barangay': farm.get('barangay'),
+            'area': farm.get('area'),
+            'trees': farm.get('trees'),
+            'status': farm.get('status'),
+            'lat': farm.get('lat'),
+            'lng': farm.get('lng'),
+            'description': farm.get('description'),
+            'images': farm.get('images', [])
             # Exclude contact and other sensitive info
         }
         public_farms.append(public_farm)
@@ -3152,28 +3173,44 @@ def guest_farm_mapping(request):
     context = {
         'farms_data': public_farms,
         'total_farms': len(public_farms),
-        'total_area': sum(farm['area'] for farm in public_farms),
-        'total_trees': sum(farm['trees'] for farm in public_farms)
+        'total_area': sum(farm.get('area', 0) for farm in public_farms),
+        'total_trees': sum(farm.get('trees', 0) for farm in public_farms)
     }
     return render(request, 'guest/guest_farm_mapping_with_images.html', context)
 
 @admin_required
 @csrf_exempt
 def get_farm_data_api(request):
-    """API endpoint for farm CRUD operations"""
-    global SAMPLE_FARMS  # ✅ Declare once at the top
-
+    """API endpoint for farm CRUD operations using Firestore"""
+    
     if request.method == 'GET':
-        return JsonResponse({
-            'success': True,
-            'farms': SAMPLE_FARMS
-        })
+        try:
+            farms_ref = db.collection('farms')
+            farms_docs = farms_ref.stream()
+            
+            farms = []
+            for doc in farms_docs:
+                farm = doc.to_dict()
+                farm['id'] = doc.id
+                farms.append(farm)
+            
+            # Return only Firestore data - no dummy fallback
+            return JsonResponse({
+                'success': True,
+                'farms': farms,
+                'total': len(farms)
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e), 'farms': []})
 
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
+            
+            # Handle image upload if provided
+            images = data.get('images', [])
+            
             new_farm = {
-                'id': len(SAMPLE_FARMS) + 1,
                 'name': data.get('name'),
                 'municipality': data.get('municipality'),
                 'barangay': data.get('barangay'),
@@ -3184,9 +3221,15 @@ def get_farm_data_api(request):
                 'lng': float(data.get('lng', 0)),
                 'description': data.get('description', ''),
                 'contact': data.get('contact', ''),
-                'created_at': '2024-01-20'
+                'images': images,
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP
             }
-            SAMPLE_FARMS.append(new_farm)
+            
+            # Add to Firestore
+            doc_ref = db.collection('farms').add(new_farm)
+            new_farm['id'] = doc_ref[1].id
+            
             return JsonResponse({'success': True, 'message': 'Farm added successfully', 'farm': new_farm})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -3194,20 +3237,46 @@ def get_farm_data_api(request):
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            farm_id = data.get('id')
-            for i, farm in enumerate(SAMPLE_FARMS):
-                if farm['id'] == farm_id:
-                    SAMPLE_FARMS[i].update(data)
-                    return JsonResponse({'success': True, 'message': 'Farm updated successfully', 'farm': SAMPLE_FARMS[i]})
-            return JsonResponse({'success': False, 'error': 'Farm not found'})
+            farm_id = str(data.get('id'))
+            
+            # Prepare update data
+            update_data = {
+                'name': data.get('name'),
+                'municipality': data.get('municipality'),
+                'barangay': data.get('barangay'),
+                'area': float(data.get('area', 0)),
+                'trees': int(data.get('trees', 0)),
+                'status': data.get('status', 'Active'),
+                'lat': float(data.get('lat', 0)),
+                'lng': float(data.get('lng', 0)),
+                'description': data.get('description', ''),
+                'contact': data.get('contact', ''),
+                'updated_at': firestore.SERVER_TIMESTAMP
+            }
+            
+            # Update images if provided (PERMANENT UPDATE)
+            if 'images' in data:
+                update_data['images'] = data['images']
+            
+            # Update in Firestore
+            db.collection('farms').document(farm_id).update(update_data)
+            
+            # Get updated farm
+            updated_farm = db.collection('farms').document(farm_id).get().to_dict()
+            updated_farm['id'] = farm_id
+            
+            return JsonResponse({'success': True, 'message': 'Farm updated successfully', 'farm': updated_farm})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
     elif request.method == 'DELETE':
         try:
             data = json.loads(request.body)
-            farm_id = data.get('id')
-            SAMPLE_FARMS = [farm for farm in SAMPLE_FARMS if farm['id'] != farm_id]
+            farm_id = str(data.get('id'))
+            
+            # Delete from Firestore
+            db.collection('farms').document(farm_id).delete()
+            
             return JsonResponse({'success': True, 'message': 'Farm deleted successfully'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -4586,27 +4655,27 @@ SECRET_KEY = '49qVayZTdlh0rkFE8uxB0mh6IrdILzk8s0v1z0UZ'
 # --------------------------------------------
 # Disease Classes and Recommendations
 # --------------------------------------------
+# FIXED: Match exact training class names and order (5 classes each)
 DISEASE_CLASSES = [
-    'Black Pod Rot',
+    'Black Pod Rot Disease',
     'Fito Disease',
     'Healthy',
     'Monilia Disease',
-    'Unknown',
-    'Mirids'
+    'Unknow Data'
 ]
 
 PEST_CLASSES = [
     'Ant Weaver',
     'Aphids',
     'Healthy',
-    'Mealy Bug',
-    'Unknown Data',
-    'Cocoa Pod Borer'
+    'Mealybug',
+    'Unknow Data'
 ]
 
 # Disease Recommendations
+# FIXED: Match exact training classes only
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Rot Disease': [
         'Remove and destroy infected pods immediately',
         'Improve drainage and air circulation',
         'Apply copper-based fungicides',
@@ -4630,15 +4699,13 @@ DISEASE_RECOMMENDATIONS = {
         'Apply protective fungicides during wet season',
         'Plant resistant varieties when available'
     ],
-    'Unknown': [
+    'Unknow Data': [
         'Monitor affected plants closely for symptom progression',
         'Consult local agricultural expert for accurate diagnosis',
         'Avoid unnecessary chemical applications',
         'Document and report unusual symptoms for research'
     ],
 }
-
-# Note: Mirids is a PEST, not a disease. See PEST_RECOMMENDATIONS below.
 
 PEST_RECOMMENDATIONS = {
     'Ant Weaver': [
@@ -4659,23 +4726,17 @@ PEST_RECOMMENDATIONS = {
         'Maintain beneficial insect populations',
         'Keep plantation clean and well-managed'
     ],
-    'Mealy Bug': [
+    'Mealybug': [
         'Introduce natural enemies such as parasitoids',
         'Apply systemic insecticides only if severe',
         'Maintain ant control to reduce mealybug spread',
         'Regularly monitor and intervene early'
     ],
-    'Unknown Data': [
+    'Unknow Data': [
         'Collect samples for proper identification',
         'Avoid immediate pesticide application until confirmed',
         'Monitor population levels over several days',
         'Seek expert assistance if pest persists'
-    ],
-    'Cocoa Pod Borer': [
-        'Harvest pods every 7-10 days to break pest cycle',
-        'Remove and destroy infested pods immediately',
-        'Install pheromone traps to monitor population',
-        'Apply biological control agents such as Trichogramma'
     ]
 }
 
@@ -5207,10 +5268,10 @@ def load_models():
             disease_model_path = os.path.join(settings.BASE_DIR, 'models', 'cacao_disease_resnet_state_dict.pth')
             if os.path.exists(disease_model_path):
                 try:
-                    disease_model = CacaoResNet(num_classes=7)  # Adjust based on your classes
+                    disease_model = CacaoResNet(num_classes=5)  # FIXED: 5 disease classes
                     disease_model.load_state_dict(torch.load(disease_model_path, map_location='cpu'))
                     disease_model.eval()
-                    logger.info("Disease model loaded successfully")
+                    logger.info("Disease model loaded successfully with 5 classes")
                 except Exception as e:
                     logger.error(f"Error loading disease model: {e}")
                     disease_model = None
@@ -5222,10 +5283,10 @@ def load_models():
             pest_model_path = os.path.join(settings.BASE_DIR, 'models', 'cacao_pest_resnet_state_dict.pth')
             if os.path.exists(pest_model_path):
                 try:
-                    pest_model = CacaoResNet(num_classes=6)  # Adjust based on your classes
+                    pest_model = CacaoResNet(num_classes=5)  # FIXED: 5 pest classes
                     pest_model.load_state_dict(torch.load(pest_model_path, map_location='cpu'))
                     pest_model.eval()
-                    logger.info("Pest model loaded successfully")
+                    logger.info("Pest model loaded successfully with 5 classes")
                 except Exception as e:
                     logger.error(f"Error loading pest model: {e}")
                     pest_model = None
@@ -5238,8 +5299,9 @@ def load_models():
 # ===============================
 # RECOMMENDATIONS
 # ===============================
+# FIXED: Match exact training classes only
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Rot Disease': [
         'Remove infected pods immediately',
         'Improve drainage to reduce humidity',
         'Apply copper-based fungicides',
@@ -5267,17 +5329,11 @@ DISEASE_RECOMMENDATIONS = {
         'Harvest pods regularly to minimize spread',
         'Monitor farm frequently for new infections'
     ],
-    'Unknown': [
+    'Unknow Data': [
         'Unable to classify — not cacao-related or unclear',
         'Verify if the image is of cacao tree or pod',
         'Consult expert for confirmation',
         'Try uploading a clearer image'
-    ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Regular monitoring and scouting'
     ]
 }
 
@@ -5303,25 +5359,18 @@ PEST_RECOMMENDATIONS = {
         'Keep farm clean and weed-free',
         'Preventive treatments during pest season'
     ],
-    'Mealy Bug': [
+    'Mealybug': [
         'Apply systemic insecticides if severe',
         'Use biological control agents',
         'Remove heavily infested plant parts',
         'Maintain ant control (ants protect mealybugs)',
         'Regular monitoring and early intervention'
     ],
-    'Unknown Data': [
+    'Unknow Data': [
         'Unable to classify — not cacao-related or unclear',
         'Verify if the image is of a cacao pest',
         'Consult pest expert for confirmation',
         'Try uploading a clearer image'
-    ],
-    'Cocoa Pod Borer': [
-        'Regular harvesting of ripe pods every 7-10 days',
-        'Remove infested pods immediately',
-        'Apply biological or chemical control as recommended',
-        'Maintain farm cleanliness',
-        'Use pheromone traps for monitoring'
     ]
 }
 
@@ -6423,7 +6472,8 @@ def checkout_view(request):
                     'total_price': item['total_price']
                 })
             
-            # Create order data for Firestore
+            # Create order data for Firestore with status history
+            manila_now = datetime.now(pytz.timezone('Asia/Manila'))
             order_data = {
                 'order_id': order_id,
                 'firebase_uid': uid,
@@ -6432,6 +6482,11 @@ def checkout_view(request):
                 'customer_email': email,
                 'customer_name': user_name,
                 'status': 'pending',
+                'status_history': [{
+                    'status': 'pending',
+                    'timestamp': manila_now,
+                    'changed_by': 'customer'
+                }],
                 'payment_method': payment_method,
                 'payment_status': 'unpaid' if payment_method == 'cod' else 'pending_verification',
                 'gcash_reference': request.POST.get('gcash_reference', ''),
@@ -6442,7 +6497,7 @@ def checkout_view(request):
                 'items': order_items_data,
                 'created_at': firestore.SERVER_TIMESTAMP,
                 'updated_at': firestore.SERVER_TIMESTAMP,
-                'order_date': datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d %H:%M:%S')
+                'order_date': manila_now.strftime('%Y-%m-%d %H:%M:%S')
             }
             
             # Save order to Firestore
@@ -7278,10 +7333,10 @@ def predict_with_model(model, image_tensor, classes):
 # ===============================
 # NOTE: These are old duplicate class definitions - using main definitions from line 866
 # ===============================
-# RECOMMENDATIONS
+# RECOMMENDATIONS (FIXED - Match training classes only)
 # ===============================
 DISEASE_RECOMMENDATIONS = {
-    'Black Pod Rot': [
+    'Black Pod Rot Disease': [
         'Remove and destroy infected pods immediately',
         'Improve drainage and air circulation',
         'Apply copper-based fungicides',
@@ -7300,14 +7355,8 @@ DISEASE_RECOMMENDATIONS = {
         'Improve ventilation between trees',
         'Apply fungicides preventively'
     ],
-    'Unknown': [
+    'Unknow Data': [
         'Unable to identify disease. Try scanning a clearer image.'
-    ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Monitor regularly'
     ]
 }
 
@@ -7325,17 +7374,12 @@ PEST_RECOMMENDATIONS = {
     'Healthy': [
         'Plant is healthy. Maintain good farm practices.'
     ],
-    'Mealy Bug': [
+    'Mealybug': [
         'Remove manually with alcohol swabs',
         'Apply systemic insecticides if infestation is severe'
     ],
-    'Unknown Data': [
+    'Unknow Data': [
         'Unable to identify pest. Try scanning a clearer image.'
-    ],
-    'Cocoa Pod Borer': [
-        'Harvest and destroy infested pods',
-        'Use pheromone traps for monitoring',
-        'Apply biological control agents'
     ]
 }
 
@@ -7470,30 +7514,30 @@ def scan_history(request):
     now = datetime.now(pytz.timezone('Asia/Manila'))
     history = []
     
-    # Disease scans
-    disease_results = ['Black Pod Disease', 'Fito Disease', 'Monilia Disease', 'Frosty Pod Rot', 'Witches Broom', 'Healthy', 'Unknown']
-    for i in range(5):
+    # Disease scans - FIXED: Use exact training classes
+    disease_results = DISEASE_CLASSES  # Use actual trained classes
+    for i in range(min(5, len(disease_results))):
         result = disease_results[i]
         history.append({
             'scan_id': f'd{i+1}',
             'type': 'disease',
             'result': result,
-            'confidence': round(85 + i*3 + (5 if result == 'Healthy' else 0)),  # Fixed missing parenthesis
-            'recommendations': RECOMMENDATIONS.get(result, RECOMMENDATIONS['Healthy']),
+            'confidence': round(85 + i*3 + (5 if result == 'Healthy' else 0)),
+            'recommendations': RECOMMENDATIONS.get(result, RECOMMENDATIONS.get('Healthy', [])),
             'timestamp': (now - timedelta(days=i+1)).isoformat(),
             'image_path': f'scans/disease_{i+1}.jpg'
         })
     
-    # Pest scans
-    pest_results = ['Cocoa Pod Borer', 'Ant Weaver', 'Mealybugs', 'Aphids', 'Healthy', 'Unknown']
-    for i in range(5):
+    # Pest scans - FIXED: Use exact training classes
+    pest_results = PEST_CLASSES  # Use actual trained classes
+    for i in range(min(5, len(pest_results))):
         result = pest_results[i]
         history.append({
             'scan_id': f'p{i+1}',
             'type': 'pest',
             'result': result,
-            'confidence': round(80 + i*4 + (8 if result == 'Healthy' else 0)),  # Healthy gets higher confidence
-            'recommendations': RECOMMENDATIONS.get(result, RECOMMENDATIONS['Healthy']),
+            'confidence': round(80 + i*4 + (8 if result == 'Healthy' else 0)),
+            'recommendations': RECOMMENDATIONS.get(result, RECOMMENDATIONS.get('Healthy', [])),
             'timestamp': (now - timedelta(days=i+6)).isoformat(),
             'image_path': f'scans/pest_{i+1}.jpg'
         })
@@ -8268,15 +8312,15 @@ def admin_dashboard(request):
         })
         
     except Exception as e:
-        # Use fallback data for scans
+        # Use fallback data for scans - FIXED: Use actual training classes
         context.update({
             'total_scan_count': 45,  # Fallback number
             'recent_scans': [
                 {'result': 'Healthy', 'confidence': 95, 'type': 'disease', 'date': 'Jan 15'},
-                {'result': 'Black Pod Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
-                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'pest', 'date': 'Jan 13'},
-                {'result': 'Healthy', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
-                {'result': 'Frosty Pod Rot', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
+                {'result': 'Black Pod Rot Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
+                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'disease', 'date': 'Jan 13'},
+                {'result': 'Aphids', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
+                {'result': 'Fito Disease', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
             ],
             'scan_labels': json.dumps(['Jan 09', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14', 'Jan 15']),
             'scan_data': json.dumps([3, 5, 8, 6, 9, 7, 12]),
@@ -10878,11 +10922,11 @@ def scan_image(request):
             except Exception as e:
                 return JsonResponse({'success': False, 'message': f'Image upload failed: {str(e)}'})
             
-            # Mock prediction (replace with your actual model prediction)
+            # FIXED: Use exact training classes only
             if scan_type == 'disease':
-                classes = ['Black Pod Disease', 'Fito Disease',  'Healthy', 'Monilia Disease', 'Unknown Data', 'Mirids',]
+                classes = DISEASE_CLASSES
             else:
-                classes = ['Ant Weaver', 'Aphids', 'Healthy', 'Mealy Bug', 'Unknown Data', 'Pod Borer',]
+                classes = PEST_CLASSES
             
             # Simulate prediction
             predicted_class = random.choice(classes)
@@ -10961,14 +11005,8 @@ def get_recommendations(result):
         'Improve tree spacing',
         'Control humidity'
     ],
-    'Mirids': [
-        'Prune infested shoots',
-        'Apply recommended insecticide',
-        'Encourage natural predators',
-        'Regular monitoring'
-    ],
 
-    # Pest Classes
+    # Pest Classes (ONLY TRAINED CLASSES)
     'Ant Weaver': [
         'Control ant colonies',
         'Remove ant bridges',
@@ -10981,17 +11019,17 @@ def get_recommendations(result):
         'Remove affected shoots',
         'Control ant populations'
     ],
-    'Mealy Bug': [
+    'Mealybug': [
         'Apply insecticidal soap',
         'Use biological control agents',
         'Remove heavily infested parts',
         'Monitor regularly'
     ],
-    'Pod Borer': [
-        'Remove infested pods',
-        'Use pheromone traps',
-        'Apply biological control',
-        'Regular monitoring'
+    'Unknow Data': [
+        'Consult agricultural expert',
+        'Improve image quality',
+        'Check for nutrient deficiency',
+        'Monitor plant health'
     ]
 }
 
@@ -11362,19 +11400,19 @@ def admin_dashboard(request):
         })
         
     except Exception as e:
-        # Use fallback data for scans
+        # Use fallback data for scans - FIXED: Use actual training classes
         context.update({
             'total_scan_count': 45,
             'recent_scans': [
                 {'result': 'Healthy', 'confidence': 95, 'type': 'disease', 'date': 'Jan 15'},
-                {'result': 'Black Pod Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
-                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'pest', 'date': 'Jan 13'},
-                {'result': 'Healthy', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
-                {'result': 'Frosty Pod Rot', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
+                {'result': 'Black Pod Rot Disease', 'confidence': 87, 'type': 'disease', 'date': 'Jan 14'},
+                {'result': 'Monilia Disease', 'confidence': 92, 'type': 'disease', 'date': 'Jan 13'},
+                {'result': 'Aphids', 'confidence': 89, 'type': 'pest', 'date': 'Jan 12'},
+                {'result': 'Fito Disease', 'confidence': 84, 'type': 'disease', 'date': 'Jan 11'},
             ],
             'scan_labels': json.dumps(['Jan 09', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14', 'Jan 15']),
             'scan_data': json.dumps([3, 5, 8, 6, 9, 7, 12]),
-            'disease_labels': json.dumps(['Healthy', 'Black Pod Disease', 'Monilia Disease', 'Frosty Pod Rot', 'Witches Broom']),
+            'disease_labels': json.dumps(DISEASE_CLASSES),
             'disease_data': json.dumps([18, 12, 8, 5, 2]),
         })
     
@@ -11715,24 +11753,24 @@ def get_chat_response(message):
         return "Hello! Kumusta! How can I help you with your cacao farming today? 🌱"
     
     # Disease related
-    elif any(word in message for word in ['disease', 'sakit', 'black pod', 'frosty pod', 'witches broom', 'monilia']):
+    elif any(word in message for word in ['disease', 'sakit', 'black pod', 'fito', 'monilia']):
         return """I can help you with cacao diseases! Here are common ones:
 
-🦠 **Black Pod Disease** - Caused by Phytophthora, appears as dark brown/black spots
-🦠 **Frosty Pod Rot** - White fungal growth on pods
-🦠 **Witches Broom** - Abnormal shoot growth
+🦠 **Black Pod Rot Disease** - Caused by Phytophthora, appears as dark brown/black spots
+🦠 **Fito Disease** - Attacks roots and trunk causing wilting
 🦠 **Monilia Disease** - Brown spots that turn into white mold
+🦠 **Healthy** - Keep your plants healthy with proper care
 
 💡 **Tip**: Use our Scan & Diagnose feature to identify diseases from photos!"""
     
     # Pest related
-    elif any(word in message for word in ['pest', 'insect', 'mirids', 'aphid', 'borer', 'mealybug']):
+    elif any(word in message for word in ['pest', 'insect', 'ant', 'aphid', 'mealybug']):
         return """Common cacao pests include:
 
-🐛 **Mirids** - Suck sap from pods and shoots
-🐛 **Cocoa Pod Borer** - Larvae bore into pods
-🐛 **Mealybugs** - White cottony insects
+🐛 **Ant Weaver** - Ants that protect harmful insects
 🐛 **Aphids** - Small sap-sucking insects
+🐛 **Mealybug** - White cottony insects
+🐛 **Healthy** - Keep monitoring for early detection
 
 💡 **Solution**: Regular monitoring and early treatment is key!"""
     

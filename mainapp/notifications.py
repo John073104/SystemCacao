@@ -24,7 +24,8 @@ def get_notifications(request):
         
         # Get notifications from Firestore
         notifications_ref = db.collection('notifications')
-        query = notifications_ref.where('user_id', '==', uid).order_by('created_at', direction=firestore.Query.DESCENDING).limit(50)
+        # Removed order_by to avoid composite index requirement - sort in Python instead
+        query = notifications_ref.where('user_id', '==', uid).limit(50)
         
         notifications = []
         unread_count = 0
@@ -43,6 +44,12 @@ def get_notifications(request):
             
             if not notif_data.get('read', False):
                 unread_count += 1
+        
+        # Sort notifications by created_at in Python (descending - newest first)
+        notifications.sort(
+            key=lambda x: x.get('created_at').seconds if hasattr(x.get('created_at', None), 'seconds') else 0,
+            reverse=True
+        )
         
         return JsonResponse({
             'success': True,

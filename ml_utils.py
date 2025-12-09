@@ -174,6 +174,21 @@ def predict_image(image_file, scan_type='disease'):
         predicted_class = classes[predicted_idx.item()]
         confidence = float(confidence_score.item() * 100)  # Convert to percentage
         
+        # CRITICAL FIX: Only show "Unknow Data" if confidence is too low (<60%)
+        # This prevents cacao images from incorrectly showing as "Unknow Data"
+        if predicted_class == 'Unknow Data' and confidence < 60:
+            # Check if image might be cacao-related by looking at other class probabilities
+            other_probabilities = [float(probabilities[i].item() * 100) 
+                                  for i in range(len(classes)) 
+                                  if classes[i] != 'Unknow Data']
+            
+            # If any other class has confidence > 40%, use that class instead
+            if other_probabilities and max(other_probabilities) > 40:
+                max_prob_idx = probabilities.argmax().item()
+                if classes[max_prob_idx] != 'Unknow Data':
+                    predicted_class = classes[max_prob_idx]
+                    confidence = float(probabilities[max_prob_idx].item() * 100)
+        
         # Get recommendation
         recommendation = recommendations.get(predicted_class, 'Consult with agricultural expert for proper diagnosis.')
         

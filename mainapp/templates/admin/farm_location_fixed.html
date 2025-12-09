@@ -711,16 +711,31 @@ function initializeImageUpload() {
     console.log('File input:', fileInput);
     console.log('Choose button:', chooseBtn);
     
-    // Button click to open file picker
+    // Button click to open file picker - FIXED
     if (chooseBtn && fileInput) {
         chooseBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             console.log('📸 Choose Images button clicked!');
+            console.log('File input element:', fileInput);
+            console.log('File input type:', fileInput.type);
             fileInput.click();
         });
         console.log('✅ Click handler attached to button');
     } else {
         console.error('❌ Button or file input not found!');
+        console.error('Choose button:', chooseBtn);
+        console.error('File input:', fileInput);
+    }
+    
+    // Direct click on upload area
+    if (uploadArea && fileInput) {
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target.id !== 'choose-images-btn' && !e.target.closest('#choose-images-btn')) {
+                console.log('📸 Upload area clicked!');
+                fileInput.click();
+            }
+        });
     }
     
     // Drag and drop functionality
@@ -749,8 +764,10 @@ function initializeImageUpload() {
     });
 }
 
-function handleImageSelection(files) {
+async function handleImageSelection(files) {
     if (files.length === 0) return;
+    
+    console.log(`📸 ${files.length} files selected`);
     
     // Limit to 10 images
     if (selectedImages.length + files.length > 10) {
@@ -758,25 +775,53 @@ function handleImageSelection(files) {
         return;
     }
     
-    files.forEach(file => {
+    // Upload each file to storage
+    for (const file of files) {
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
             showAlert(`Image ${file.name} is too large. Maximum size is 5MB.`, 'error');
-            return;
+            continue;
         }
         
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const imageData = {
-                file: file,
-                url: e.target.result,
-                name: file.name
-            };
+        try {
+            console.log(`⬆️ Uploading ${file.name} to storage...`);
             
-            selectedImages.push(imageData);
-            updateImagePreview();
-        };
-        reader.readAsDataURL(file);
-    });
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('farm_id', currentEditingFarm || 'new');
+            
+            // Upload to server
+            const response = await fetch('/api/farm-image/upload/', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log(`✅ Image uploaded: ${result.url}`);
+                
+                // Store permanent URL
+                const imageData = {
+                    file: file,
+                    url: result.url,  // PERMANENT URL from storage
+                    name: file.name,
+                    isPermanent: true
+                };
+                
+                selectedImages.push(imageData);
+                updateImagePreview();
+                showAlert(`Image ${file.name} uploaded successfully!`, 'success');
+            } else {
+                console.error(`❌ Upload failed: ${result.error}`);
+                showAlert(`Failed to upload ${file.name}: ${result.error}`, 'error');
+            }
+            
+        } catch (error) {
+            console.error(`❌ Upload error:`, error);
+            showAlert(`Error uploading ${file.name}. Please try again.`, 'error');
+        }
+    }
 }
 
 function updateImagePreview() {
@@ -832,21 +877,23 @@ function showAlert(message, type = 'success') {
 
 async function loadFarmsData() {
     try {
-        const response = await fetch('/api/admin/farms-firebase/');
+        console.log('📡 Loading farms from Firestore...');
+        const response = await fetch('/api/farm-data/');
         const data = await response.json();
         
-        if (data.success) {
+        console.log('📦 Received data:', data);
+        
+        if (data.success && data.farms) {
             farmsData = data.farms;
+            console.log(`✅ Loaded ${farmsData.length} farms from Firestore`);
             updateStatistics();
             populateTable();
             updateMapMarkers();
             updateRecentActivity();
         } else {
-            farmsData = SAMPLE_FARMS;
-            updateStatistics();
-            populateTable();
-            updateMapMarkers();
-            updateRecentActivity();
+            console.error('❌ Failed to load farms:', data.error);
+            farmsData = [];
+            showAlert('Failed to load farms. Please refresh the page.', 'error');
         }
     } catch (error) {
         console.error('Error loading farms data:', error);
@@ -1423,16 +1470,18 @@ function editFarm(farmId) {
     document.getElementById('farm-description').value = farm.description || '';
     document.getElementById('farm-contact').value = farm.contact || '';
 
-    // Show existing images
+    // Show existing images (PERMANENT URLs from Firestore)
     if (farm.images && farm.images.length > 0) {
-        farm.images.forEach(imageUrl => {
+        farm.images.forEach((imageUrl, index) => {
             selectedImages.push({
-                url: imageUrl,
-                name: 'Existing Image',
-                existing: true
+                url: imageUrl,  // Already permanent URL from storage
+                name: `Image ${index + 1}`,
+                existing: true,
+                isPermanent: true
             });
         });
         updateImagePreview();
+        console.log(`✅ Loaded ${selectedImages.length} existing images for editing`);
     }
 
     document.body.classList.add('modal-open');
@@ -1477,7 +1526,8 @@ async function deleteFarm(farmId) {
     if (!confirm('Are you sure you want to delete this farm? This action cannot be undone.')) return;
 
     try {
-        const response = await fetch('/api/admin/farms-firebase/', {
+        console.log('🗑️ Deleting farm:', farmId);
+        const response = await fetch('/api/farm-data/', {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1511,6 +1561,13 @@ function closeModal() {
 }
 
 async function saveFarm(formData) {
+    // Get permanent image URLs (already uploaded to storage)
+    const imageUrls = selectedImages.length > 0 
+        ? selectedImages.map(img => img.url) 
+        : ['/static/images/download.jpg', '/static/images/download (1).jpg'];
+    
+    console.log('💾 Saving farm with images:', imageUrls);
+    
     const farmData = {
         name: formData.get('name'),
         municipality: formData.get('municipality'),
@@ -1522,7 +1579,7 @@ async function saveFarm(formData) {
         lng: parseFloat(formData.get('lng')) || null,
         description: formData.get('description'),
         contact: formData.get('contact'),
-        images: selectedImages.length > 0 ? selectedImages.map(img => img.url) : ['/static/images/download.jpg', '/static/images/download (1).jpg']
+        images: imageUrls  // PERMANENT URLs from storage
     };
 
     // Show loading state
@@ -1535,7 +1592,8 @@ async function saveFarm(formData) {
         if (currentEditingFarm) {
             // Update existing farm
             farmData.id = currentEditingFarm;
-            response = await fetch('/api/admin/farms-firebase/', {
+            console.log('🔄 Updating farm:', farmData);
+            response = await fetch('/api/farm-data/', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1544,7 +1602,8 @@ async function saveFarm(formData) {
             });
         } else {
             // Add new farm
-            response = await fetch('/api/admin/farms-firebase/', {
+            console.log('➕ Adding new farm:', farmData);
+            response = await fetch('/api/farm-data/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

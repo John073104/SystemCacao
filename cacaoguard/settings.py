@@ -73,7 +73,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'mainapp.middleware.ClearStaleMessagesMiddleware',  # Clear admin error messages for regular users
-    # SessionSecurityMiddleware and SessionValidationMiddleware DISABLED - they were causing session interruption errors
+    # NEW SECURITY MIDDLEWARES - Prevent role confusion and unauthorized access
+    'mainapp.security_middleware.RoleSecurityMiddleware',  # Role-based access control across tabs
+    'mainapp.security_middleware.SessionTimeoutMiddleware',  # Auto logout inactive users
 ]
 
 
@@ -130,6 +132,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Store sessions in the database (default setting)
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_SAVE_EVERY_REQUEST = False  # Prevent session deletion errors on concurrent logout
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # ===============================
 # CACHING CONFIGURATION (for speed optimization)

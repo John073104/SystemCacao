@@ -89,6 +89,8 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-6">Order Status</h3>
                     
                     <div class="order-timeline">
+                        {% with status_map=order.status_history|default:list %}
+                        {% for status_info in status_map %}
                         <div class="timeline-item">
                             <div class="timeline-icon active">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -96,50 +98,39 @@
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="font-medium text-gray-900">Order Placed</h4>
-                                <!-- FIXED: Add localtime filter -->
-                                <p class="text-sm text-gray-500">{{ order.created_at|localtime|date:"F d, Y" }} at {{ order.created_at|localtime|time:"g:i A" }}</p>
+                                <h4 class="font-medium text-gray-900">{{ status_info.status|title }}</h4>
+                                <p class="text-sm text-gray-500">{{ status_info.timestamp|date:"F d, Y" }} at {{ status_info.timestamp|time:"g:i A" }}</p>
                             </div>
                         </div>
+                        {% endfor %}
+                        {% endwith %}
                         
+                        <!-- Pending future statuses -->
+                        {% if order.status == 'pending' %}
                         <div class="timeline-item">
-                            <div class="timeline-icon {% if order.status != 'pending' %}active{% else %}inactive{% endif %}">
+                            <div class="timeline-icon inactive">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                                 </svg>
                             </div>
                             <div>
                                 <h4 class="font-medium text-gray-900">Order Confirmed</h4>
-                                <p class="text-sm text-gray-500">
-                                    {% if order.status != 'pending' %}
-                                        Your order has been confirmed
-                                    {% else %}
-                                        Waiting for confirmation
-                                    {% endif %}
-                                </p>
+                                <p class="text-sm text-gray-500">Your order has been confirmed</p>
                             </div>
                         </div>
-                        
                         <div class="timeline-item">
-                            <div class="timeline-icon {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}active{% else %}inactive{% endif %}">
+                            <div class="timeline-icon inactive">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
                                 </svg>
                             </div>
                             <div>
                                 <h4 class="font-medium text-gray-900">Processing</h4>
-                                <p class="text-sm text-gray-500">
-                                    {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}
-                                        Your order is being prepared
-                                    {% else %}
-                                        Waiting to be processed
-                                    {% endif %}
-                                </p>
+                                <p class="text-sm text-gray-500">Waiting to be processed</p>
                             </div>
                         </div>
-                        
                         <div class="timeline-item">
-                            <div class="timeline-icon {% if order.status == 'shipped' or order.status == 'delivered' %}active{% else %}inactive{% endif %}">
+                            <div class="timeline-icon inactive">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"></path>
                                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707L16 7.586A1 1 0 0015.414 7H14z"></path>
@@ -147,33 +138,21 @@
                             </div>
                             <div>
                                 <h4 class="font-medium text-gray-900">Shipped</h4>
-                                <p class="text-sm text-gray-500">
-                                    {% if order.status == 'shipped' or order.status == 'delivered' %}
-                                        Your order is on the way
-                                    {% else %}
-                                        Waiting to be shipped
-                                    {% endif %}
-                                </p>
+                                <p class="text-sm text-gray-500">Waiting to be shipped</p>
                             </div>
                         </div>
-                        
                         <div class="timeline-item">
-                            <div class="timeline-icon {% if order.status == 'delivered' %}active{% else %}inactive{% endif %}">
+                            <div class="timeline-icon inactive">
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                                 </svg>
                             </div>
                             <div>
                                 <h4 class="font-medium text-gray-900">Delivered</h4>
-                                <p class="text-sm text-gray-500">
-                                    {% if order.status == 'delivered' %}
-                                        Order delivered successfully
-                                    {% else %}
-                                        Estimated delivery: 3-7 business days
-                                    {% endif %}
-                                </p>
+                                <p class="text-sm text-gray-500">Estimated delivery: 3-7 business days</p>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
 
