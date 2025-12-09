@@ -717,7 +717,26 @@ from django.contrib.auth import logout
 # Guest pages
 @guest_required
 def guest_dashboard(request):
-    return render(request, 'guest/guest_dashboard.html') 
+    """Guest dashboard with scan limits"""
+    today = datetime.now(pytz.timezone('Asia/Manila')).strftime('%Y-%m-%d')
+    session_key = f'guest_limits_{today}'
+
+    if session_key not in request.session:
+        request.session[session_key] = {'disease': 0, 'pest': 0}
+
+    # Calculate remaining scans
+    daily_limits = request.session[session_key]
+    disease_remaining = max(0, 5 - daily_limits.get('disease', 0))
+    pest_remaining = max(0, 5 - daily_limits.get('pest', 0))
+
+    context = {
+        'disease_remaining': disease_remaining,
+        'pest_remaining': pest_remaining,
+        'daily_limits': daily_limits,
+        'max_daily_scans': 5,
+        'today': today
+    }
+    return render(request, 'guest/guest_dashboard.html', context) 
 
 def guest_marketplace(request):
     """Guest marketplace view - display all active products from Firestore"""
@@ -3126,6 +3145,8 @@ def farm_mapping(request):
     except Exception as e:
         print(f'Error loading farms: {e}')
         farms_data = []
+    
+    context = {
         'page_title': 'Farm Mapping',
         'description': 'Explore and interact with farm data',
         'farms_data': farms_data,
@@ -5110,12 +5131,9 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from django.utils import timezone
 from django.core.paginator import Paginator
 import requests
+from .firebase_config import db
 
-# Initialize Firestore (with error handling)
-try:
-    db = firestore.client()
-except Exception as e:
-    db = None
+# Initialize Firestore (with error handling) - using firebase_config
 
 # Sample products data for fallback
 SAMPLE_PRODUCTS = [
@@ -7618,7 +7636,7 @@ import json
 @admin_required
 def admin_dashboard(request):
     """Admin dashboard with real data counting from Firestore"""
-    db = firestore.client()
+    # db already imported from firebase_config at module level
     
     # Get current date and calculate date ranges
     today = datetime.now(pytz.timezone('Asia/Manila'))
@@ -8055,7 +8073,7 @@ from django.shortcuts import render
 from firebase_admin import firestore
 
 def admin_user_list(request):
-    db = firestore.client()
+    # db already imported from firebase_config at module level
     users_ref = db.collection('users')
     docs = users_ref.stream()
 
@@ -8117,7 +8135,7 @@ def user_create(request):
                 firebase_auth.set_custom_user_claims(user.uid, {'role': role})
 
                 # Save additional user details in Firestore
-                db = firestore.client()
+                # db already imported from firebase_config at module level
                 db.collection('users').document(user.uid).set({
                     'uid': user.uid,
                     'email': email,
