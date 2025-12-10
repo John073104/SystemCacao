@@ -1,11 +1,13 @@
-# Core Django
+﻿# Core Django
 Django==4.2.7
 gunicorn==21.2.0
 whitenoise==6.6.0
 python-decouple==3.8
 
-# Image Storage
+# Image Storage & Processing
 cloudinary==1.36.0
+Pillow==10.0.1
+opencv-python-headless==4.10.0.84
 
 # Firebase & Google Cloud
 firebase-admin==6.2.0
@@ -15,19 +17,13 @@ Pyrebase4==4.7.1
 # TensorFlow & ML
 tensorflow==2.18.0
 numpy==1.26.4
-Pillow==10.0.1
 
 # PyTorch & ML (Python 3.12 compatible)
 torch==2.2.0
 torchvision==0.17.0
 
-# HTTP client for model downloads
+# HTTP & Utilities
 requests==2.31.0
-opencv-python-headless==4.10.0.84
-pillow==11.0.0
-
-# Utilities
-requests==2.32.3
 python-dateutil==2.9.0.post0
 pytz==2025.1
 reportlab==4.2.5
